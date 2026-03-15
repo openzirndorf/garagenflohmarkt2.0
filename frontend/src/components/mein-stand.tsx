@@ -7,6 +7,11 @@ interface Props {
   onCancelled: () => void;
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "Wartet auf Freigabe",
+  APPROVED: "Freigeschaltet ✓",
+};
+
 export function MeinStand({ onCancelled }: Props) {
   const [stand, setStand] = useState<CreatedStand | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -19,7 +24,6 @@ export function MeinStand({ onCancelled }: Props) {
     try {
       setStand(await fetchMyStand(token));
     } catch {
-      // Token ungültig oder Stand bereits gelöscht → aus localStorage entfernen
       localStorage.removeItem(EDIT_TOKEN_KEY);
     }
   }, [token]);
@@ -46,30 +50,36 @@ export function MeinStand({ onCancelled }: Props) {
     }
   };
 
-  const statusLabel: Record<string, string> = {
-    PENDING: "Wartet auf Freigabe",
-    APPROVED: "Freigeschaltet ✓",
-  };
+  const isApproved = stand.status === "APPROVED";
 
   return (
-    <section className="border rounded-lg p-4 bg-blue-50 border-blue-200 flex flex-col gap-2">
+    <section
+      style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+      className="border border-blue-100 bg-blue-50 p-4"
+    >
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold text-blue-800">Dein angemeldeter Stand</p>
-          <p className="font-medium mt-0.5">{stand.name}</p>
-          <p className="text-sm text-gray-600">{stand.adresse}</p>
-          <p className="text-xs mt-1 text-blue-700">{statusLabel[stand.status] ?? stand.status}</p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-500">
+            Dein angemeldeter Stand
+          </p>
+          <p className="font-semibold text-gray-900">{stand.name}</p>
+          <p className="text-sm text-gray-500">{stand.adresse}</p>
+          <p
+            className={`mt-1 text-xs font-medium ${isApproved ? "text-[--oz-green]" : "text-blue-600"}`}
+          >
+            {STATUS_LABEL[stand.status] ?? stand.status}
+          </p>
         </div>
         <button
           type="button"
           onClick={handleCancel}
           disabled={cancelling}
-          className="shrink-0 text-sm text-red-600 hover:underline disabled:opacity-50"
+          className="shrink-0 text-sm text-red-500 transition-colors hover:text-red-700 disabled:opacity-50"
         >
           {cancelling ? "…" : "Zurückziehen"}
         </button>
       </div>
-      {error && <p className="text-red-600 text-xs">{error}</p>}
+      {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </section>
   );
 }
