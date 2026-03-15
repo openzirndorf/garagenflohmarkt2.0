@@ -1,0 +1,10 @@
+# Kopieren nach terraform.tfvars und ausfüllen (wird NICHT eingecheckt)
+
+scw_access_key      = "SCW_ACCESS_KEY_HIER"
+scw_secret_key      = "SCW_SECRET_KEY_HIER"
+scw_project_id      = "PROJECT_ID_HIER"
+admin_token         = "EIN_LANGES_ZUFAELLIGES_GEHEIMNIS"
+api_username        = "flohmarkt"
+api_password        = "EIN_ANDERES_LANGES_ZUFAELLIGES_GEHEIMNIS"
+container_image_tag = "latest"
+# database_url wird automatisch aus scaleway_sdb_sql_database.flohmarkt.endpoint abgeleitet
