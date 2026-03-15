@@ -261,7 +261,7 @@ Die API-URL aus der Ausgabe notieren:
 api_url = "https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud"
 ```
 
-### Schritt 7 – GitHub Secrets für Frontend-Deploy anlegen
+### Schritt 7 – GitHub Secrets anlegen
 
 `https://github.com/openzirndorf/garagenflohmarkt2.0/settings/secrets/actions`
 → **New repository secret** für jedes der folgenden:
@@ -270,6 +270,9 @@ api_url = "https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.c
 |-------------|------|
 | `VITE_API_USERNAME` | Wert von `api_username` aus `terraform.tfvars` |
 | `VITE_API_PASSWORD` | Wert von `api_password` aus `terraform.tfvars` |
+| `SCW_ACCESS_KEY` | Wert von `scw_access_key` aus `terraform.tfvars` |
+| `SCW_SECRET_KEY` | Wert von `scw_secret_key` aus `terraform.tfvars` |
+| `SCW_PROJECT_ID` | Wert von `scw_project_id` aus `terraform.tfvars` |
 
 ### Schritt 8 – GitHub Pages aktivieren
 
@@ -288,20 +291,18 @@ Manuell triggern:
 `https://github.com/openzirndorf/garagenflohmarkt2.0/actions/workflows/deploy-frontend.yml`
 → **Run workflow**
 
-### Backend (manuell nach Codeänderungen)
+### Backend (automatisch)
 
-```bash
-REGISTRY=rg.fr-par.scw.cloud/openzirndorf-flohmarkt
+Das Backend deployt **automatisch** bei jedem Push auf `main` wenn Dateien in `app/`, `Dockerfile`
+oder `pyproject.toml` geändert wurden. Die Pipeline:
 
-# Image neu bauen
-docker build -t $REGISTRY/flohmarkt-api:latest .
+1. Baut das Docker Image
+2. Pusht es nach `rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:latest`
+3. Deployt den Scaleway Serverless Container neu
 
-# Image hochladen
-docker push $REGISTRY/flohmarkt-api:latest
-
-# Scaleway anweisen das neue Image zu laden
-cd infra && tofu apply
-```
+Manuell triggern:
+`https://github.com/openzirndorf/garagenflohmarkt2.0/actions/workflows/deploy-backend.yml`
+→ **Run workflow**
 
 ---
 
