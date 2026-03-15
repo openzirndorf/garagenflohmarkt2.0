@@ -32,11 +32,7 @@ export function CardContent({ className, ...props }: ComponentProps<"div">) {
   return <div className={cn(className)} {...props} />;
 }
 
-export function Button({
-  className,
-  disabled,
-  ...props
-}: ComponentProps<"button">) {
+export function Button({ className, disabled, ...props }: ComponentProps<"button">) {
   return (
     <button
       type="button"

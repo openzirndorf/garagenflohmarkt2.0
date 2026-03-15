@@ -83,37 +83,22 @@ export function AdminPanel() {
             </button>
           </div>
 
-          {error && (
-            <p className="text-red-600 text-sm bg-red-50 rounded px-3 py-2">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-red-600 text-sm bg-red-50 rounded px-3 py-2">{error}</p>}
 
           <section>
             <h2 className="text-xl font-semibold mb-3">Ausstehend</h2>
             {pending.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                Keine ausstehenden Stände.
-              </p>
+              <p className="text-gray-500 text-sm">Keine ausstehenden Stände.</p>
             ) : (
               <ul className="flex flex-col gap-3">
                 {pending.map((s) => (
-                  <li
-                    key={s.id}
-                    className="border rounded p-4 flex flex-col gap-1"
-                  >
+                  <li key={s.id} className="border rounded p-4 flex flex-col gap-1">
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-semibold">{s.name}</p>
                         <p className="text-sm text-gray-600">{s.adresse}</p>
-                        {s.beschreibung && (
-                          <p className="text-sm mt-1">{s.beschreibung}</p>
-                        )}
-                        {s.email && (
-                          <p className="text-sm text-gray-500 mt-1">
-                            {s.email}
-                          </p>
-                        )}
+                        {s.beschreibung && <p className="text-sm mt-1">{s.beschreibung}</p>}
+                        {s.email && <p className="text-sm text-gray-500 mt-1">{s.email}</p>}
                       </div>
                       <button
                         type="button"
@@ -133,9 +118,7 @@ export function AdminPanel() {
           <section>
             <h2 className="text-xl font-semibold mb-3">Freigegeben</h2>
             {approved.length === 0 ? (
-              <p className="text-gray-500 text-sm">
-                Noch keine freigegebenen Stände.
-              </p>
+              <p className="text-gray-500 text-sm">Noch keine freigegebenen Stände.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {approved.map((s) => (

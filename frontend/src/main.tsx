@@ -9,6 +9,4 @@ if (!root) throw new Error("#root not found");
 
 const isAdmin = window.location.hash === "#admin";
 
-createRoot(root).render(
-  <StrictMode>{isAdmin ? <AdminPanel /> : <FlohmarktApp />}</StrictMode>,
-);
+createRoot(root).render(<StrictMode>{isAdmin ? <AdminPanel /> : <FlohmarktApp />}</StrictMode>);

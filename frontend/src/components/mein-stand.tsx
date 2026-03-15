@@ -31,12 +31,7 @@ export function MeinStand({ onCancelled }: Props) {
   if (!token || !stand) return null;
 
   const handleCancel = async () => {
-    if (
-      !confirm(
-        "Stand wirklich zurückziehen? Das kann nicht rückgängig gemacht werden.",
-      )
-    )
-      return;
+    if (!confirm("Stand wirklich zurückziehen? Das kann nicht rückgängig gemacht werden.")) return;
     setCancelling(true);
     setError(null);
     try {
@@ -60,14 +55,10 @@ export function MeinStand({ onCancelled }: Props) {
     <section className="border rounded-lg p-4 bg-blue-50 border-blue-200 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-blue-800">
-            Dein angemeldeter Stand
-          </p>
+          <p className="text-sm font-semibold text-blue-800">Dein angemeldeter Stand</p>
           <p className="font-medium mt-0.5">{stand.name}</p>
           <p className="text-sm text-gray-600">{stand.adresse}</p>
-          <p className="text-xs mt-1 text-blue-700">
-            {statusLabel[stand.status] ?? stand.status}
-          </p>
+          <p className="text-xs mt-1 text-blue-700">{statusLabel[stand.status] ?? stand.status}</p>
         </div>
         <button
           type="button"

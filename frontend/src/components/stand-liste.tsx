@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../ui";
 import type { Stand } from "../types";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui";
 
 interface Props {
   stands: Stand[];
@@ -16,11 +16,7 @@ export function StandListe({ stands, loading }: Props) {
   }
 
   if (!stands.length) {
-    return (
-      <p className="text-muted-foreground text-sm">
-        Noch keine Stände angemeldet.
-      </p>
-    );
+    return <p className="text-muted-foreground text-sm">Noch keine Stände angemeldet.</p>;
   }
 
   return (

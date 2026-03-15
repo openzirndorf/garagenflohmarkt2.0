@@ -1,13 +1,7 @@
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../ui";
 import { useRef, useState } from "react";
 import { createStand } from "../api";
 import type { StandFormData } from "../types";
+import { Button, Card, CardContent, CardHeader, CardTitle } from "../ui";
 
 const EDIT_TOKEN_KEY = "flohmarkt_edit_token";
 const MIN_SUBMIT_MS = 3000; // Einreichung muss mindestens 3 Sekunden nach Laden kommen
@@ -26,9 +20,7 @@ const EMPTY: StandFormData = {
 
 export function StandForm({ onSuccess }: Props) {
   const [form, setForm] = useState<StandFormData>(EMPTY);
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [editToken, setEditToken] = useState<string | null>(null);
   const mountedAt = useRef(Date.now());
@@ -77,8 +69,7 @@ export function StandForm({ onSuccess }: Props) {
             {window.location.pathname}#mein-stand/{editToken}
           </code>
           <p className="text-xs text-gray-400">
-            Der Link ist auch in deinem Browser gespeichert und erscheint oben
-            auf der Seite.
+            Der Link ist auch in deinem Browser gespeichert und erscheint oben auf der Seite.
           </p>
         </CardContent>
       </Card>
@@ -120,9 +111,7 @@ export function StandForm({ onSuccess }: Props) {
               className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               placeholder="z.B. Musterstraße 1, Zirndorf"
               value={form.adresse}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, adresse: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
               disabled={status === "loading"}
             />
           </div>
@@ -135,9 +124,7 @@ export function StandForm({ onSuccess }: Props) {
               id="beschreibung"
               className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 min-h-[80px] resize-y"
               value={form.beschreibung}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, beschreibung: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
               disabled={status === "loading"}
             />
           </div>
@@ -151,9 +138,7 @@ export function StandForm({ onSuccess }: Props) {
               type="email"
               className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               value={form.email}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, email: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               disabled={status === "loading"}
             />
           </div>
@@ -168,9 +153,7 @@ export function StandForm({ onSuccess }: Props) {
               tabIndex={-1}
               autoComplete="off"
               value={form.website}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, website: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
             />
           </div>
 
