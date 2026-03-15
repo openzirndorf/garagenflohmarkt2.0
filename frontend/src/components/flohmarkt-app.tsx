@@ -12,12 +12,15 @@ const PORTAL_URL = "https://openzirndorf.github.io/openzirndorf-portal/";
 function Header({ page }: { page: string }) {
   const navCls =
     page === "impressum" ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-700";
+  const goHome = () => {
+    window.location.hash = "";
+  };
   return (
     <header
       style={{ height: "var(--oz-header-height)" }}
       className="sticky top-0 z-10 flex items-center gap-4 border-b border-gray-100 bg-white px-4"
     >
-      <a href="#" className="mr-auto flex items-center gap-2 no-underline">
+      <button type="button" onClick={goHome} className="mr-auto flex items-center gap-2">
         <span aria-hidden="true" className="text-xl">
           🏘
         </span>
@@ -27,11 +30,8 @@ function Header({ page }: { page: string }) {
         >
           Garagenflohmarkt <span className="text-[--oz-green]">Zirndorf</span>
         </span>
-      </a>
-      <a
-        href={PORTAL_URL}
-        className="hidden text-sm text-gray-400 hover:text-gray-600 sm:block"
-      >
+      </button>
+      <a href={PORTAL_URL} className="hidden text-sm text-gray-400 hover:text-gray-600 sm:block">
         OpenZirndorf ↗
       </a>
       <a href="#impressum" className={`text-sm transition-colors ${navCls}`}>
@@ -43,9 +43,7 @@ function Header({ page }: { page: string }) {
 
 function Footer() {
   return (
-    <footer
-      className="mt-16 flex justify-center gap-4 border-t py-8 text-sm text-gray-400"
-    >
+    <footer className="mt-16 flex justify-center gap-4 border-t py-8 text-sm text-gray-400">
       <a href={PORTAL_URL} className="transition-colors hover:text-[--oz-green]">
         Ein OpenZirndorf-Projekt
       </a>
@@ -80,8 +78,7 @@ export function FlohmarktApp() {
   }, [loadStands]);
 
   useEffect(() => {
-    const onHash = () =>
-      setPage(window.location.hash === "#impressum" ? "impressum" : "main");
+    const onHash = () => setPage(window.location.hash === "#impressum" ? "impressum" : "main");
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
