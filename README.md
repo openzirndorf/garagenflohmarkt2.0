@@ -207,24 +207,15 @@ tofu apply
 # Mit "yes" bestätigen
 ```
 
-Ausgabe notieren:
+Die API-URL aus der Ausgabe notieren:
 ```
-container_url = "openzirndorf...-flohmarkt-api.functions.fnc.fr-par.scw.cloud"
-api_domain    = "https://api.openzirndorf.de"
+api_url = "https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud"
 ```
 
-### Schritt 7 – DNS-Eintrag setzen
-
-Beim DNS-Anbieter einen CNAME-Eintrag anlegen:
-
-| Typ | Name | Ziel |
-|-----|------|------|
-| CNAME | `api` | Wert aus `container_url` |
-
-### Schritt 8 – Testen
+### Schritt 7 – Testen
 
 ```bash
-curl https://api.openzirndorf.de/health
+curl https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud/health
 # → {"ok":true}
 ```
 
@@ -266,13 +257,13 @@ cd infra && tofu apply
 ```bash
 curl -X POST \
   -H "Authorization: Bearer DEIN_ADMIN_TOKEN" \
-  https://api.openzirndorf.de/stands/1/approve
+  https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud/stands/1/approve
 ```
 
 **Alle eingereichten Stände ansehen:**
 ```bash
 curl -H "Authorization: Bearer DEIN_ADMIN_TOKEN" \
-  https://api.openzirndorf.de/stands/admin
+  https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud/stands/admin
 ```
 
 ---
