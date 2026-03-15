@@ -107,15 +107,23 @@ Dieser Schritt legt alles in Scaleway an: Datenbank, Container-Registry, Contain
 
 ### Schritt 1 – Scaleway Zugangsdaten holen
 
+> **Hinweis:** Hier erstellst du einen Key **für dich selbst** (damit OpenTofu in deinem
+> Namen arbeiten darf). Den Key für die Datenbank-App (`flohmarkt-db`) legt OpenTofu
+> automatisch an — den musst du nicht manuell erstellen.
+
 1. Auf [console.scaleway.com](https://console.scaleway.com) einloggen
-2. **IAM → API Keys → Generate API Key**
-3. Berechtigungen auswählen:
+2. **IAM → API Keys → Generate API Key** klicken
+3. **"Select API key bearer"** → **Myself (IAM user)** auswählen
+4. Ablaufdatum setzen (max. 1 Jahr)
+5. **"Will this API key be used for Object Storage?"** → **No, skip for now**
+6. **Generate API Key** klicken
+7. Auf der nächsten Seite (Credentials Usage) die Berechtigungen setzen:
    - `ContainerRegistryFullAccess`
    - `ServerlessContainersFullAccess`
    - `ServerlessSQLDatabaseFullAccess`
    - `IAMFullAccess`
-4. Access Key und Secret Key notieren
-5. **Project ID** finden: linke Seitenleiste → Projektname → Settings
+8. **Access Key** und **Secret Key** notieren — der Secret Key wird nur einmal angezeigt!
+9. **Project ID** finden: linke Seitenleiste → Projektname → Settings
 
 ### Schritt 2 – terraform.tfvars anlegen
 
