@@ -103,6 +103,7 @@ export function FlohmarktApp() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(() => (window.location.hash === "#faq" ? "faq" : "main"));
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
+  const [showForm, setShowForm] = useState(false);
 
   const loadStands = useCallback(async () => {
     setLoading(true);
@@ -189,12 +190,18 @@ export function FlohmarktApp() {
             </div>
           </div>
 
-          <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-8">
-            <MeinStand onCancelled={loadStands} />
+          {/* Event-Info-Banner */}
+          <div className="border-b border-green-100 bg-green-50 px-4 py-3">
+            <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <p className="text-sm font-semibold text-[#009a00]">
+                Sonntag, 26. April 2026 · 10:00 – 16:00 Uhr
+              </p>
+              <p className="text-xs text-green-700">Zirndorf – Garagenflohmarkt stadtgebietweit</p>
+            </div>
+          </div>
 
-            <section aria-label="Stand anmelden">
-              <StandForm onSuccess={loadStands} />
-            </section>
+          <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-6">
+            <MeinStand onCancelled={loadStands} />
 
             <section aria-label="Alle Stände">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -210,7 +217,6 @@ export function FlohmarktApp() {
                     </span>
                   )}
                 </h2>
-                {/* Kategorien-Filter auch in der Liste */}
                 <div className="flex flex-wrap gap-1.5">
                   {KATEGORIEN.map((k) => {
                     const active = kategorienFilter.includes(k);
@@ -241,6 +247,25 @@ export function FlohmarktApp() {
                 </div>
               </div>
               <StandListe stands={filteredStands} loading={loading} />
+            </section>
+
+            <section aria-label="Stand anmelden">
+              {showForm ? (
+                <StandForm
+                  onSuccess={() => {
+                    loadStands();
+                    setShowForm(false);
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowForm(true)}
+                  className="w-full rounded-xl border-2 border-dashed border-[#009a00] py-4 text-sm font-semibold text-[#009a00] transition-colors hover:bg-green-50"
+                >
+                  + Eigenen Stand anmelden
+                </button>
+              )}
             </section>
           </div>
         </main>
