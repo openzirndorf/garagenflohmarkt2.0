@@ -4,6 +4,7 @@ import type { Stand } from "../types";
 import { Faq } from "./faq";
 import { FlohmarktMap } from "./flohmarkt-map";
 import { MeinStand } from "./mein-stand";
+import { KATEGORIEN } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
@@ -101,6 +102,7 @@ export function FlohmarktApp() {
   const [stands, setStands] = useState<Stand[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(() => (window.location.hash === "#faq" ? "faq" : "main"));
+  const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
 
   const loadStands = useCallback(async () => {
     setLoading(true);
@@ -123,6 +125,15 @@ export function FlohmarktApp() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  const toggleFilter = (k: string) => {
+    setKategorienFilter((prev) => (prev.includes(k) ? prev.filter((c) => c !== k) : [...prev, k]));
+  };
+
+  const filteredStands =
+    kategorienFilter.length === 0
+      ? stands
+      : stands.filter((s) => s.kategorien.some((k) => kategorienFilter.includes(k)));
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header page={page} />
@@ -142,27 +153,43 @@ export function FlohmarktApp() {
         </main>
       ) : (
         <main className="flex-1">
-          <div className="border-b border-green-100 bg-[--oz-green-light] px-4 py-10">
-            <div className="mx-auto max-w-2xl">
-              <h1
-                style={{ fontFamily: "var(--oz-font-heading)" }}
-                className="mb-2 text-4xl font-extrabold leading-tight text-[--oz-green-dark]"
-              >
-                Garagenflohmarkt Zirndorf
-              </h1>
-              <p className="text-lg text-gray-600">
-                Melde deinen Stand an und finde alle Verkäufer auf der Karte.
-              </p>
+          {/* Karte als Startseite – volle Breite, prominent */}
+          <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
+            <FlohmarktMap kategorienFilter={kategorienFilter} />
+            {/* Kategorie-Filter-Overlay */}
+            <div className="absolute bottom-3 left-0 right-0 z-10 flex justify-center px-4">
+              <div className="flex flex-wrap justify-center gap-1.5 rounded-2xl bg-white/90 px-3 py-2 shadow-md backdrop-blur-sm">
+                {KATEGORIEN.map((k) => {
+                  const active = kategorienFilter.includes(k);
+                  return (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => toggleFilter(k)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        active
+                          ? "border-[--oz-green] bg-[--oz-green] text-white"
+                          : "border-gray-300 bg-white text-gray-600 hover:border-[--oz-green] hover:text-[--oz-green]"
+                      }`}
+                    >
+                      {k}
+                    </button>
+                  );
+                })}
+                {kategorienFilter.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setKategorienFilter([])}
+                    className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    ✕ Alle
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-8">
-            <section aria-label="Karte der Stände">
-              <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-md">
-                <FlohmarktMap />
-              </div>
-            </section>
-
             <MeinStand onCancelled={loadStands} />
 
             <section aria-label="Stand anmelden">
@@ -176,10 +203,13 @@ export function FlohmarktApp() {
               >
                 Angemeldete Stände
                 {!loading && stands.length > 0 && (
-                  <span className="text-sm font-normal text-gray-400">({stands.length})</span>
+                  <span className="text-sm font-normal text-gray-400">
+                    ({filteredStands.length}
+                    {kategorienFilter.length > 0 ? ` von ${stands.length}` : ""})
+                  </span>
                 )}
               </h2>
-              <StandListe stands={stands} loading={loading} />
+              <StandListe stands={filteredStands} loading={loading} />
             </section>
           </div>
         </main>

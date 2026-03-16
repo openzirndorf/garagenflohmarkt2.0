@@ -68,9 +68,23 @@ export async function fetchMyStand(editToken: string): Promise<CreatedStand> {
   return res.json();
 }
 
+export async function deleteStandAdmin(id: number, token: string): Promise<void> {
+  const res = await fetch(`${API}/stands/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Löschen fehlgeschlagen");
+}
+
 export async function updateStand(
   editToken: string,
-  data: { name?: string; adresse?: string; beschreibung?: string },
+  data: {
+    name?: string;
+    adresse?: string;
+    beschreibung?: string;
+    kategorien?: string[];
+    uhrzeit?: string;
+  },
 ): Promise<CreatedStand> {
   const res = await fetch(`${API}/stands/by-token/${editToken}`, {
     method: "PATCH",

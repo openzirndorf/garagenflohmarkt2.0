@@ -37,9 +37,24 @@ export function StandListe({ stands, loading }: Props) {
             aria-hidden="true"
             className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[--oz-green]"
           />
-          <div className="min-w-0">
-            <p className="font-semibold leading-tight text-gray-900">{s.name}</p>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <p className="font-semibold leading-tight text-gray-900">{s.name}</p>
+              {s.uhrzeit && <span className="text-xs text-gray-500">🕐 {s.uhrzeit}</span>}
+            </div>
             <p className="mt-0.5 text-sm text-gray-500">{s.adresse}</p>
+            {s.kategorien.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {s.kategorien.map((k) => (
+                  <span
+                    key={k}
+                    className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-[--oz-green]"
+                  >
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
             {s.beschreibung && (
               <p className="mt-1 text-sm leading-snug text-gray-600">{s.beschreibung}</p>
             )}

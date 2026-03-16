@@ -10,11 +10,22 @@ interface Props {
   onSuccess: () => void;
 }
 
+export const KATEGORIEN = [
+  "Kleidung",
+  "Spielzeug",
+  "Möbel",
+  "Bücher",
+  "Elektro",
+  "Sonstiges",
+] as const;
+
 const EMPTY: StandFormData = {
   name: "",
   adresse: "",
   beschreibung: "",
   email: "",
+  kategorien: [],
+  uhrzeit: "",
   website: "", // Honeypot
 };
 
@@ -34,6 +45,15 @@ export function StandForm({ onSuccess }: Props) {
   const mountedAt = useRef(Date.now());
 
   const allConfirmed = confirmed.every(Boolean);
+
+  const toggleKategorie = (k: string) => {
+    setForm((f) => ({
+      ...f,
+      kategorien: f.kategorien.includes(k)
+        ? f.kategorien.filter((c) => c !== k)
+        : [...f.kategorien, k],
+    }));
+  };
 
   const handleSubmit = async () => {
     if (!form.name || !form.adresse || !form.email) {
@@ -69,18 +89,18 @@ export function StandForm({ onSuccess }: Props) {
   if (status === "success" && editToken) {
     return (
       <Card>
-        <CardContent className="pt-6 flex flex-col gap-3">
-          <p role="alert" className="text-green-700 font-medium">
+        <CardContent className="flex flex-col gap-3 pt-6">
+          <p role="alert" className="font-medium text-green-700">
             Dein Stand wurde eingereicht!
           </p>
           <p className="text-sm text-gray-700">
             Wir haben dir eine Bestätigungsmail geschickt. Bitte klicke auf den Link in der Mail,
             damit dein Stand auf der Karte erscheint.
           </p>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="mt-1 text-sm text-gray-600">
             Speichere außerdem diesen Link, um deinen Stand später zu verwalten:
           </p>
-          <code className="text-xs bg-gray-100 rounded px-2 py-1 break-all select-all">
+          <code className="select-all break-all rounded bg-gray-100 px-2 py-1 text-xs">
             {window.location.origin}
             {window.location.pathname}#mein-stand/{editToken}
           </code>
@@ -100,7 +120,7 @@ export function StandForm({ onSuccess }: Props) {
       <CardContent>
         <div className="flex flex-col gap-4">
           {status === "error" && (
-            <p role="alert" className="text-red-600 text-sm">
+            <p role="alert" className="text-sm text-red-600">
               {errorMsg}
             </p>
           )}
@@ -111,7 +131,7 @@ export function StandForm({ onSuccess }: Props) {
             </label>
             <input
               id="name"
-              className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               disabled={status === "loading"}
@@ -124,7 +144,7 @@ export function StandForm({ onSuccess }: Props) {
             </label>
             <input
               id="adresse"
-              className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               placeholder="z.B. Musterstraße 1, Zirndorf"
               value={form.adresse}
               onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
@@ -133,12 +153,50 @@ export function StandForm({ onSuccess }: Props) {
           </div>
 
           <div className="flex flex-col gap-1.5">
+            <label htmlFor="uhrzeit" className="text-sm font-medium">
+              Uhrzeit (optional)
+            </label>
+            <input
+              id="uhrzeit"
+              className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              placeholder="z.B. 9:00 – 14:00 Uhr"
+              value={form.uhrzeit}
+              onChange={(e) => setForm((f) => ({ ...f, uhrzeit: e.target.value }))}
+              disabled={status === "loading"}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Kategorien (optional)</span>
+            <div className="flex flex-wrap gap-2">
+              {KATEGORIEN.map((k) => {
+                const active = form.kategorien.includes(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => toggleKategorie(k)}
+                    disabled={status === "loading"}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                      active
+                        ? "border-[--oz-green] bg-[--oz-green] text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-[--oz-green] hover:text-[--oz-green]"
+                    }`}
+                  >
+                    {k}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <label htmlFor="beschreibung" className="text-sm font-medium">
               Was gibt es zu kaufen?
             </label>
             <textarea
               id="beschreibung"
-              className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 min-h-[80px] resize-y"
+              className="min-h-[80px] resize-y rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               value={form.beschreibung}
               onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
               disabled={status === "loading"}
@@ -152,7 +210,7 @@ export function StandForm({ onSuccess }: Props) {
             <input
               id="email"
               type="email"
-              className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
               placeholder="deine@email.de"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -169,7 +227,7 @@ export function StandForm({ onSuccess }: Props) {
               Bitte bestätige die Teilnahmebedingungen:
             </p>
             {RULES.map((rule, i) => (
-              <label key={rule} className="flex items-start gap-2.5 cursor-pointer">
+              <label key={rule} className="flex cursor-pointer items-start gap-2.5">
                 <input
                   type="checkbox"
                   className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
@@ -182,7 +240,7 @@ export function StandForm({ onSuccess }: Props) {
                 <span className="text-sm text-amber-900">{rule}</span>
               </label>
             ))}
-            <p className="text-xs text-amber-700 mt-1">
+            <p className="mt-1 text-xs text-amber-700">
               Weitere Infos auf der{" "}
               <a href="#faq" className="underline hover:text-amber-900">
                 Regeln & FAQ-Seite

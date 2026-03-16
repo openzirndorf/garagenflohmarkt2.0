@@ -7,9 +7,14 @@ import { fetchGeoJSON } from "../api";
 const CENTER: [number, number] = [10.9557, 49.4467];
 const ZOOM = 13;
 
-export function FlohmarktMap() {
+interface Props {
+  kategorienFilter?: string[];
+}
+
+export function FlohmarktMap({ kategorienFilter = [] }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
+  const allGeoJSONRef = useRef<GeoJSON.FeatureCollection | null>(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -25,6 +30,7 @@ export function FlohmarktMap() {
     map.on("load", async () => {
       try {
         const geojson = await fetchGeoJSON();
+        allGeoJSONRef.current = geojson;
         map.addSource("stands", { type: "geojson", data: geojson });
         map.addLayer({
           id: "stands-pins",
@@ -40,17 +46,21 @@ export function FlohmarktMap() {
         map.on("click", "stands-pins", (e) => {
           const feature = e.features?.[0];
           if (!feature) return;
-          const { name, adresse, beschreibung } = feature.properties as {
+          const { name, adresse, beschreibung, uhrzeit } = feature.properties as {
             name: string;
             adresse: string;
             beschreibung: string;
+            uhrzeit: string | null;
           };
-          new maplibregl.Popup()
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<strong>${name}</strong><br>${adresse}${beschreibung ? `<br>${beschreibung}` : ""}`,
-            )
-            .addTo(map);
+          const lines = [
+            `<strong>${name}</strong>`,
+            adresse,
+            uhrzeit ? `🕐 ${uhrzeit}` : null,
+            beschreibung || null,
+          ]
+            .filter(Boolean)
+            .join("<br>");
+          new maplibregl.Popup().setLngLat(e.lngLat).setHTML(lines).addTo(map);
         });
         map.on("mouseenter", "stands-pins", () => {
           map.getCanvas().style.cursor = "pointer";
@@ -69,10 +79,31 @@ export function FlohmarktMap() {
     };
   }, []);
 
+  // Re-filter when kategorienFilter changes
+  useEffect(() => {
+    const map = mapRef.current;
+    const all = allGeoJSONRef.current;
+    if (!map || !all) return;
+
+    const filtered: GeoJSON.FeatureCollection =
+      kategorienFilter.length === 0
+        ? all
+        : {
+            type: "FeatureCollection",
+            features: all.features.filter((f) => {
+              const cats = (f.properties?.kategorien ?? []) as string[];
+              return cats.some((k) => kategorienFilter.includes(k));
+            }),
+          };
+
+    const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
+    source?.setData(filtered);
+  }, [kategorienFilter]);
+
   return (
     <div
       ref={containerRef}
-      style={{ width: "100%", height: "400px" }}
+      style={{ width: "100%", height: "100%" }}
       role="img"
       aria-label="Karte mit Garagenflohmarkt-Ständen in Zirndorf"
     />

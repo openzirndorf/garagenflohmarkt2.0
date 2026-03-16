@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { type CreatedStand, cancelStand, fetchMyStand, updateStand } from "../api";
+import { KATEGORIEN } from "./stand-form";
 
 const EDIT_TOKEN_KEY = "flohmarkt_edit_token";
 
@@ -15,7 +16,13 @@ const STATUS_LABEL: Record<string, string> = {
 export function MeinStand({ onCancelled }: Props) {
   const [stand, setStand] = useState<CreatedStand | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", adresse: "", beschreibung: "" });
+  const [editForm, setEditForm] = useState({
+    name: "",
+    adresse: "",
+    beschreibung: "",
+    kategorien: [] as string[],
+    uhrzeit: "",
+  });
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,11 +46,22 @@ export function MeinStand({ onCancelled }: Props) {
 
   const isApproved = stand.status === "APPROVED";
 
+  const toggleKategorie = (k: string) => {
+    setEditForm((f) => ({
+      ...f,
+      kategorien: f.kategorien.includes(k)
+        ? f.kategorien.filter((c) => c !== k)
+        : [...f.kategorien, k],
+    }));
+  };
+
   const handleEdit = () => {
     setEditForm({
       name: stand.name,
       adresse: stand.adresse,
       beschreibung: stand.beschreibung ?? "",
+      kategorien: stand.kategorien ?? [],
+      uhrzeit: stand.uhrzeit ?? "",
     });
     setEditing(true);
     setError(null);
@@ -84,7 +102,7 @@ export function MeinStand({ onCancelled }: Props) {
       style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
       className="border border-blue-100 bg-blue-50 p-4"
     >
-      <p className="text-xs font-semibold uppercase tracking-wide text-blue-500 mb-2">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-500">
         Dein angemeldeter Stand
       </p>
 
@@ -96,7 +114,7 @@ export function MeinStand({ onCancelled }: Props) {
             </label>
             <input
               id="edit-name"
-              className="border border-input rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring bg-white"
+              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={editForm.name}
               onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
             />
@@ -107,10 +125,44 @@ export function MeinStand({ onCancelled }: Props) {
             </label>
             <input
               id="edit-adresse"
-              className="border border-input rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring bg-white"
+              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={editForm.adresse}
               onChange={(e) => setEditForm((f) => ({ ...f, adresse: e.target.value }))}
             />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="edit-uhrzeit" className="text-xs font-medium text-gray-600">
+              Uhrzeit
+            </label>
+            <input
+              id="edit-uhrzeit"
+              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="z.B. 9:00 – 14:00 Uhr"
+              value={editForm.uhrzeit}
+              onChange={(e) => setEditForm((f) => ({ ...f, uhrzeit: e.target.value }))}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-600">Kategorien</span>
+            <div className="flex flex-wrap gap-1.5">
+              {KATEGORIEN.map((k) => {
+                const active = editForm.kategorien.includes(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => toggleKategorie(k)}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-blue-400"
+                    }`}
+                  >
+                    {k}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <label htmlFor="edit-beschreibung" className="text-xs font-medium text-gray-600">
@@ -118,7 +170,7 @@ export function MeinStand({ onCancelled }: Props) {
             </label>
             <textarea
               id="edit-beschreibung"
-              className="border border-input rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring bg-white min-h-[60px] resize-y"
+              className="min-h-[60px] resize-y rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
               value={editForm.beschreibung}
               onChange={(e) => setEditForm((f) => ({ ...f, beschreibung: e.target.value }))}
             />
@@ -128,7 +180,7 @@ export function MeinStand({ onCancelled }: Props) {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="bg-blue-600 text-white rounded px-4 py-1.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
               {saving ? "Speichern…" : "Speichern"}
             </button>
@@ -147,6 +199,19 @@ export function MeinStand({ onCancelled }: Props) {
           <div className="flex flex-col gap-0.5">
             <p className="font-semibold text-gray-900">{stand.name}</p>
             <p className="text-sm text-gray-500">{stand.adresse}</p>
+            {stand.uhrzeit && <p className="mt-0.5 text-xs text-gray-500">🕐 {stand.uhrzeit}</p>}
+            {stand.kategorien && stand.kategorien.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {stand.kategorien.map((k) => (
+                  <span
+                    key={k}
+                    className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700"
+                  >
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
             <p
               className={`mt-1 text-xs font-medium ${isApproved ? "text-[--oz-green]" : "text-blue-600"}`}
             >

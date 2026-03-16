@@ -36,6 +36,8 @@ class StandIn(BaseModel):
     adresse: str
     beschreibung: str | None = None
     email: EmailStr  # Pflichtfeld – wird für E-Mail-Bestätigung benötigt
+    kategorien: list[str] = []
+    uhrzeit: str | None = None
     # Honeypot: muss leer bleiben; Bots füllen versteckte Felder aus
     website: str | None = None
 
@@ -44,6 +46,8 @@ class StandPatch(BaseModel):
     name: str | None = None
     adresse: str | None = None
     beschreibung: str | None = None
+    kategorien: list[str] | None = None
+    uhrzeit: str | None = None
 
 
 # GET /stands – öffentlich (Karte ist public)
@@ -51,7 +55,7 @@ class StandPatch(BaseModel):
 async def list_stands():
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT id, name, adresse, lat, lng, beschreibung, created_at "
+        "SELECT id, name, adresse, lat, lng, beschreibung, kategorien, uhrzeit, created_at "
         "FROM stands WHERE status = 'APPROVED' ORDER BY created_at DESC"
     )
     return [dict(r) for r in rows]
@@ -62,7 +66,7 @@ async def list_stands():
 async def stands_geojson():
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT id, name, adresse, lat, lng, beschreibung FROM stands "
+        "SELECT id, name, adresse, lat, lng, beschreibung, kategorien, uhrzeit FROM stands "
         "WHERE status = 'APPROVED' AND lat IS NOT NULL AND lng IS NOT NULL"
     )
     return {
@@ -76,6 +80,8 @@ async def stands_geojson():
                     "name": r["name"],
                     "adresse": r["adresse"],
                     "beschreibung": r["beschreibung"],
+                    "kategorien": list(r["kategorien"] or []),
+                    "uhrzeit": r["uhrzeit"],
                 },
             }
             for r in rows
@@ -100,10 +106,11 @@ async def create_stand(body: StandIn, request: Request):
 
     pool = await get_pool()
     row = await pool.fetchrow(
-        "INSERT INTO stands (name, adresse, lat, lng, beschreibung, email) "
-        "VALUES ($1,$2,$3,$4,$5,$6) "
-        "RETURNING id, name, adresse, lat, lng, beschreibung, status, edit_token, created_at",
+        "INSERT INTO stands (name, adresse, lat, lng, beschreibung, email, kategorien, uhrzeit) "
+        "VALUES ($1,$2,$3,$4,$5,$6,$7,$8) "
+        "RETURNING id, name, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, edit_token, created_at",
         body.name, body.adresse, lat, lng, body.beschreibung, body.email,
+        body.kategorien, body.uhrzeit,
     )
     result = dict(row)
 
@@ -207,7 +214,7 @@ def _confirmation_html(
 async def get_stand_by_token(edit_token: str):
     pool = await get_pool()
     row = await pool.fetchrow(
-        "SELECT id, name, adresse, lat, lng, beschreibung, status, edit_token, created_at "
+        "SELECT id, name, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, edit_token, created_at "
         "FROM stands WHERE edit_token = $1",
         edit_token,
     )
@@ -219,7 +226,7 @@ async def get_stand_by_token(edit_token: str):
 # PATCH /stands/by-token/{edit_token} – eigenen Stand bearbeiten
 @router.patch("/by-token/{edit_token}")
 async def update_stand(edit_token: str, body: StandPatch):
-    updates: dict = {k: v for k, v in body.model_dump().items() if v is not None}
+    updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
 
@@ -234,7 +241,7 @@ async def update_stand(edit_token: str, body: StandPatch):
     pool = await get_pool()
     row = await pool.fetchrow(
         f"UPDATE stands SET {set_clause} WHERE edit_token = $1 "
-        "RETURNING id, name, adresse, lat, lng, beschreibung, status, edit_token, created_at",
+        "RETURNING id, name, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, edit_token, created_at",
         edit_token, *values,
     )
     if not row:
@@ -273,6 +280,15 @@ async def admin_list():
     pool = await get_pool()
     rows = await pool.fetch("SELECT * FROM stands ORDER BY created_at DESC")
     return [dict(r) for r in rows]
+
+
+# DELETE /stands/{id} – Bearer Token (Admin löscht Stand)
+@router.delete("/{stand_id}", status_code=204, dependencies=[Depends(require_admin_auth)])
+async def delete_stand_admin(stand_id: int):
+    pool = await get_pool()
+    result = await pool.execute("DELETE FROM stands WHERE id = $1", stand_id)
+    if result == "DELETE 0":
+        raise HTTPException(status_code=404, detail="Stand nicht gefunden")
 
 
 # POST /stands/{id}/approve – Bearer Token
