@@ -1,4 +1,8 @@
 # Kopieren nach terraform.tfvars und ausfüllen (wird NICHT eingecheckt)
+#
+# Hinweis: Die SMTP-Variablen können alternativ direkt im Scaleway-Webinterface gesetzt werden:
+#   Serverless Containers → flohmarkt-api → Environment Variables
+# Das ist einfacher, wenn du keinen lokalen tofu apply machen willst.
 
 scw_access_key      = "SCW_ACCESS_KEY_HIER"
 scw_secret_key      = "SCW_SECRET_KEY_HIER"
@@ -8,3 +12,13 @@ api_username        = "flohmarkt"
 api_password        = "EIN_ANDERES_LANGES_ZUFAELLIGES_GEHEIMNIS"
 container_image_tag = "latest"
 # database_url wird automatisch aus scaleway_sdb_sql_database.flohmarkt.endpoint abgeleitet
+
+# SMTP – E-Mail-Bestätigung für neue Inserate
+# smtp_from ist optional – wenn leer, wird smtp_user als Absender verwendet
+smtp_host     = "smtp.beispiel.de"
+smtp_port     = 587
+smtp_user     = "flohmarkt@beispiel.de"
+smtp_password = "SMTP_PASSWORT"
+smtp_from     = ""   # optional
+backend_url   = "https://SCALEWAY_CONTAINER_URL"   # z.B. https://xyz-flohmarkt-api.functions.fnc.fr-par.scw.cloud
+frontend_url  = "https://openzirndorf.github.io/garagenflohmarkt2.0"

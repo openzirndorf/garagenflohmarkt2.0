@@ -93,6 +93,16 @@ resource "scaleway_container" "flohmarkt_api" {
     ADMIN_TOKEN    = var.admin_token
     API_USERNAME   = var.api_username
     API_PASSWORD   = var.api_password
+    SMTP_USER      = var.smtp_user
+    SMTP_PASSWORD  = var.smtp_password
+  }
+
+  environment_variables = {
+    SMTP_HOST    = var.smtp_host
+    SMTP_PORT    = tostring(var.smtp_port)
+    SMTP_FROM    = var.smtp_from
+    BACKEND_URL  = var.backend_url
+    FRONTEND_URL = var.frontend_url
   }
 
   privacy = "public"

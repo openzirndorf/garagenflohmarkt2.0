@@ -8,7 +8,7 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Wartet auf Freigabe",
+  PENDING: "Warte auf E-Mail-Bestätigung",
   APPROVED: "Freigeschaltet ✓",
 };
 
@@ -79,6 +79,11 @@ export function MeinStand({ onCancelled }: Props) {
           {cancelling ? "…" : "Zurückziehen"}
         </button>
       </div>
+      {stand.status === "PENDING" && (
+        <p className="mt-2 text-xs text-blue-500">
+          Bitte bestätige deine E-Mail-Adresse über den Link in der Bestätigungsmail.
+        </p>
+      )}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </section>
   );

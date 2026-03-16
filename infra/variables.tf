@@ -44,3 +44,47 @@ variable "container_image_tag" {
   type        = string
   default     = "latest"
 }
+
+variable "smtp_host" {
+  description = "SMTP-Server-Hostname"
+  type        = string
+  default     = ""
+}
+
+variable "smtp_port" {
+  description = "SMTP-Port (Standard: 587)"
+  type        = number
+  default     = 587
+}
+
+variable "smtp_user" {
+  description = "SMTP-Benutzername / Absenderadresse"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "smtp_password" {
+  description = "SMTP-Passwort"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "smtp_from" {
+  description = "Absenderadresse (optional, Standard = smtp_user)"
+  type        = string
+  default     = ""
+}
+
+variable "backend_url" {
+  description = "Öffentliche URL des Backends (für Bestätigungslinks in Mails)"
+  type        = string
+  default     = ""
+}
+
+variable "frontend_url" {
+  description = "Öffentliche URL des Frontends (für Weiterleitungen nach Bestätigung)"
+  type        = string
+  default     = "https://openzirndorf.github.io/garagenflohmarkt2.0"
+}

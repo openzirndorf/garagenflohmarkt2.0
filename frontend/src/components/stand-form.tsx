@@ -26,8 +26,8 @@ export function StandForm({ onSuccess }: Props) {
   const mountedAt = useRef(Date.now());
 
   const handleSubmit = async () => {
-    if (!form.name || !form.adresse) {
-      setErrorMsg("Name und Adresse sind Pflichtfelder.");
+    if (!form.name || !form.adresse || !form.email) {
+      setErrorMsg("Name, Adresse und E-Mail sind Pflichtfelder.");
       setStatus("error");
       return;
     }
@@ -59,10 +59,14 @@ export function StandForm({ onSuccess }: Props) {
       <Card>
         <CardContent className="pt-6 flex flex-col gap-3">
           <p role="alert" className="text-green-700 font-medium">
-            Dein Stand wurde eingereicht und wird bald freigeschaltet. 🎉
+            Dein Stand wurde eingereicht!
           </p>
-          <p className="text-sm text-gray-600">
-            Speichere diesen Link um deinen Stand später zu verwalten:
+          <p className="text-sm text-gray-700">
+            Wir haben dir eine Bestätigungsmail geschickt. Bitte klicke auf den Link in der
+            Mail, damit dein Stand auf der Karte erscheint.
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            Speichere außerdem diesen Link, um deinen Stand später zu verwalten:
           </p>
           <code className="text-xs bg-gray-100 rounded px-2 py-1 break-all select-all">
             {window.location.origin}
@@ -131,16 +135,20 @@ export function StandForm({ onSuccess }: Props) {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">
-              E-Mail (optional, für Rückfragen)
+              E-Mail *
             </label>
             <input
               id="email"
               type="email"
               className="border border-input rounded-md px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              placeholder="deine@email.de"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               disabled={status === "loading"}
             />
+            <p className="text-xs text-gray-500">
+              Du erhältst einen Bestätigungslink per Mail – erst danach wird dein Stand sichtbar.
+            </p>
           </div>
 
           {/* Honeypot – für Menschen unsichtbar, für Bots verlockend */}
