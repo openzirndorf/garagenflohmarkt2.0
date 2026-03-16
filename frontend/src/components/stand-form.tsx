@@ -179,8 +179,8 @@ export function StandForm({ onSuccess }: Props) {
                     disabled={status === "loading"}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                       active
-                        ? "border-[--oz-green] bg-[--oz-green] text-white"
-                        : "border-gray-300 bg-white text-gray-600 hover:border-[--oz-green] hover:text-[--oz-green]"
+                        ? "border-[#009a00] bg-[#009a00] text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
                     }`}
                   >
                     {k}

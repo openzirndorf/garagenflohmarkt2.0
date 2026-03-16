@@ -213,7 +213,7 @@ export function MeinStand({ onCancelled }: Props) {
               </div>
             )}
             <p
-              className={`mt-1 text-xs font-medium ${isApproved ? "text-[--oz-green]" : "text-blue-600"}`}
+              className={`mt-1 text-xs font-medium ${isApproved ? "text-[#009a00]" : "text-blue-600"}`}
             >
               {STATUS_LABEL[stand.status] ?? stand.status}
             </p>

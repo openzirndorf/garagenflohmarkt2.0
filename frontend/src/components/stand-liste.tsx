@@ -33,10 +33,7 @@ export function StandListe({ stands, loading }: Props) {
           style={{ boxShadow: "var(--oz-shadow-sm)", borderRadius: "var(--oz-radius-lg)" }}
           className="flex items-start gap-3 border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md"
         >
-          <span
-            aria-hidden="true"
-            className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[--oz-green]"
-          />
+          <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#009a00]" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className="font-semibold leading-tight text-gray-900">{s.name}</p>
@@ -48,7 +45,7 @@ export function StandListe({ stands, loading }: Props) {
                 {s.kategorien.map((k) => (
                   <span
                     key={k}
-                    className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-[--oz-green]"
+                    className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-[#009a00]"
                   >
                     {k}
                   </span>

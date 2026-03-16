@@ -51,7 +51,7 @@ function Header({ page }: { page: string }) {
           style={{ fontFamily: "var(--oz-font-heading)" }}
           className="text-lg font-extrabold leading-none"
         >
-          Garagenflohmarkt <span className="text-[--oz-green]">Zirndorf</span>
+          Garagenflohmarkt <span className="text-[#009a00]">Zirndorf</span>
         </span>
       </button>
       <a href={PORTAL_URL} className="hidden text-sm text-gray-400 hover:text-gray-600 sm:block">
@@ -59,7 +59,7 @@ function Header({ page }: { page: string }) {
       </a>
       <a
         href="#faq"
-        className={`text-sm transition-colors ${page === "faq" ? "font-semibold text-[--oz-green]" : "text-gray-500 hover:text-gray-700"}`}
+        className={`text-sm transition-colors ${page === "faq" ? "font-semibold text-[#009a00]" : "text-gray-500 hover:text-gray-700"}`}
       >
         Regeln & FAQ
       </a>
@@ -78,11 +78,11 @@ function Header({ page }: { page: string }) {
 function Footer() {
   return (
     <footer className="mt-16 flex justify-center gap-4 border-t py-8 text-sm text-gray-400">
-      <a href={PORTAL_URL} className="transition-colors hover:text-[--oz-green]">
+      <a href={PORTAL_URL} className="transition-colors hover:text-[#009a00]">
         Ein OpenZirndorf-Projekt
       </a>
       <span aria-hidden="true">·</span>
-      <a href="#faq" className="transition-colors hover:text-[--oz-green]">
+      <a href="#faq" className="transition-colors hover:text-[#009a00]">
         Regeln & FAQ
       </a>
       <span aria-hidden="true">·</span>
@@ -90,7 +90,7 @@ function Footer() {
         href={IMPRESSUM_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="transition-colors hover:text-[--oz-green]"
+        className="transition-colors hover:text-[#009a00]"
       >
         Impressum
       </a>
@@ -145,7 +145,7 @@ export function FlohmarktApp() {
             onClick={() => {
               window.location.hash = "";
             }}
-            className="mb-6 text-sm text-[--oz-green] hover:underline"
+            className="mb-6 text-sm text-[#009a00] hover:underline"
           >
             ← Zurück
           </button>
@@ -168,8 +168,8 @@ export function FlohmarktApp() {
                       onClick={() => toggleFilter(k)}
                       className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         active
-                          ? "border-[--oz-green] bg-[--oz-green] text-white"
-                          : "border-gray-300 bg-white text-gray-600 hover:border-[--oz-green] hover:text-[--oz-green]"
+                          ? "border-[#009a00] bg-[#009a00] text-white"
+                          : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
                       }`}
                     >
                       {k}
@@ -197,18 +197,49 @@ export function FlohmarktApp() {
             </section>
 
             <section aria-label="Alle Stände">
-              <h2
-                style={{ fontFamily: "var(--oz-font-heading)" }}
-                className="mb-4 flex items-center gap-2 text-xl font-bold"
-              >
-                Angemeldete Stände
-                {!loading && stands.length > 0 && (
-                  <span className="text-sm font-normal text-gray-400">
-                    ({filteredStands.length}
-                    {kategorienFilter.length > 0 ? ` von ${stands.length}` : ""})
-                  </span>
-                )}
-              </h2>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <h2
+                  style={{ fontFamily: "var(--oz-font-heading)" }}
+                  className="flex items-center gap-2 text-xl font-bold"
+                >
+                  Angemeldete Stände
+                  {!loading && stands.length > 0 && (
+                    <span className="text-sm font-normal text-gray-400">
+                      ({filteredStands.length}
+                      {kategorienFilter.length > 0 ? ` von ${stands.length}` : ""})
+                    </span>
+                  )}
+                </h2>
+                {/* Kategorien-Filter auch in der Liste */}
+                <div className="flex flex-wrap gap-1.5">
+                  {KATEGORIEN.map((k) => {
+                    const active = kategorienFilter.includes(k);
+                    return (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => toggleFilter(k)}
+                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                          active
+                            ? "border-[#009a00] bg-[#009a00] text-white"
+                            : "border-gray-200 bg-white text-gray-500 hover:border-[#009a00] hover:text-[#009a00]"
+                        }`}
+                      >
+                        {k}
+                      </button>
+                    );
+                  })}
+                  {kategorienFilter.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setKategorienFilter([])}
+                      className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
               <StandListe stands={filteredStands} loading={loading} />
             </section>
           </div>

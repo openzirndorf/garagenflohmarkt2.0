@@ -8,7 +8,7 @@ export function Impressum() {
         <button
           type="button"
           onClick={goHome}
-          className="mb-4 inline-block text-sm text-[--oz-green] hover:underline"
+          className="mb-4 inline-block text-sm text-[#009a00] hover:underline"
         >
           ← Zurück
         </button>
@@ -32,7 +32,7 @@ export function Impressum() {
         <h2 className="text-base font-semibold">Kontakt</h2>
         <p className="text-gray-600">
           E-Mail:{" "}
-          <a href="mailto:kontakt@openzirndorf.de" className="text-[--oz-green] hover:underline">
+          <a href="mailto:kontakt@openzirndorf.de" className="text-[#009a00] hover:underline">
             kontakt@openzirndorf.de
           </a>
         </p>
