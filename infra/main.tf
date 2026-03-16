@@ -89,21 +89,17 @@ resource "scaleway_container" "flohmarkt_api" {
   max_scale    = 5
 
   secret_environment_variables = {
-    DATABASE_URL   = local.database_url
-    ADMIN_TOKEN    = var.admin_token
-    API_USERNAME   = var.api_username
-    API_PASSWORD   = var.api_password
-    SCW_SECRET_KEY = var.scw_secret_key
-    SCW_PROJECT_ID = var.scw_project_id
-    SCW_TEM_REGION = var.scw_tem_region
-    BREVO_API_KEY  = var.brevo_api_key
-    SMTP_USER      = var.smtp_user
-    SMTP_PASSWORD  = var.smtp_password
+    DATABASE_URL  = local.database_url
+    ADMIN_TOKEN   = var.admin_token
+    API_USERNAME  = var.api_username
+    API_PASSWORD  = var.api_password
+    SMTP_PASSWORD = var.scw_secret_key
   }
 
   environment_variables = {
-    SMTP_HOST    = var.smtp_host
-    SMTP_PORT    = tostring(var.smtp_port)
+    SMTP_HOST    = "smtp.tem.scaleway.com"
+    SMTP_PORT    = "465"
+    SMTP_USER    = var.scw_project_id
     SMTP_FROM    = var.smtp_from
     BACKEND_URL  = var.backend_url
     FRONTEND_URL = var.frontend_url

@@ -4,7 +4,7 @@ import type { StandFormData } from "../types";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "../ui";
 
 const EDIT_TOKEN_KEY = "flohmarkt_edit_token";
-const MIN_SUBMIT_MS = 3000; // Einreichung muss mindestens 3 Sekunden nach Laden kommen
+const MIN_SUBMIT_MS = 3000;
 
 interface Props {
   onSuccess: () => void;
@@ -18,12 +18,22 @@ const EMPTY: StandFormData = {
   website: "", // Honeypot
 };
 
+const RULES = [
+  "Ich biete ausschließlich gebrauchte Waren an (keine neuen Produkte).",
+  "Mein Stand befindet sich auf meinem Privatgrundstück innerhalb Zirndorfs.",
+  "Ich bin kein gewerblicher Anbieter.",
+  "Ich markiere meinen Stand mit mindestens 3 bunten Luftballons.",
+] as const;
+
 export function StandForm({ onSuccess }: Props) {
   const [form, setForm] = useState<StandFormData>(EMPTY);
+  const [confirmed, setConfirmed] = useState<boolean[]>(RULES.map(() => false));
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [editToken, setEditToken] = useState<string | null>(null);
   const mountedAt = useRef(Date.now());
+
+  const allConfirmed = confirmed.every(Boolean);
 
   const handleSubmit = async () => {
     if (!form.name || !form.adresse || !form.email) {
@@ -31,8 +41,11 @@ export function StandForm({ onSuccess }: Props) {
       setStatus("error");
       return;
     }
-
-    // Zeitprüfung: zu schnell = vermutlich Bot
+    if (!allConfirmed) {
+      setErrorMsg("Bitte bestätige alle Hinweise.");
+      setStatus("error");
+      return;
+    }
     if (Date.now() - mountedAt.current < MIN_SUBMIT_MS) {
       setErrorMsg("Bitte fülle das Formular etwas langsamer aus.");
       setStatus("error");
@@ -42,7 +55,6 @@ export function StandForm({ onSuccess }: Props) {
     setStatus("loading");
     try {
       const created = await createStand(form);
-      // Token im Browser speichern → ermöglicht späteren Zugriff
       localStorage.setItem(EDIT_TOKEN_KEY, created.edit_token);
       setEditToken(created.edit_token);
       setStatus("success");
@@ -151,7 +163,35 @@ export function StandForm({ onSuccess }: Props) {
             </p>
           </div>
 
-          {/* Honeypot – für Menschen unsichtbar, für Bots verlockend */}
+          {/* Teilnahmebedingungen */}
+          <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm font-semibold text-amber-800">
+              Bitte bestätige die Teilnahmebedingungen:
+            </p>
+            {RULES.map((rule, i) => (
+              <label key={rule} className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
+                  checked={confirmed[i]}
+                  onChange={(e) =>
+                    setConfirmed((prev) => prev.map((v, j) => (j === i ? e.target.checked : v)))
+                  }
+                  disabled={status === "loading"}
+                />
+                <span className="text-sm text-amber-900">{rule}</span>
+              </label>
+            ))}
+            <p className="text-xs text-amber-700 mt-1">
+              Weitere Infos auf der{" "}
+              <a href="#faq" className="underline hover:text-amber-900">
+                Regeln & FAQ-Seite
+              </a>
+              .
+            </p>
+          </div>
+
+          {/* Honeypot */}
           <div aria-hidden="true" className="hidden">
             <label htmlFor="website">Website</label>
             <input
@@ -165,7 +205,11 @@ export function StandForm({ onSuccess }: Props) {
             />
           </div>
 
-          <Button onClick={handleSubmit} disabled={status === "loading"}>
+          <Button
+            onClick={handleSubmit}
+            disabled={status === "loading" || !allConfirmed}
+            style={{ backgroundColor: allConfirmed ? "#009a00" : undefined }}
+          >
             {status === "loading" ? "Wird eingereicht…" : "Stand anmelden"}
           </Button>
         </div>
