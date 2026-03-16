@@ -12,9 +12,23 @@ const IMPRESSUM_URL = "https://openzirndorf.github.io/openzirndorf-portal/#impre
 
 function OzLogo() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 32 32"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
       <rect width="32" height="32" rx="6" fill="#009a00" />
-      <text x="16" y="23" fontSize="18" textAnchor="middle" fontFamily="sans-serif" fontWeight="bold" fill="white">
+      <text
+        x="16"
+        y="23"
+        fontSize="18"
+        textAnchor="middle"
+        fontFamily="sans-serif"
+        fontWeight="bold"
+        fill="white"
+      >
         OZ
       </text>
     </svg>
@@ -86,9 +100,7 @@ function Footer() {
 export function FlohmarktApp() {
   const [stands, setStands] = useState<Stand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(() =>
-    window.location.hash === "#faq" ? "faq" : "main",
-  );
+  const [page, setPage] = useState(() => (window.location.hash === "#faq" ? "faq" : "main"));
 
   const loadStands = useCallback(async () => {
     setLoading(true);
@@ -119,7 +131,9 @@ export function FlohmarktApp() {
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
           <button
             type="button"
-            onClick={() => { window.location.hash = ""; }}
+            onClick={() => {
+              window.location.hash = "";
+            }}
             className="mb-6 text-sm text-[--oz-green] hover:underline"
           >
             ← Zurück
