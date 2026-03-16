@@ -10,29 +10,45 @@ import { StandListe } from "./stand-liste";
 
 const PORTAL_URL = "https://openzirndorf.github.io/openzirndorf-portal/";
 const IMPRESSUM_URL = "https://openzirndorf.github.io/openzirndorf-portal/#impressum";
+const EVENT_DATE = new Date("2026-04-26T10:00:00+02:00");
+
+function daysUntilEvent(): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((EVENT_DATE.getTime() - today.getTime()) / 86_400_000);
+}
+
+function downloadICS() {
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//OpenZirndorf//Garagenflohmarkt//DE",
+    "BEGIN:VEVENT",
+    "DTSTART:20260426T080000Z",
+    "DTEND:20260426T140000Z",
+    "SUMMARY:Garagenflohmarkt Zirndorf",
+    "DESCRIPTION:Stadtgebietsweiter Garagenflohmarkt in Zirndorf",
+    "LOCATION:Zirndorf\\, Bayern",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+  const blob = new Blob([ics], { type: "text/calendar" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "garagenflohmarkt-zirndorf.ics";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 
 function OzLogo() {
   return (
-    <svg
-      width="28"
-      height="28"
-      viewBox="0 0 32 32"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      <rect width="32" height="32" rx="6" fill="#009a00" />
-      <text
-        x="16"
-        y="23"
-        fontSize="18"
-        textAnchor="middle"
-        fontFamily="sans-serif"
-        fontWeight="bold"
-        fill="white"
-      >
-        OZ
-      </text>
-    </svg>
+    <img
+      src="https://openzirndorf.de/static/media/logo.png"
+      alt="OpenZirndorf"
+      width={28}
+      height={28}
+      className="rounded-md"
+    />
   );
 }
 
@@ -77,23 +93,28 @@ function Header({ page }: { page: string }) {
 
 function Footer() {
   return (
-    <footer className="mt-16 flex justify-center gap-4 border-t py-8 text-sm text-gray-400">
-      <a href={PORTAL_URL} className="transition-colors hover:text-[#009a00]">
-        Ein OpenZirndorf-Projekt
-      </a>
-      <span aria-hidden="true">·</span>
-      <a href="#faq" className="transition-colors hover:text-[#009a00]">
-        Regeln & FAQ
-      </a>
-      <span aria-hidden="true">·</span>
-      <a
-        href={IMPRESSUM_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="transition-colors hover:text-[#009a00]"
-      >
-        Impressum
-      </a>
+    <footer className="mt-16 border-t px-4 py-8 text-sm text-gray-400">
+      <div className="mx-auto flex max-w-2xl flex-col items-center gap-3">
+        <div className="flex flex-wrap justify-center gap-4">
+          <a href={PORTAL_URL} className="transition-colors hover:text-[#009a00]">
+            Ein OpenZirndorf-Projekt
+          </a>
+          <span aria-hidden="true">·</span>
+          <a href="#faq" className="transition-colors hover:text-[#009a00]">
+            Regeln & FAQ
+          </a>
+          <span aria-hidden="true">·</span>
+          <a
+            href={IMPRESSUM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-[#009a00]"
+          >
+            Impressum
+          </a>
+        </div>
+        <p className="text-xs text-gray-300">Entwickelt mit ❤️ in Zirndorf</p>
+      </div>
     </footer>
   );
 }
@@ -193,10 +214,21 @@ export function FlohmarktApp() {
           {/* Event-Info-Banner */}
           <div className="border-b border-green-100 bg-green-50 px-4 py-3">
             <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <p className="text-sm font-semibold text-[#009a00]">
-                Sonntag, 26. April 2026 · 10:00 – 16:00 Uhr
-              </p>
-              <p className="text-xs text-green-700">Zirndorf – Garagenflohmarkt stadtgebietweit</p>
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                <p className="text-sm font-semibold text-[#009a00]">
+                  Sonntag, 26. April 2026 · 10:00 – 16:00 Uhr
+                </p>
+                {daysUntilEvent() > 0 && (
+                  <span className="text-xs text-green-600">in {daysUntilEvent()} Tagen</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={downloadICS}
+                className="text-xs text-green-700 underline-offset-2 hover:underline"
+              >
+                + Kalender
+              </button>
             </div>
           </div>
 

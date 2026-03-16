@@ -282,6 +282,31 @@ async def admin_list():
     return [dict(r) for r in rows]
 
 
+# PATCH /stands/{id} – Bearer Token (Admin bearbeitet Stand)
+@router.patch("/{stand_id}", dependencies=[Depends(require_admin_auth)])
+async def update_stand_admin(stand_id: int, body: StandPatch):
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
+
+    if "adresse" in updates:
+        coords = await geocode(updates["adresse"])
+        updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
+
+    set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
+    values = list(updates.values())
+
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        f"UPDATE stands SET {set_clause} WHERE id = $1 "
+        "RETURNING id, name, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, edit_token, email, created_at",
+        stand_id, *values,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    return dict(row)
+
+
 # DELETE /stands/{id} – Bearer Token (Admin löscht Stand)
 @router.delete("/{stand_id}", status_code=204, dependencies=[Depends(require_admin_auth)])
 async def delete_stand_admin(stand_id: int):

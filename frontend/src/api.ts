@@ -68,6 +68,29 @@ export async function fetchMyStand(editToken: string): Promise<CreatedStand> {
   return res.json();
 }
 
+export async function updateStandAdmin(
+  id: number,
+  token: string,
+  data: {
+    name?: string;
+    adresse?: string;
+    beschreibung?: string;
+    kategorien?: string[];
+    uhrzeit?: string;
+  },
+): Promise<AdminStand> {
+  const res = await fetch(`${API}/stands/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Bearbeitung fehlgeschlagen");
+  return res.json();
+}
+
 export async function deleteStandAdmin(id: number, token: string): Promise<void> {
   const res = await fetch(`${API}/stands/${id}`, {
     method: "DELETE",
