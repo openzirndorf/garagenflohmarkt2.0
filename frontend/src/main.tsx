@@ -1,12 +1,26 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { AdminPanel } from "./components/admin-panel";
 import { FlohmarktApp } from "./components/flohmarkt-app";
 import "./style.css";
 
+function App() {
+  const [isAdmin, setIsAdmin] = useState(window.location.hash === "#admin");
+
+  useEffect(() => {
+    const onHash = () => setIsAdmin(window.location.hash === "#admin");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  return isAdmin ? <AdminPanel /> : <FlohmarktApp />;
+}
+
 const root = document.getElementById("root");
 if (!root) throw new Error("#root not found");
 
-const isAdmin = window.location.hash === "#admin";
-
-createRoot(root).render(<StrictMode>{isAdmin ? <AdminPanel /> : <FlohmarktApp />}</StrictMode>);
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 from app.auth import require_admin_auth, require_api_auth
 from app.database import get_pool
-from app.email import FRONTEND_URL, send_confirmation_email, smtp_configured
+from app.email import FRONTEND_URL, send_confirmation_email, smtp_configured, smtp_debug_info
 from app.geocode import geocode
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,12 @@ class StandIn(BaseModel):
     email: EmailStr  # Pflichtfeld – wird für E-Mail-Bestätigung benötigt
     # Honeypot: muss leer bleiben; Bots füllen versteckte Felder aus
     website: str | None = None
+
+
+class StandPatch(BaseModel):
+    name: str | None = None
+    adresse: str | None = None
+    beschreibung: str | None = None
 
 
 # GET /stands – öffentlich (Karte ist public)
@@ -210,6 +216,32 @@ async def get_stand_by_token(edit_token: str):
     return dict(row)
 
 
+# PATCH /stands/by-token/{edit_token} – eigenen Stand bearbeiten
+@router.patch("/by-token/{edit_token}")
+async def update_stand(edit_token: str, body: StandPatch):
+    updates: dict = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
+
+    # Adresse geändert → neu geokodieren
+    if "adresse" in updates:
+        coords = await geocode(updates["adresse"])
+        updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
+
+    set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
+    values = list(updates.values())
+
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        f"UPDATE stands SET {set_clause} WHERE edit_token = $1 "
+        "RETURNING id, name, adresse, lat, lng, beschreibung, status, edit_token, created_at",
+        edit_token, *values,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    return dict(row)
+
+
 # DELETE /stands/by-token/{edit_token} – eigenen Stand zurückziehen
 @router.delete("/by-token/{edit_token}", status_code=204)
 async def cancel_stand(edit_token: str):
@@ -220,6 +252,19 @@ async def cancel_stand(edit_token: str):
     )
     if result == "DELETE 0":
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+
+
+# POST /stands/test-email – Bearer Token, sendet Test-Mail und gibt Ergebnis zurück
+@router.post("/test-email", dependencies=[Depends(require_admin_auth)])
+async def test_email(to: str):
+    info = smtp_debug_info()
+    if not info["configured"]:
+        return {"ok": False, "config": info, "error": "SMTP nicht vollständig konfiguriert"}
+    try:
+        await send_confirmation_email(to, "Testnutzer", "00000000-0000-0000-0000-000000000000")
+        return {"ok": True, "config": info}
+    except Exception as exc:
+        return {"ok": False, "config": info, "error": str(exc)}
 
 
 # GET /stands/admin – Bearer Token, NIE im Frontend verwenden

@@ -36,27 +36,62 @@ FRONTEND_URL = os.getenv(
 
 
 def smtp_configured() -> bool:
-    return bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD and BACKEND_URL)
+    # Env-Vars werden beim Import gelesen – zur Laufzeit noch mal prüfen falls nötig
+    host = os.getenv("SMTP_HOST", SMTP_HOST)
+    user = os.getenv("SMTP_USER", SMTP_USER)
+    pw = os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
+    bu = os.getenv("BACKEND_URL", BACKEND_URL)
+    return bool(host and user and pw and bu)
+
+
+def smtp_debug_info() -> dict:
+    """Gibt aktuelle SMTP-Konfiguration zurück (ohne Passwort)."""
+    host = os.getenv("SMTP_HOST", SMTP_HOST)
+    port = int(os.getenv("SMTP_PORT", str(SMTP_PORT)))
+    user = os.getenv("SMTP_USER", SMTP_USER)
+    pw = os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
+    backend = os.getenv("BACKEND_URL", BACKEND_URL)
+    ssl_env = os.getenv("SMTP_SSL", "").lower()
+    use_ssl = ssl_env == "true" if ssl_env else port == 465
+    return {
+        "smtp_host": host or "(nicht gesetzt)",
+        "smtp_port": port,
+        "smtp_user": user or "(nicht gesetzt)",
+        "smtp_password_set": bool(pw),
+        "smtp_ssl": use_ssl,
+        "backend_url": backend or "(nicht gesetzt)",
+        "configured": bool(host and user and pw and backend),
+    }
 
 
 def _send_sync(to: str, subject: str, body_text: str, body_html: str) -> None:
+    # Env-Vars zur Laufzeit lesen (nicht gecacht vom Modulimport)
+    host = os.getenv("SMTP_HOST", SMTP_HOST)
+    port = int(os.getenv("SMTP_PORT", str(SMTP_PORT)))
+    user = os.getenv("SMTP_USER", SMTP_USER)
+    password = os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
+    sender = os.getenv("SMTP_FROM", SMTP_FROM) or user
+    ssl_env = os.getenv("SMTP_SSL", "").lower()
+    use_ssl = ssl_env == "true" if ssl_env else port == 465
+    use_starttls = not use_ssl
+
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
-    msg["From"] = SMTP_FROM
+    msg["From"] = sender
     msg["To"] = to
     msg.attach(MIMEText(body_text, "plain", "utf-8"))
     msg.attach(MIMEText(body_html, "html", "utf-8"))
 
-    if SMTP_SSL:
-        with smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
-            smtp.login(SMTP_USER, SMTP_PASSWORD)
-            smtp.sendmail(SMTP_FROM, [to], msg.as_string())
+    if use_ssl:
+        with smtplib.SMTP_SSL(host, port, timeout=15) as smtp:
+            smtp.login(user, password)
+            smtp.sendmail(sender, [to], msg.as_string())
     else:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as smtp:
-            if SMTP_STARTTLS:
+        with smtplib.SMTP(host, port, timeout=15) as smtp:
+            if use_starttls:
                 smtp.starttls()
-            smtp.login(SMTP_USER, SMTP_PASSWORD)
-            smtp.sendmail(SMTP_FROM, [to], msg.as_string())
+            smtp.login(user, password)
+            smtp.sendmail(sender, [to], msg.as_string())
 
 
 async def send_confirmation_email(email: str, name: str, edit_token: str) -> None:

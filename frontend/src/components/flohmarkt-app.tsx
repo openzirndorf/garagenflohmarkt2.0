@@ -2,16 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchStands } from "../api";
 import type { Stand } from "../types";
 import { FlohmarktMap } from "./flohmarkt-map";
-import { Impressum } from "./impressum";
 import { MeinStand } from "./mein-stand";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
 const PORTAL_URL = "https://openzirndorf.github.io/openzirndorf-portal/";
+const IMPRESSUM_URL = "https://openzirndorf.github.io/openzirndorf-portal/#impressum";
 
-function Header({ page }: { page: string }) {
-  const navCls =
-    page === "impressum" ? "font-medium text-gray-900" : "text-gray-500 hover:text-gray-700";
+function Header() {
   const goHome = () => {
     window.location.hash = "";
   };
@@ -34,7 +32,12 @@ function Header({ page }: { page: string }) {
       <a href={PORTAL_URL} className="hidden text-sm text-gray-400 hover:text-gray-600 sm:block">
         OpenZirndorf ↗
       </a>
-      <a href="#impressum" className={`text-sm transition-colors ${navCls}`}>
+      <a
+        href={IMPRESSUM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-sm text-gray-500 transition-colors hover:text-gray-700"
+      >
         Impressum
       </a>
     </header>
@@ -48,7 +51,12 @@ function Footer() {
         Ein OpenZirndorf-Projekt
       </a>
       <span aria-hidden="true">·</span>
-      <a href="#impressum" className="transition-colors hover:text-[--oz-green]">
+      <a
+        href={IMPRESSUM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="transition-colors hover:text-[--oz-green]"
+      >
         Impressum
       </a>
     </footer>
@@ -58,9 +66,6 @@ function Footer() {
 export function FlohmarktApp() {
   const [stands, setStands] = useState<Stand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(() =>
-    window.location.hash === "#impressum" ? "impressum" : "main",
-  );
 
   const loadStands = useCallback(async () => {
     setLoading(true);
@@ -77,22 +82,11 @@ export function FlohmarktApp() {
     loadStands();
   }, [loadStands]);
 
-  useEffect(() => {
-    const onHash = () => setPage(window.location.hash === "#impressum" ? "impressum" : "main");
-    window.addEventListener("hashchange", onHash);
-    return () => window.removeEventListener("hashchange", onHash);
-  }, []);
-
   return (
     <div className="flex min-h-screen flex-col">
-      <Header page={page} />
+      <Header />
 
-      {page === "impressum" ? (
-        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
-          <Impressum />
-        </main>
-      ) : (
-        <main className="flex-1">
+      <main className="flex-1">
           <div className="border-b border-green-100 bg-[--oz-green-light] px-4 py-10">
             <div className="mx-auto max-w-2xl">
               <h1
@@ -133,8 +127,7 @@ export function FlohmarktApp() {
               <StandListe stands={stands} loading={loading} />
             </section>
           </div>
-        </main>
-      )}
+      </main>
 
       <Footer />
     </div>

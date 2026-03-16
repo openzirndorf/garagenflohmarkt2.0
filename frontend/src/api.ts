@@ -68,6 +68,19 @@ export async function fetchMyStand(editToken: string): Promise<CreatedStand> {
   return res.json();
 }
 
+export async function updateStand(
+  editToken: string,
+  data: { name?: string; adresse?: string; beschreibung?: string },
+): Promise<CreatedStand> {
+  const res = await fetch(`${API}/stands/by-token/${editToken}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Speichern fehlgeschlagen");
+  return res.json();
+}
+
 export async function cancelStand(editToken: string): Promise<void> {
   const res = await fetch(`${API}/stands/by-token/${editToken}`, {
     method: "DELETE",
