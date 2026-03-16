@@ -1,14 +1,28 @@
-"""SMTP E-Mail-Versand für Bestätigungsmails.
+"""E-Mail-Versand für Bestätigungsmails.
 
-Benötigte Umgebungsvariablen:
-  SMTP_HOST       – z.B. smtp.mailbox.org
-  SMTP_PORT       – Standard: 587
-  SMTP_USER       – Benutzername / Absenderadresse
-  SMTP_PASSWORD   – Passwort
-  SMTP_FROM       – Absenderadresse (optional, Standard = SMTP_USER)
-  SMTP_STARTTLS   – "true"/"false", Standard: true
-  BACKEND_URL     – öffentliche Backend-URL, z.B. https://api.example.com
-  FRONTEND_URL    – öffentliche Frontend-URL, z.B. https://example.com/flohmarkt
+Priorität:
+  1. Scaleway Transactional Email (TEM) – empfohlen für Scaleway-Deployments
+  2. Brevo HTTP-API – kostenloser Fallback
+  3. SMTP – nur für lokale Entwicklung
+
+Benötigte Umgebungsvariablen (eine der folgenden Optionen):
+
+  Option 1 – Scaleway TEM:
+    SCW_SECRET_KEY    – Scaleway Secret Key (IAM)
+    SCW_PROJECT_ID    – Scaleway Project ID
+    SCW_TEM_REGION    – Region des TEM-Projekts (Standard: fr-par)
+    SMTP_FROM         – Verifizierte Absenderadresse in Scaleway TEM
+
+  Option 2 – Brevo:
+    BREVO_API_KEY     – API-Key von app.brevo.com
+    SMTP_FROM         – Verifizierte Absenderadresse
+
+  Option 3 – SMTP (lokal):
+    SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM
+
+  Immer benötigt:
+    BACKEND_URL       – öffentliche Backend-URL
+    FRONTEND_URL      – öffentliche Frontend-URL
 """
 
 import asyncio
@@ -17,16 +31,15 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+import httpx
+
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+SCW_TEM_API_URL = "https://api.scaleway.com/transactional-email/v1alpha1/regions/{region}/emails"
+
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM = os.getenv("SMTP_FROM", "") or SMTP_USER
-# SMTP_SSL=true  → implicit TLS (Port 465)
-# SMTP_SSL=false → STARTTLS (Port 587, Standard)
-_smtp_ssl_env = os.getenv("SMTP_SSL", "").lower()
-SMTP_SSL = _smtp_ssl_env == "true" if _smtp_ssl_env else SMTP_PORT == 465
-SMTP_STARTTLS = not SMTP_SSL and os.getenv("SMTP_STARTTLS", "true").lower() != "false"
 
 BACKEND_URL = os.getenv("BACKEND_URL", "").rstrip("/")
 FRONTEND_URL = os.getenv(
@@ -35,45 +48,99 @@ FRONTEND_URL = os.getenv(
 ).rstrip("/")
 
 
+def _get_sender() -> str:
+    return os.getenv("SMTP_FROM", os.getenv("SMTP_USER", SMTP_USER))
+
+
 def smtp_configured() -> bool:
-    # Env-Vars werden beim Import gelesen – zur Laufzeit noch mal prüfen falls nötig
-    host = os.getenv("SMTP_HOST", SMTP_HOST)
-    user = os.getenv("SMTP_USER", SMTP_USER)
-    pw = os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
-    bu = os.getenv("BACKEND_URL", BACKEND_URL)
-    return bool(host and user and pw and bu)
+    scw = os.getenv("SCW_SECRET_KEY", "") and os.getenv("SCW_PROJECT_ID", "")
+    brevo = os.getenv("BREVO_API_KEY", "")
+    smtp = os.getenv("SMTP_HOST", SMTP_HOST) and os.getenv("SMTP_USER", SMTP_USER) and os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
+    backend = os.getenv("BACKEND_URL", BACKEND_URL)
+    return bool((scw or brevo or smtp) and backend)
 
 
 def smtp_debug_info() -> dict:
-    """Gibt aktuelle SMTP-Konfiguration zurück (ohne Passwort)."""
+    scw_key = os.getenv("SCW_SECRET_KEY", "")
+    scw_project = os.getenv("SCW_PROJECT_ID", "")
+    scw_region = os.getenv("SCW_TEM_REGION", "fr-par")
+    brevo_key = os.getenv("BREVO_API_KEY", "")
     host = os.getenv("SMTP_HOST", SMTP_HOST)
     port = int(os.getenv("SMTP_PORT", str(SMTP_PORT)))
-    user = os.getenv("SMTP_USER", SMTP_USER)
     pw = os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
     backend = os.getenv("BACKEND_URL", BACKEND_URL)
-    ssl_env = os.getenv("SMTP_SSL", "").lower()
-    use_ssl = ssl_env == "true" if ssl_env else port == 465
+    if scw_key and scw_project:
+        provider = "scaleway-tem"
+    elif brevo_key:
+        provider = "brevo"
+    elif host and pw:
+        provider = "smtp"
+    else:
+        provider = "none"
     return {
+        "provider": provider,
+        "scw_secret_key_set": bool(scw_key),
+        "scw_project_id": scw_project or "(nicht gesetzt)",
+        "scw_tem_region": scw_region,
+        "brevo_api_key_set": bool(brevo_key),
         "smtp_host": host or "(nicht gesetzt)",
         "smtp_port": port,
-        "smtp_user": user or "(nicht gesetzt)",
         "smtp_password_set": bool(pw),
-        "smtp_ssl": use_ssl,
+        "sender": _get_sender() or "(nicht gesetzt)",
         "backend_url": backend or "(nicht gesetzt)",
-        "configured": bool(host and user and pw and backend),
+        "configured": smtp_configured(),
     }
 
 
-def _send_sync(to: str, subject: str, body_text: str, body_html: str) -> None:
-    # Env-Vars zur Laufzeit lesen (nicht gecacht vom Modulimport)
+async def _send_via_scaleway_tem(
+    secret_key: str, project_id: str, region: str,
+    to: str, subject: str, body_text: str, body_html: str,
+) -> None:
+    sender = _get_sender()
+    payload = {
+        "project_id": project_id,
+        "from": {"email": sender, "name": "Garagenflohmarkt Zirndorf"},
+        "to": [{"email": to}],
+        "subject": subject,
+        "text": body_text,
+        "html": body_html,
+    }
+    url = SCW_TEM_API_URL.format(region=region)
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            url,
+            json=payload,
+            headers={"X-Auth-Token": secret_key, "Content-Type": "application/json"},
+        )
+        resp.raise_for_status()
+
+
+async def _send_via_brevo(api_key: str, to: str, subject: str, body_text: str, body_html: str) -> None:
+    sender = _get_sender()
+    payload = {
+        "sender": {"name": "Garagenflohmarkt Zirndorf", "email": sender},
+        "to": [{"email": to}],
+        "subject": subject,
+        "textContent": body_text,
+        "htmlContent": body_html,
+    }
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.post(
+            BREVO_API_URL,
+            json=payload,
+            headers={"api-key": api_key, "Content-Type": "application/json"},
+        )
+        resp.raise_for_status()
+
+
+def _send_via_smtp(to: str, subject: str, body_text: str, body_html: str) -> None:
     host = os.getenv("SMTP_HOST", SMTP_HOST)
     port = int(os.getenv("SMTP_PORT", str(SMTP_PORT)))
     user = os.getenv("SMTP_USER", SMTP_USER)
     password = os.getenv("SMTP_PASSWORD", SMTP_PASSWORD)
-    sender = os.getenv("SMTP_FROM", SMTP_FROM) or user
+    sender = _get_sender()
     ssl_env = os.getenv("SMTP_SSL", "").lower()
     use_ssl = ssl_env == "true" if ssl_env else port == 465
-    use_starttls = not use_ssl
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -88,19 +155,20 @@ def _send_sync(to: str, subject: str, body_text: str, body_html: str) -> None:
             smtp.sendmail(sender, [to], msg.as_string())
     else:
         with smtplib.SMTP(host, port, timeout=15) as smtp:
-            if use_starttls:
-                smtp.starttls()
+            smtp.starttls()
             smtp.login(user, password)
             smtp.sendmail(sender, [to], msg.as_string())
 
 
 async def send_confirmation_email(email: str, name: str, edit_token: str) -> None:
-    """Schickt eine Bestätigungsmail. Bei nicht konfiguriertem SMTP wird nichts gesendet."""
+    """Schickt eine Bestätigungsmail. Nutzt Brevo API falls konfiguriert, sonst SMTP."""
     if not smtp_configured():
         return
 
-    confirm_url = f"{BACKEND_URL}/stands/confirm/{edit_token}"
-    manage_url = f"{FRONTEND_URL}#mein-stand/{edit_token}"
+    backend_url = os.getenv("BACKEND_URL", BACKEND_URL).rstrip("/")
+    frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
+    confirm_url = f"{backend_url}/stands/confirm/{edit_token}"
+    manage_url = f"{frontend_url}#mein-stand/{edit_token}"
 
     subject = "Garagenflohmarkt Zirndorf – Bitte bestätige dein Inserat"
 
@@ -151,4 +219,14 @@ Das Garagenflohmarkt-Team
 </html>
 """
 
-    await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
+    scw_key = os.getenv("SCW_SECRET_KEY", "")
+    scw_project = os.getenv("SCW_PROJECT_ID", "")
+    scw_region = os.getenv("SCW_TEM_REGION", "fr-par")
+    brevo_key = os.getenv("BREVO_API_KEY", "")
+
+    if scw_key and scw_project:
+        await _send_via_scaleway_tem(scw_key, scw_project, scw_region, email, subject, body_text, body_html)
+    elif brevo_key:
+        await _send_via_brevo(brevo_key, email, subject, body_text, body_html)
+    else:
+        await asyncio.to_thread(_send_via_smtp, email, subject, body_text, body_html)

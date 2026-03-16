@@ -45,6 +45,19 @@ variable "container_image_tag" {
   default     = "latest"
 }
 
+variable "scw_tem_region" {
+  description = "Scaleway Region für Transactional Email"
+  type        = string
+  default     = "fr-par"
+}
+
+variable "brevo_api_key" {
+  description = "Brevo (ehem. Sendinblue) API-Key für transaktionale E-Mails"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "smtp_host" {
   description = "SMTP-Server-Hostname"
   type        = string

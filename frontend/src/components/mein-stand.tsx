@@ -91,24 +91,33 @@ export function MeinStand({ onCancelled }: Props) {
       {editing ? (
         <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Name</label>
+            <label htmlFor="edit-name" className="text-xs font-medium text-gray-600">
+              Name
+            </label>
             <input
+              id="edit-name"
               className="border border-input rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring bg-white"
               value={editForm.name}
               onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Adresse</label>
+            <label htmlFor="edit-adresse" className="text-xs font-medium text-gray-600">
+              Adresse
+            </label>
             <input
+              id="edit-adresse"
               className="border border-input rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring bg-white"
               value={editForm.adresse}
               onChange={(e) => setEditForm((f) => ({ ...f, adresse: e.target.value }))}
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-gray-600">Was gibt es zu kaufen?</label>
+            <label htmlFor="edit-beschreibung" className="text-xs font-medium text-gray-600">
+              Was gibt es zu kaufen?
+            </label>
             <textarea
+              id="edit-beschreibung"
               className="border border-input rounded-md px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring bg-white min-h-[60px] resize-y"
               value={editForm.beschreibung}
               onChange={(e) => setEditForm((f) => ({ ...f, beschreibung: e.target.value }))}

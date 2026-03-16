@@ -93,6 +93,10 @@ resource "scaleway_container" "flohmarkt_api" {
     ADMIN_TOKEN    = var.admin_token
     API_USERNAME   = var.api_username
     API_PASSWORD   = var.api_password
+    SCW_SECRET_KEY = var.scw_secret_key
+    SCW_PROJECT_ID = var.scw_project_id
+    SCW_TEM_REGION = var.scw_tem_region
+    BREVO_API_KEY  = var.brevo_api_key
     SMTP_USER      = var.smtp_user
     SMTP_PASSWORD  = var.smtp_password
   }
@@ -106,4 +110,11 @@ resource "scaleway_container" "flohmarkt_api" {
   }
 
   privacy = "public"
+}
+
+# Custom Domain für den Container
+resource "scaleway_container_domain" "flohmarkt_api" {
+  container_id = scaleway_container.flohmarkt_api.id
+  hostname     = "api.openzirndorf.de"
+  region       = var.scw_region
 }

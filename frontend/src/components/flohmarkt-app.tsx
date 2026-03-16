@@ -87,46 +87,46 @@ export function FlohmarktApp() {
       <Header />
 
       <main className="flex-1">
-          <div className="border-b border-green-100 bg-[--oz-green-light] px-4 py-10">
-            <div className="mx-auto max-w-2xl">
-              <h1
-                style={{ fontFamily: "var(--oz-font-heading)" }}
-                className="mb-2 text-4xl font-extrabold leading-tight text-[--oz-green-dark]"
-              >
-                Garagenflohmarkt Zirndorf
-              </h1>
-              <p className="text-lg text-gray-600">
-                Melde deinen Stand an und finde alle Verkäufer auf der Karte.
-              </p>
+        <div className="border-b border-green-100 bg-[--oz-green-light] px-4 py-10">
+          <div className="mx-auto max-w-2xl">
+            <h1
+              style={{ fontFamily: "var(--oz-font-heading)" }}
+              className="mb-2 text-4xl font-extrabold leading-tight text-[--oz-green-dark]"
+            >
+              Garagenflohmarkt Zirndorf
+            </h1>
+            <p className="text-lg text-gray-600">
+              Melde deinen Stand an und finde alle Verkäufer auf der Karte.
+            </p>
+          </div>
+        </div>
+
+        <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-8">
+          <section aria-label="Karte der Stände">
+            <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-md">
+              <FlohmarktMap />
             </div>
-          </div>
+          </section>
 
-          <div className="mx-auto flex max-w-2xl flex-col gap-10 px-4 py-8">
-            <section aria-label="Karte der Stände">
-              <div className="overflow-hidden rounded-2xl border border-gray-200 shadow-md">
-                <FlohmarktMap />
-              </div>
-            </section>
+          <MeinStand onCancelled={loadStands} />
 
-            <MeinStand onCancelled={loadStands} />
+          <section aria-label="Stand anmelden">
+            <StandForm onSuccess={loadStands} />
+          </section>
 
-            <section aria-label="Stand anmelden">
-              <StandForm onSuccess={loadStands} />
-            </section>
-
-            <section aria-label="Alle Stände">
-              <h2
-                style={{ fontFamily: "var(--oz-font-heading)" }}
-                className="mb-4 flex items-center gap-2 text-xl font-bold"
-              >
-                Angemeldete Stände
-                {!loading && stands.length > 0 && (
-                  <span className="text-sm font-normal text-gray-400">({stands.length})</span>
-                )}
-              </h2>
-              <StandListe stands={stands} loading={loading} />
-            </section>
-          </div>
+          <section aria-label="Alle Stände">
+            <h2
+              style={{ fontFamily: "var(--oz-font-heading)" }}
+              className="mb-4 flex items-center gap-2 text-xl font-bold"
+            >
+              Angemeldete Stände
+              {!loading && stands.length > 0 && (
+                <span className="text-sm font-normal text-gray-400">({stands.length})</span>
+              )}
+            </h2>
+            <StandListe stands={stands} loading={loading} />
+          </section>
+        </div>
       </main>
 
       <Footer />
