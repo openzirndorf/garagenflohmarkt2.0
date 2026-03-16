@@ -62,8 +62,8 @@ export function StandForm({ onSuccess }: Props) {
             Dein Stand wurde eingereicht!
           </p>
           <p className="text-sm text-gray-700">
-            Wir haben dir eine Bestätigungsmail geschickt. Bitte klicke auf den Link in der
-            Mail, damit dein Stand auf der Karte erscheint.
+            Wir haben dir eine Bestätigungsmail geschickt. Bitte klicke auf den Link in der Mail,
+            damit dein Stand auf der Karte erscheint.
           </p>
           <p className="text-sm text-gray-600 mt-1">
             Speichere außerdem diesen Link, um deinen Stand später zu verwalten:
