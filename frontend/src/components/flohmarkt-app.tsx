@@ -8,9 +8,49 @@ import { KATEGORIEN } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
-const PORTAL_URL = "https://openzirndorf.github.io/openzirndorf-portal/";
-const IMPRESSUM_URL = "https://openzirndorf.github.io/openzirndorf-portal/#impressum";
+const PORTAL_URL = "https://portal.openzirndorf.de/";
+const IMPRESSUM_URL = "https://portal.openzirndorf.de/#impressum";
 const EVENT_DATE = new Date("2026-04-26T10:00:00+02:00");
+
+const MASKOTTCHEN = [
+  { datei: "tuxi.png", name: "Tuxi", text: "Tuxi holt schon die Daten vom Server…" },
+  { datei: "fynn.png", name: "Fynn", text: "Fynn tippt auf Hochtouren…" },
+  { datei: "kreiselix.png", name: "Kreiselix", text: "Kreiselix dreht die Stände auf…" },
+  { datei: "horst.png", name: "Horst", text: "Horst kennt das Geheimnis – gleich ist er da…" },
+  { datei: "paul.png", name: "Paul", text: "Paul begrüßt alle neuen Stände herzlich…" },
+  { datei: "nico.png", name: "Nico", text: "Nico lädt die Karte…" },
+  { datei: "quirin.png", name: "Quirin", text: "Quirin spielt schon zur Eröffnung auf…" },
+];
+
+const MASCOT_BASE = "https://openzirndorf.de/static/media/maskottchen/";
+
+function MascotLoading() {
+  const mascot = MASKOTTCHEN[Math.floor(Math.random() * MASKOTTCHEN.length)];
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-white">
+      <img
+        src={`${MASCOT_BASE}${mascot.datei}`}
+        alt={mascot.name}
+        className="h-40 w-40 object-contain drop-shadow-md"
+      />
+      <p
+        style={{ fontFamily: "var(--oz-font-heading)" }}
+        className="text-lg font-bold text-gray-700"
+      >
+        {mascot.text}
+      </p>
+      <div className="flex gap-1.5">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-2 w-2 animate-bounce rounded-full bg-[#009a00]"
+            style={{ animationDelay: `${i * 0.15}s` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function daysUntilEvent(): number {
   const today = new Date();
@@ -156,8 +196,11 @@ export function FlohmarktApp() {
       ? stands
       : stands.filter((s) => s.kategorien.some((k) => kategorienFilter.includes(k)));
 
+  const initialLoading = loading && stands.length === 0;
+
   return (
     <div className="flex min-h-screen flex-col">
+      {initialLoading && <MascotLoading />}
       <Header page={page} />
 
       {page === "faq" ? (
