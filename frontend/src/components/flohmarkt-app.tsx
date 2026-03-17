@@ -133,7 +133,7 @@ function Header({ page }: { page: string }) {
 
 function Footer() {
   return (
-    <footer className="mt-16 border-t text-sm text-gray-500">
+    <footer className="mt-16 bg-[#1f2937] text-sm text-white/65">
       <div className="mx-auto flex max-w-4xl flex-wrap justify-between gap-8 px-4 py-8">
         <div className="flex flex-col gap-2">
           <a href={PORTAL_URL} className="flex items-center gap-2 no-underline">
@@ -146,16 +146,16 @@ function Footer() {
               className="rounded-md"
             />
             <span style={{ fontFamily: "var(--oz-font-heading)" }} className="font-extrabold">
-              <span className="text-gray-400">open</span>
+              <span className="text-white/50">open</span>
               <span className="text-[#009a00]">zirndorf</span>
             </span>
           </a>
-          <p className="text-xs text-gray-400">Digitale Möglichkeiten für Zirndorf.</p>
+          <p className="text-xs text-white/45">Digitale Möglichkeiten für Zirndorf.</p>
         </div>
 
         <div className="flex flex-wrap gap-8">
           <div className="flex flex-col gap-1">
-            <strong className="text-gray-700">Digitale Angebote</strong>
+            <strong className="text-white/85">Digitale Angebote</strong>
             <a
               href={PORTAL_URL}
               target="_blank"
@@ -182,7 +182,7 @@ function Footer() {
             </a>
           </div>
           <div className="flex flex-col gap-1">
-            <strong className="text-gray-700">Community</strong>
+            <strong className="text-white/85">Community</strong>
             <a
               href="https://join.slack.com/t/openzirndorf/shared_invite/zt-3qt1trev5-UZDu3QpOfFfLKcIQTndZ6Q"
               target="_blank"
@@ -209,7 +209,7 @@ function Footer() {
             </a>
           </div>
           <div className="flex flex-col gap-1">
-            <strong className="text-gray-700">Rechtliches</strong>
+            <strong className="text-white/85">Rechtliches</strong>
             <a
               href={IMPRESSUM_URL}
               target="_blank"
@@ -232,7 +232,7 @@ function Footer() {
           </div>
         </div>
       </div>
-      <div className="border-t px-4 py-3 text-center text-xs text-gray-400">
+      <div className="border-t border-white/10 px-4 py-3 text-center text-xs text-white/40">
         © {new Date().getFullYear()} OpenZirndorf · Entwickelt mit ❤️ in Zirndorf
       </div>
     </footer>
