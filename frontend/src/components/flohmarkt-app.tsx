@@ -156,20 +156,79 @@ function Footer() {
         <div className="flex flex-wrap gap-8">
           <div className="flex flex-col gap-1">
             <strong className="text-gray-700">Digitale Angebote</strong>
-            <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Alle Angebote</a>
-            <a href="https://wahl2026.openzirndorf.de/" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Wahlanalyse 2026</a>
-            <a href="https://ideen.openzirndorf.de/" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Ideenbörse</a>
+            <a
+              href={PORTAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Alle Angebote
+            </a>
+            <a
+              href="https://wahl2026.openzirndorf.de/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Wahlanalyse 2026
+            </a>
+            <a
+              href="https://ideen.openzirndorf.de/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Ideenbörse
+            </a>
           </div>
           <div className="flex flex-col gap-1">
             <strong className="text-gray-700">Community</strong>
-            <a href="https://join.slack.com/t/openzirndorf/shared_invite/zt-3qt1trev5-UZDu3QpOfFfLKcIQTndZ6Q" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Slack</a>
-            <a href="https://github.com/openzirndorf" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">GitHub</a>
-            <a href="https://instagram.com/openzirndorf" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Instagram</a>
+            <a
+              href="https://join.slack.com/t/openzirndorf/shared_invite/zt-3qt1trev5-UZDu3QpOfFfLKcIQTndZ6Q"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Slack
+            </a>
+            <a
+              href="https://github.com/openzirndorf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              GitHub
+            </a>
+            <a
+              href="https://instagram.com/openzirndorf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Instagram
+            </a>
           </div>
           <div className="flex flex-col gap-1">
             <strong className="text-gray-700">Rechtliches</strong>
-            <a href={IMPRESSUM_URL} target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Impressum</a>
-            <a href="#faq" className="hover:text-[#009a00]">Regeln & FAQ</a>
+            <a
+              href={IMPRESSUM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Impressum
+            </a>
+            <a
+              href="https://openzirndorf.de/datenschutz.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-[#009a00]"
+            >
+              Datenschutz
+            </a>
+            <a href="#faq" className="hover:text-[#009a00]">
+              Regeln & FAQ
+            </a>
           </div>
         </div>
       </div>
