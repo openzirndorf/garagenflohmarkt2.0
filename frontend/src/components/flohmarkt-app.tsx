@@ -133,27 +133,48 @@ function Header({ page }: { page: string }) {
 
 function Footer() {
   return (
-    <footer className="mt-16 border-t px-4 py-8 text-sm text-gray-400">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-3">
-        <div className="flex flex-wrap justify-center gap-4">
-          <a href={PORTAL_URL} className="transition-colors hover:text-[#009a00]">
-            Ein OpenZirndorf-Projekt
+    <footer className="mt-16 border-t text-sm text-gray-500">
+      <div className="mx-auto flex max-w-4xl flex-wrap justify-between gap-8 px-4 py-8">
+        <div className="flex flex-col gap-2">
+          <a href={PORTAL_URL} className="flex items-center gap-2 no-underline">
+            <img
+              src="https://openzirndorf.de/static/media/logo.png"
+              alt=""
+              aria-hidden="true"
+              width={28}
+              height={28}
+              className="rounded-md"
+            />
+            <span style={{ fontFamily: "var(--oz-font-heading)" }} className="font-extrabold">
+              <span className="text-gray-400">open</span>
+              <span className="text-[#009a00]">zirndorf</span>
+            </span>
           </a>
-          <span aria-hidden="true">·</span>
-          <a href="#faq" className="transition-colors hover:text-[#009a00]">
-            Regeln & FAQ
-          </a>
-          <span aria-hidden="true">·</span>
-          <a
-            href={IMPRESSUM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-[#009a00]"
-          >
-            Impressum
-          </a>
+          <p className="text-xs text-gray-400">Digitale Möglichkeiten für Zirndorf.</p>
         </div>
-        <p className="text-xs text-gray-300">Entwickelt mit ❤️ in Zirndorf</p>
+
+        <div className="flex flex-wrap gap-8">
+          <div className="flex flex-col gap-1">
+            <strong className="text-gray-700">Digitale Angebote</strong>
+            <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Alle Angebote</a>
+            <a href="https://wahl2026.openzirndorf.de/" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Wahlanalyse 2026</a>
+            <a href="https://ideen.openzirndorf.de/" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Ideenbörse</a>
+          </div>
+          <div className="flex flex-col gap-1">
+            <strong className="text-gray-700">Community</strong>
+            <a href="https://join.slack.com/t/openzirndorf/shared_invite/zt-3qt1trev5-UZDu3QpOfFfLKcIQTndZ6Q" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Slack</a>
+            <a href="https://github.com/openzirndorf" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">GitHub</a>
+            <a href="https://instagram.com/openzirndorf" target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Instagram</a>
+          </div>
+          <div className="flex flex-col gap-1">
+            <strong className="text-gray-700">Rechtliches</strong>
+            <a href={IMPRESSUM_URL} target="_blank" rel="noopener noreferrer" className="hover:text-[#009a00]">Impressum</a>
+            <a href="#faq" className="hover:text-[#009a00]">Regeln & FAQ</a>
+          </div>
+        </div>
+      </div>
+      <div className="border-t px-4 py-3 text-center text-xs text-gray-400">
+        © {new Date().getFullYear()} OpenZirndorf · Entwickelt mit ❤️ in Zirndorf
       </div>
     </footer>
   );

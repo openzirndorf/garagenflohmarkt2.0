@@ -33,11 +33,13 @@ garagenflohmarkt2.0/
 │   │   ├── ui.tsx        ← Einfache UI-Komponenten (Button, Card, …)
 │   │   ├── types.ts      ← TypeScript-Typdefinitionen
 │   │   └── components/
-│   │       ├── flohmarkt-app.tsx   ← Hauptansicht (Karte + Liste + Formular)
+│   │       ├── flohmarkt-app.tsx   ← Hauptansicht (Karte + Liste + Formular + Header + Footer)
 │   │       ├── flohmarkt-map.tsx   ← Interaktive Karte (MapLibre)
 │   │       ├── stand-form.tsx      ← Formular zum Anmelden eines Stands
 │   │       ├── stand-liste.tsx     ← Liste aller freigegebenen Stände
 │   │       ├── mein-stand.tsx      ← "Dein Stand" (aus Browser-Speicher)
+│   │       ├── faq.tsx             ← Regeln & FAQ (erreichbar via #faq)
+│   │       ├── impressum.tsx       ← Impressum
 │   │       └── admin-panel.tsx     ← Admin-UI (erreichbar via #admin)
 │   └── README.md         ← Frontend-spezifische Dokumentation
 │
