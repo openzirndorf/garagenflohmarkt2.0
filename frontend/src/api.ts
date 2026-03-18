@@ -47,7 +47,7 @@ export interface CreatedStand extends Stand {
 }
 
 export async function createStand(data: StandFormData): Promise<CreatedStand> {
-  const res = await fetch(`${API}/stands`, {
+  const res = await fetch(`${API}/stands/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
