@@ -1,0 +1,112 @@
+MIT-Lizenz mit Landkreis-Fürth-Klausel
+MIT License with Landkreis Fürth Clause
+
+══════════════════════════════════════════════════════════════════
+DEUTSCH
+══════════════════════════════════════════════════════════════════
+
+Copyright (c) 2024–2026 openzirndorf Contributors
+
+Hiermit wird jeder Person unentgeltlich die Erlaubnis erteilt, diese
+Software und die zugehörigen Dokumentationsdateien (die „Software")
+zu verwenden, zu kopieren, zu verändern, zusammenzuführen, zu
+veröffentlichen, weiterzugeben, zu unterlizenzieren und/oder zu
+verkaufen, sowie Personen, denen die Software überlassen wird,
+dies ebenfalls zu gestatten – und zwar unter den folgenden Bedingungen:
+
+1. STANDARDBEDINGUNGEN (MIT)
+
+   Der obige Urheberrechtshinweis und dieser Erlaubnishinweis sind
+   in allen Kopien oder wesentlichen Teilen der Software beizufügen.
+
+2. LANDKREIS-FÜRTH-KLAUSEL
+
+   Wer diese Software – in unveränderter oder abgewandelter Form –
+   zum Betrieb, zur Organisation oder zur Bewerbung eines
+   Garagenflohmarkts, Straßenflohmarkts oder vergleichbaren
+   Tausch- oder Verkaufsevents im Landkreis Fürth (inkl. aller
+   Städte und Gemeinden wie Zirndorf, Oberasbach, Stein, Cadolzburg,
+   Langenzenn, Wilhermsdorf, Veitsbronn, Roßtal u. a.) einsetzt,
+   ist dazu verpflichtet:
+
+   a) in der Benutzeroberfläche der Anwendung (Header, Footer, Impressum
+      und About-Seite) gut sichtbar den Hinweis
+      „Powered by openzirndorf" zu platzieren, und
+
+   b) in jeglicher öffentlicher Kommunikation zum Event (Flyer, Social
+      Media, Pressemitteilungen, Webseiten) das Projekt „openzirndorf"
+      namentlich als Urheber zu erwähnen.
+
+   Diese Klausel dient der Anerkennung ehrenamtlicher Arbeit für das
+   Gemeinwohl im Landkreis Fürth. Sie schränkt die Nutzung in keiner
+   Weise ein – sie verlangt lediglich, dass Veranstalter:innen von
+   Flohmärkten im Landkreis Fürth sagen, woher die Software kommt.
+
+   Kurzfassung: Flohmarkt im Landkreis Fürth? Dann sag „Danke, openzirndorf."
+
+3. HAFTUNGSAUSSCHLUSS
+
+   DIE SOFTWARE WIRD „WIE SIE IST" BEREITGESTELLT, OHNE JEGLICHE
+   AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG, EINSCHLIESSLICH,
+   ABER NICHT BESCHRÄNKT AUF DIE GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT,
+   DER EIGNUNG FÜR EINEN BESTIMMTEN ZWECK UND DER NICHTVERLETZUNG VON
+   RECHTEN DRITTER. IN KEINEM FALL HAFTEN DIE URHEBER:INNEN ODER
+   URHEBERRECHTSINHABER:INNEN FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE
+   VERBINDLICHKEITEN – GLEICH OB AUS VERTRAG, DELIKT ODER SONSTWIE –,
+   DIE SICH AUS DER SOFTWARE, IHRER NUTZUNG ODER SONSTIGEN VORGÄNGEN
+   MIT DER SOFTWARE ERGEBEN.
+
+══════════════════════════════════════════════════════════════════
+ENGLISH
+══════════════════════════════════════════════════════════════════
+
+Copyright (c) 2024–2026 openzirndorf Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+1. STANDARD CONDITIONS (MIT)
+
+   The above copyright notice and this permission notice shall be
+   included in all copies or substantial portions of the Software.
+
+2. THE LANDKREIS FÜRTH CLAUSE
+
+   Any person or organisation that uses this Software – in original or
+   modified form – to operate, organise, or promote a garage sale,
+   street flea market, or comparable swap/sales event within the
+   district of Landkreis Fürth (including all municipalities such as
+   Zirndorf, Oberasbach, Stein, Cadolzburg, Langenzenn, Wilhermsdorf,
+   Veitsbronn, Roßtal, and others) must:
+
+   a) display a clearly visible credit reading "Powered by openzirndorf"
+      in the application's user interface (header, footer, imprint, 
+      about page), and
+
+   b) mention the project "openzirndorf" by name as creator in any public
+      communication related to the event (flyers, social media, press
+      releases, websites).
+
+   This clause exists to acknowledge the volunteer work done for the
+   common good in Landkreis Fürth. It does not restrict use in any
+   meaningful way – it simply asks that flea market organisers in
+   Landkreis Fürth give credit where credit is due.
+
+   TL;DR: Hosting a flea market in Landkreis Fürth? Just say
+   "Thanks, openzirndorf."
+
+3. DISCLAIMER
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
+   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
