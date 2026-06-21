@@ -17,6 +17,7 @@ dist/
 # Terraform
 infra/.terraform/
 infra/terraform.tfvars
+infra/backend.hcl
 infra/*.tfstate
 infra/*.tfstate.backup
 infra/terraform.tfstate.d/
