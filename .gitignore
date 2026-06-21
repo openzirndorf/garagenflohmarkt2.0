@@ -1,11 +1,55 @@
+# Python
 __pycache__/
 *.pyc
+*.pyo
 .venv/
+*.egg-info/
+dist/
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
 .env.local
 .env.*.local
-dist/
-*.egg-info/
+
+# Terraform
 infra/.terraform/
 infra/terraform.tfvars
 infra/*.tfstate
 infra/*.tfstate.backup
+infra/terraform.tfstate.d/
+infra/.terraform.tfstate.lock.info
+
+# Datenbank-Dumps und Backups
+*.dump
+*.pg_dump
+*.sql.gz
+*_backup.sql
+*_dump.sql
+*.bak
+*.backup
+backups/
+dumps/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+frontend/!.env.example

@@ -1,0 +1,15 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Beispieldateien und Platzhalter"
+paths = [
+    '''\.example$''',
+    '''\.example\..*$''',
+]
+regexes = [
+    # Generische Platzhalter aus Example-Dateien
+    '''BEISPIEL|HIER|PASSWORT|GEHEIMNIS|EXAMPLE|PLACEHOLDER''',
+    # GitHub Actions Secret-Referenzen sind keine Leaks
+    '''\$\{\{.*secrets\..*\}\}''',
+]

@@ -14,7 +14,7 @@ jobs:
           script: |
             const projectNumber = 2;
             const org = 'openzirndorf';
-            
+
             // Get project ID
             const projectQuery = `query {
               organization(login: "${org}") {
@@ -25,7 +25,7 @@ jobs:
             }`;
             const projectResult = await github.graphql(projectQuery);
             const projectId = projectResult.organization.projectV2.id;
-            
+
             // Add issue to project
             const mutation = `mutation {
               addProjectV2ItemById(input: {projectId: "${projectId}", contentId: "${context.payload.issue.node_id}"}) {

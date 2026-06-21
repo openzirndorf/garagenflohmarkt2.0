@@ -13,12 +13,14 @@ api_password        = "EIN_ANDERES_LANGES_ZUFAELLIGES_GEHEIMNIS"
 container_image_tag = "latest"
 # database_url wird automatisch aus scaleway_sdb_sql_database.flohmarkt.endpoint abgeleitet
 
-# SMTP – E-Mail-Bestätigung für neue Inserate
-# smtp_from ist optional – wenn leer, wird smtp_user als Absender verwendet
-smtp_host     = "smtp.beispiel.de"
-smtp_port     = 587
-smtp_user     = "flohmarkt@beispiel.de"
-smtp_password = "SMTP_PASSWORT"
-smtp_from     = ""   # optional
-backend_url   = "https://SCALEWAY_CONTAINER_URL"   # z.B. https://xyz-flohmarkt-api.functions.fnc.fr-par.scw.cloud
+# SMTP – Scaleway Transactional Email, wird automatisch aus main.tf gesetzt:
+#   SMTP_HOST     = smtp.tem.scaleway.com  (hardcoded)
+#   SMTP_PORT     = 465                    (hardcoded, SSL)
+#   SMTP_USER     = scw_project_id         (hardcoded)
+#   SMTP_PASSWORD = scw_secret_key         (hardcoded)
+smtp_from     = "noreply@automail.DEINE_DOMAIN.de"  # Absenderadresse, muss in Scaleway TEM verifiziert sein
+
+# Öffentliche Backend-URL (für Bestätigungslinks in E-Mails)
+# Beim ersten Deploy leer lassen (""), nach Apply mit Container-URL befüllen
+backend_url   = "https://api.DEINE_DOMAIN.de"
 frontend_url  = "https://openzirndorf.github.io/garagenflohmarkt2.0"
