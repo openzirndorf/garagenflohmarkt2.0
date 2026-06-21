@@ -4,12 +4,12 @@
 #   Serverless Containers → flohmarkt-api → Environment Variables
 # Das ist einfacher, wenn du keinen lokalen tofu apply machen willst.
 
-scw_access_key      = "SCW_ACCESS_KEY_HIER"
-scw_secret_key      = "SCW_SECRET_KEY_HIER"
-scw_project_id      = "PROJECT_ID_HIER"
-admin_token         = "EIN_LANGES_ZUFAELLIGES_GEHEIMNIS"
+scw_access_key      = "<Scaleway Access Key>"
+scw_secret_key      = "<Scaleway Secret Key>"
+scw_project_id      = "<Scaleway Project ID>"
+admin_token         = "<openssl rand -base64 32>"
 api_username        = "flohmarkt"
-api_password        = "EIN_ANDERES_LANGES_ZUFAELLIGES_GEHEIMNIS"
+api_password        = "<openssl rand -base64 32>"
 container_image_tag = "latest"
 # database_url wird automatisch aus scaleway_sdb_sql_database.flohmarkt.endpoint abgeleitet
 
