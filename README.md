@@ -1,359 +1,311 @@
 # Garagenflohmarkt Zirndorf
 
-Dieses Repository enthält die gesamte Anwendung für den Garagenflohmarkt Zirndorf:
+React-Frontend + FastAPI-Backend + Scaleway-Infrastruktur für den Garagenflohmarkt Zirndorf.
 
-- **`frontend/`** – React-App (Karte, Anmeldeformular, Admin-UI)
-- **`app/`** – FastAPI-Backend (REST-API, Datenbankzugriff)
-- **`infra/`** – Cloud-Infrastruktur als Code (Scaleway via OpenTofu)
-
-Live unter: `https://openzirndorf.github.io/garagenflohmarkt2.0/`
+Live: `https://openzirndorf.github.io/garagenflohmarkt2.0/`
+API: `https://api.openzirndorf.de`
 
 ---
 
-## Inhaltsverzeichnis
+## Architektur
 
-1. [Was ist was?](#was-ist-was)
-2. [Voraussetzungen](#voraussetzungen)
-3. [Lokale Entwicklung](#lokale-entwicklung)
-4. [Infrastruktur aufbauen (einmalig)](#infrastruktur-aufbauen-einmalig)
-5. [Deployen](#deployen)
-6. [API-Übersicht](#api-übersicht)
-7. [Wartung & Updates](#wartung--updates)
-
----
-
-## Was ist was?
+```
+Browser
+  └── GitHub Pages (React-SPA, statisch)
+        └── https://api.openzirndorf.de
+              └── Scaleway Serverless Container (FastAPI, Docker)
+                    └── Scaleway Serverless SQL (PostgreSQL)
+```
 
 ```
 garagenflohmarkt2.0/
-├── frontend/             ← React-App (wird auf GitHub Pages deployt)
-│   ├── src/
-│   │   ├── main.tsx      ← Einstiegspunkt (auch Admin-UI via #admin)
-│   │   ├── api.ts        ← Alle Anfragen ans Backend
-│   │   ├── ui.tsx        ← Einfache UI-Komponenten (Button, Card, …)
-│   │   ├── types.ts      ← TypeScript-Typdefinitionen
-│   │   └── components/
-│   │       ├── flohmarkt-app.tsx   ← Hauptansicht (Karte + Liste + Formular + Header + Footer)
-│   │       ├── flohmarkt-map.tsx   ← Interaktive Karte (MapLibre)
-│   │       ├── stand-form.tsx      ← Formular zum Anmelden eines Stands
-│   │       ├── stand-liste.tsx     ← Liste aller freigegebenen Stände
-│   │       ├── mein-stand.tsx      ← "Dein Stand" (aus Browser-Speicher)
-│   │       ├── faq.tsx             ← Regeln & FAQ (erreichbar via #faq)
-│   │       ├── impressum.tsx       ← Impressum
-│   │       └── admin-panel.tsx     ← Admin-UI (erreichbar via #admin)
-│   └── README.md         ← Frontend-spezifische Dokumentation
-│
-├── app/                  ← Python-Code (FastAPI)
-│   ├── main.py           ← App-Einstiegspunkt, CORS-Einstellungen
-│   ├── auth.py           ← Authentifizierung (Basic Auth + Bearer Token)
-│   ├── database.py       ← Datenbankverbindung (asyncpg)
-│   ├── geocode.py        ← Adresse → GPS-Koordinaten (OpenStreetMap)
+├── frontend/          React-App (Karte, Formular, Admin-UI)
+│   └── src/
+│       ├── api.ts                  API-Client
+│       ├── types.ts                TypeScript-Typen
+│       └── components/
+│           ├── flohmarkt-app.tsx   Hauptansicht
+│           ├── flohmarkt-map.tsx   MapLibre-Karte
+│           ├── stand-form.tsx      Anmeldeformular
+│           ├── stand-liste.tsx     Standliste
+│           ├── mein-stand.tsx      Eigener Stand (via edit_token)
+│           └── admin-panel.tsx     Admin-UI (#admin)
+├── app/               FastAPI-Backend
+│   ├── main.py        App-Einstiegspunkt, CORS
+│   ├── auth.py        Basic Auth (API) + Bearer Token (Admin)
+│   ├── database.py    asyncpg-Connection-Pool
+│   ├── email.py       Bestätigungsmail via Scaleway TEM
+│   ├── geocode.py     Adresse → GPS (Nominatim/OSM)
 │   └── routes/
-│       └── stands.py     ← Alle API-Endpunkte + Rate-Limiter + Honeypot
-│
-├── infra/                ← Infrastruktur als Code (OpenTofu/Terraform)
-│   ├── main.tf           ← Alle Scaleway-Ressourcen
-│   ├── variables.tf      ← Eingabevariablen
-│   ├── outputs.tf        ← Ausgabewerte nach dem Anlegen
-│   ├── terraform.tfvars.example  ← Vorlage für Zugangsdaten
-│   └── terraform.tfvars  ← Deine geheimen Zugangsdaten (NICHT ins Git!)
-│
-├── schema.sql            ← Datenbankstruktur
-├── Dockerfile            ← Bauanleitung für das Docker-Image
-└── pyproject.toml        ← Python-Abhängigkeiten
+│       └── stands.py  Alle Endpunkte, Rate-Limiter, Honeypot
+├── infra/             OpenTofu (Scaleway-Infrastruktur)
+│   ├── main.tf        Ressourcen + S3-Backend
+│   ├── variables.tf   Eingabevariablen
+│   ├── outputs.tf     Ausgabewerte
+│   ├── terraform.tfvars          Secrets (gitignored)
+│   ├── terraform.tfvars.example  Vorlage
+│   └── backend.hcl               State-Credentials (gitignored)
+├── schema.sql         Datenbankschema
+└── Dockerfile         Multi-Stage (builder + runner)
 ```
 
-**Wichtige Begriffe für Einsteiger:**
-- **React** – JavaScript-Framework zum Bauen von Benutzeroberflächen
-- **FastAPI** – Python-Framework zum Bauen von Web-APIs
-- **Docker** – verpackt die App so, dass sie überall gleich läuft
-- **OpenTofu** – legt Cloud-Ressourcen automatisch an (Datenbank, Container usw.)
-- **Scaleway** – der Cloud-Anbieter (wie AWS, aber europäisch und DSGVO-konform)
-- **Serverless** – die App läuft nur wenn jemand sie aufruft, kostet sonst nichts
-- **GitHub Actions** – automatisiert das Bauen und Deployen bei jedem Git-Push
+**Ablauf einer Stand-Anmeldung:**
+1. Nutzer füllt Formular aus → `POST /stands` (Basic Auth)
+2. Backend geocodiert die Adresse via Nominatim/OSM
+3. Stand landet als `PENDING` in der Datenbank
+4. Bestätigungsmail geht raus (Scaleway TEM, Port 465/SSL)
+5. Nutzer klickt Link → Stand wird `CONFIRMED`
+6. Admin gibt ihn frei → `APPROVED`, erscheint auf der Karte
 
 ---
 
-## Voraussetzungen
+## Credentials
 
-Alles einmalig installieren:
+Das Projekt hat sechs Credential-Gruppen:
 
+### 1. Scaleway Haupt-API-Key
+**Zweck:** OpenTofu verwaltet damit alle Scaleway-Ressourcen (Datenbank, Container, IAM …)
+
+| Wo | Variable |
+|----|----------|
+| `infra/terraform.tfvars` | `scw_access_key`, `scw_secret_key`, `scw_project_id` |
+| GitHub Actions Secrets | `SCW_ACCESS_KEY`, `SCW_SECRET_KEY`, `SCW_PROJECT_ID`, `SCW_ORGANIZATION_ID` |
+
+**Rotieren:**
+1. Scaleway Console → IAM → API Keys → neuen Key anlegen (bearer: eigener User)
+2. `terraform.tfvars` aktualisieren
+3. GitHub Secrets aktualisieren
+4. `tofu apply` (aktualisiert `SMTP_PASSWORD` im Container automatisch)
+5. Alten Key in Scaleway löschen
+
+---
+
+### 2. Terraform-State-Key
+**Zweck:** Lese-/Schreibzugriff auf den OpenTofu-State im S3-Bucket `openzirndorf-tfstate`
+
+| Wo | Variable |
+|----|----------|
+| `infra/backend.hcl` | `access_key`, `secret_key` |
+| GitHub Actions Secrets | `TF_STATE_ACCESS_KEY`, `TF_STATE_SECRET_KEY` |
+
+IAM-Application in Scaleway: `terraform-state` mit `ObjectStorageFullAccess`
+
+**Rotieren:**
+1. Scaleway Console → IAM → API Keys → neuen Key für Application `terraform-state`
+2. `infra/backend.hcl` aktualisieren
+3. GitHub Secrets aktualisieren
+4. `tofu init -backend-config=backend.hcl` (kein `-migrate-state` nötig)
+5. Alten Key löschen
+
+---
+
+### 3. Datenbank-IAM-Key
+**Zweck:** Verbindung zwischen Serverless Container und Serverless SQL DB
+
+| Wo | |
+|----|-|
+| Scaleway IAM | Application `flohmarkt-db` |
+| Container-Env | `DATABASE_URL` (secret, von OpenTofu gesetzt) |
+
+Dieser Key wird vollständig von OpenTofu verwaltet — nie manuell anfassen.
+
+**Rotieren:**
 ```bash
-# 1. Docker (für Image bauen & pushen)
-sudo apt install docker.io
-sudo usermod -aG docker $USER
-# → Terminal neu starten damit die Gruppe aktiv wird
+cd infra
+tofu destroy -target=scaleway_iam_api_key.flohmarkt_db
+tofu apply
+```
+OpenTofu erstellt einen neuen Key und aktualisiert `DATABASE_URL` im Container automatisch.
 
-# 2. OpenTofu (verwaltet die Cloud-Infrastruktur)
-curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh \
-  | sh -s -- --install-method deb
+---
 
-# 3. psql (PostgreSQL-Client, um die Datenbank einzurichten)
-sudo apt install postgresql-client
+### 4. Admin-Token
+**Zweck:** Authentifizierung für Admin-API-Endpunkte. Wird im Admin-Panel eingegeben (`#admin`), nicht ins JS-Bundle gebaut.
 
-# 4. Python venv (für lokale Backend-Entwicklung)
-sudo apt install python3.12-venv
+| Wo | Variable |
+|----|----------|
+| `infra/terraform.tfvars` | `admin_token` |
+| Container-Env | `ADMIN_TOKEN` (secret, von OpenTofu) |
 
-# 5. Node.js 22 (für lokale Frontend-Entwicklung)
-curl -fsSL https://fnm.vercel.app/install | bash
-fnm install 22 && fnm use 22
+**Rotieren:**
+```bash
+openssl rand -base64 32   # neuen Token generieren
+# in terraform.tfvars eintragen, dann:
+cd infra && tofu apply
+```
+
+---
+
+### 5. API-Credentials (Basic Auth)
+**Zweck:** Schützt `POST /stands`. Wird beim Frontend-Build in das JS-Bundle eingebaut.
+
+| Wo | Variable |
+|----|----------|
+| `infra/terraform.tfvars` | `api_username`, `api_password` |
+| Container-Env | `API_USERNAME`, `API_PASSWORD` (secret, von OpenTofu) |
+| GitHub Actions Secrets | `VITE_API_USERNAME`, `VITE_API_PASSWORD` |
+
+**Rotieren:**
+```bash
+openssl rand -base64 32   # neues Passwort generieren
+```
+1. `terraform.tfvars` aktualisieren → `tofu apply`
+2. GitHub Secret `VITE_API_PASSWORD` aktualisieren
+3. Frontend-Deploy neu triggern (Actions → Deploy Frontend → Run workflow)
+
+---
+
+### 6. SMTP / Transactional Email
+**Zweck:** Bestätigungsmail-Versand via Scaleway TEM
+
+| Einstellung | Wert | Herkunft |
+|-------------|------|----------|
+| `SMTP_HOST` | `smtp.tem.scaleway.com` | hardcoded in `main.tf` |
+| `SMTP_PORT` | `465` (SSL) | hardcoded in `main.tf` |
+| `SMTP_USER` | Project ID | automatisch aus Gruppe 1 |
+| `SMTP_PASSWORD` | Secret Key | automatisch aus Gruppe 1 |
+| `SMTP_FROM` | `noreply@automail.openzirndorf.de` | `terraform.tfvars` → `smtp_from` |
+
+Rotiert automatisch mit Gruppe 1. Die Absenderdomain `automail.openzirndorf.de` muss in Scaleway Console → Transactional Email als verifizierte Domain eingetragen sein (SPF + DKIM im DNS).
+
+SMTP-Konfiguration live prüfen:
+```bash
+curl -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/debug/smtp
 ```
 
 ---
 
 ## Lokale Entwicklung
 
+### Voraussetzungen
+
+```bash
+# OpenTofu
+curl --proto '=https' --tlsv1.2 -fsSL https://get.opentofu.org/install-opentofu.sh | sh -s -- --install-method deb
+
+# Python 3.12
+sudo apt install python3.12-venv
+
+# Node.js 22
+curl -fsSL https://fnm.vercel.app/install | bash && fnm install 22
+
+# PostgreSQL-Client
+sudo apt install postgresql-client
+
+# pre-commit (Secret-Scanning vor jedem Commit)
+pip install pre-commit && pre-commit install
+```
+
 ### Backend
 
 ```bash
-# 1. Python-Umgebung anlegen und aktivieren
-python3 -m venv .venv
-source .venv/bin/activate
-# → Das Terminal zeigt jetzt (.venv) am Anfang
-
-# 2. Abhängigkeiten installieren
+python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# 3. .env.local anlegen
-cat > .env.local << EOF
-DATABASE_URL=postgresql://USER:PASS@HOST:5432/DBNAME?sslmode=require
+# Lokale Konfiguration (gitignored)
+cat > .env.local << 'EOF'
+DATABASE_URL=postgresql://USER:PASS@HOST:5432/fastapi-db?sslmode=require
 API_USERNAME=flohmarkt
-API_PASSWORD=mein-lokales-testpasswort
-ADMIN_TOKEN=mein-lokaler-admintoken
+API_PASSWORD=lokales-testpasswort
+ADMIN_TOKEN=lokaler-admintoken
 EOF
 
-# 4. Server starten
 uvicorn app.main:app --reload --env-file .env.local --port 8080
-# → http://localhost:8080/health sollte {"ok":true} zurückgeben
+# → http://localhost:8080/health  →  {"ok": true}
+```
+
+`DATABASE_URL` der Scaleway-Datenbank:
+```bash
+cd infra && tofu output -raw database_connection_string
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-
-# Abhängigkeiten installieren (einmalig)
 npm install
 
-# .env.local anlegen
-cat > .env.local << EOF
+cat > .env.local << 'EOF'
 VITE_API_URL=http://localhost:8080
 VITE_API_USERNAME=flohmarkt
-VITE_API_PASSWORD=mein-lokales-testpasswort
+VITE_API_PASSWORD=lokales-testpasswort
 EOF
 
-# Entwicklungsserver starten
 npm run dev
 # → http://localhost:5173/
 ```
 
-→ Ausführlichere Frontend-Dokumentation: [frontend/README.md](frontend/README.md)
-
 ---
 
-## Infrastruktur aufbauen (einmalig)
-
-Dieser Schritt legt alles in Scaleway an: Datenbank, Container-Registry, Container.
-**Nur einmal nötig** – danach nur noch [deployen](#deployen).
-
-### Schritt 1 – Scaleway Zugangsdaten holen
-
-> **Hinweis:** Hier erstellst du einen Key **für dich selbst** (damit OpenTofu in deinem
-> Namen arbeiten darf). Den Key für die Datenbank-App (`flohmarkt-db`) legt OpenTofu
-> automatisch an — den musst du nicht manuell erstellen.
-
-1. Auf [console.scaleway.com](https://console.scaleway.com) einloggen
-2. **IAM → API Keys → Generate API Key** klicken
-3. **"Select API key bearer"** → **Myself (IAM user)** auswählen
-4. Ablaufdatum setzen (max. 1 Jahr)
-5. **"Will this API key be used for Object Storage?"** → **No, skip for now**
-6. **Generate API Key** klicken
-7. Auf der nächsten Seite (Credentials Usage) die Berechtigungen setzen:
-   - `ContainerRegistryFullAccess`
-   - `ServerlessContainersFullAccess`
-   - `ServerlessSQLDatabaseFullAccess`
-   - `IAMFullAccess`
-8. **Access Key** und **Secret Key** notieren — der Secret Key wird nur einmal angezeigt!
-9. **Project ID** finden: linke Seitenleiste → Projektname → Settings
-
-### Schritt 2 – terraform.tfvars anlegen
-
-```bash
-cp infra/terraform.tfvars.example infra/terraform.tfvars
-```
-
-Datei öffnen und ausfüllen:
-
-```hcl
-scw_access_key      = "SCWXXXXXXXXXXXXXXXXX"
-scw_secret_key      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-scw_project_id      = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-admin_token         = "..."   # Ausgabe von: openssl rand -base64 32
-api_username        = "flohmarkt"
-api_password        = "..."   # Ausgabe von: openssl rand -base64 32
-container_image_tag = "latest"
-```
-
-Starke Passwörter generieren:
-```bash
-openssl rand -base64 32
-```
-
-### Schritt 3 – Phase 1: Datenbank und Registry anlegen
+## Infrastruktur-Änderungen (OpenTofu)
 
 ```bash
 cd infra
-tofu init   # einmalig: lädt den Scaleway-Provider herunter
 
-tofu apply \
-  -target=scaleway_sdb_sql_database.flohmarkt \
-  -target=scaleway_registry_namespace.flohmarkt \
-  -target=scaleway_container_namespace.flohmarkt_ns \
-  -target=scaleway_iam_application.flohmarkt_db \
-  -target=scaleway_iam_api_key.flohmarkt_db \
-  -target=scaleway_iam_policy.flohmarkt_db
-```
+# Beim ersten Checkout: backend.hcl anlegen (Werte aus GitHub Secrets TF_STATE_*)
+cat > backend.hcl << 'EOF'
+access_key = "..."
+secret_key = "..."
+EOF
 
-Mit `yes` bestätigen. OpenTofu legt an:
-- PostgreSQL-Datenbank
-- Container-Registry (Speicher für Docker-Images)
-- Container-Namespace
-- Datenbank-Nutzer (IAM Application + API Key)
-
-### Schritt 4 – Datenbankstruktur einspielen
-
-```bash
-# Verbindungsdaten aus OpenTofu lesen und Tabellen anlegen
-psql "$(tofu output -raw database_connection_string)" -f ../schema.sql
-```
-
-Erwartete Ausgabe:
-```
-CREATE EXTENSION
-CREATE TABLE
-CREATE INDEX
-```
-
-### Schritt 5 – Docker Image bauen und hochladen
-
-```bash
-REGISTRY=$(tofu output -raw registry_endpoint)
-
-# Bei der Scaleway Registry einloggen
-docker login rg.fr-par.scw.cloud \
-  -u nologin \
-  -p $(grep scw_secret_key terraform.tfvars | cut -d'"' -f2)
-
-# Image bauen (aus dem infra-Ordner heraus, daher "..")
-docker build -t $REGISTRY/flohmarkt-api:latest ..
-
-# Image hochladen
-docker push $REGISTRY/flohmarkt-api:latest
-```
-
-### Schritt 6 – Phase 2: Container deployen
-
-```bash
+tofu init -backend-config=backend.hcl
+tofu plan
 tofu apply
-# Mit "yes" bestätigen
 ```
-
-Die API-URL aus der Ausgabe notieren:
-```
-api_url = "https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud"
-```
-
-### Schritt 7 – GitHub Secrets anlegen
-
-`https://github.com/openzirndorf/garagenflohmarkt2.0/settings/secrets/actions`
-→ **New repository secret** für jedes der folgenden:
-
-| Secret-Name | Wert |
-|-------------|------|
-| `VITE_API_USERNAME` | Wert von `api_username` aus `terraform.tfvars` |
-| `VITE_API_PASSWORD` | Wert von `api_password` aus `terraform.tfvars` |
-| `SCW_ACCESS_KEY` | Wert von `scw_access_key` aus `terraform.tfvars` |
-| `SCW_SECRET_KEY` | Wert von `scw_secret_key` aus `terraform.tfvars` |
-| `SCW_PROJECT_ID` | Wert von `scw_project_id` aus `terraform.tfvars` |
-
-### Schritt 8 – GitHub Pages aktivieren
-
-`https://github.com/openzirndorf/garagenflohmarkt2.0/settings/pages`
-→ Source: **GitHub Actions** → Speichern
 
 ---
 
-## Deployen
+## Deployment
 
-### Frontend (automatisch)
+### Automatisch (bei Push auf `main`)
 
-Das Frontend deployt **automatisch** bei jedem Push auf `main` wenn Dateien in `frontend/` geändert wurden.
+| Geänderte Pfade | Workflow | Aktion |
+|-----------------|----------|--------|
+| `frontend/**` | `deploy-frontend.yml` | Build + GitHub Pages |
+| `app/**`, `Dockerfile`, `pyproject.toml` | `deploy-backend.yml` | Docker Build + Push + Container-Redeploy |
 
-Manuell triggern:
-`https://github.com/openzirndorf/garagenflohmarkt2.0/actions/workflows/deploy-frontend.yml`
-→ **Run workflow**
+### Manuell triggern
 
-### Backend (automatisch)
-
-Das Backend deployt **automatisch** bei jedem Push auf `main` wenn Dateien in `app/`, `Dockerfile`
-oder `pyproject.toml` geändert wurden. Die Pipeline:
-
-1. Baut das Docker Image
-2. Pusht es nach `rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:latest`
-3. Deployt den Scaleway Serverless Container neu
-
-Manuell triggern:
-`https://github.com/openzirndorf/garagenflohmarkt2.0/actions/workflows/deploy-backend.yml`
-→ **Run workflow**
+GitHub → Actions → Workflow → **Run workflow**
 
 ---
 
-## API-Übersicht
+## API-Referenz
 
 | Methode | Pfad | Auth | Beschreibung |
 |---------|------|------|--------------|
-| GET | `/health` | – | Statuscheck |
-| GET | `/stands` | – | Alle freigegebenen Stände |
-| GET | `/stands/geojson` | – | Stände als GeoJSON für die Karte |
-| POST | `/stands` | Basic Auth | Stand anmelden (landet als PENDING) |
-| GET | `/stands/by-token/{token}` | – | Eigenen Stand abrufen (Token = Auth) |
-| DELETE | `/stands/by-token/{token}` | – | Eigenen Stand zurückziehen |
-| GET | `/stands/admin` | Bearer Token | Alle Stände inkl. PENDING |
-| POST | `/stands/{id}/approve` | Bearer Token | Stand freigeben |
+| `GET` | `/health` | – | Statuscheck |
+| `GET` | `/stands` | – | Freigegebene Stände |
+| `GET` | `/stands/geojson` | – | GeoJSON für die Karte |
+| `POST` | `/stands/` | Basic Auth | Stand einreichen |
+| `GET` | `/stands/confirm/{token}` | – | E-Mail bestätigen |
+| `GET` | `/stands/by-token/{token}` | – | Eigenen Stand abrufen |
+| `PATCH` | `/stands/by-token/{token}` | – | Eigenen Stand bearbeiten |
+| `DELETE` | `/stands/by-token/{token}` | – | Eigenen Stand zurückziehen |
+| `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING |
+| `POST` | `/stands/{id}/approve` | Bearer | Stand freigeben |
+| `PATCH` | `/stands/{id}` | Bearer | Stand bearbeiten (Admin) |
+| `DELETE` | `/stands/{id}` | Bearer | Stand löschen (Admin) |
+| `GET` | `/stands/debug/smtp` | Bearer | SMTP-Konfiguration prüfen |
 
-**Stand freigeben** (Admin-Token aus `terraform.tfvars`, Admin-UI unter `#admin`):
 ```bash
-curl -X POST \
-  -H "Authorization: Bearer DEIN_ADMIN_TOKEN" \
-  https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud/stands/1/approve
+# Stand freigeben
+curl -X POST -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/1/approve
+
+# Alle Stände ansehen (inkl. PENDING/CONFIRMED)
+curl -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/admin
+
+# Direkte DB-Abfrage
+cd infra && psql "$(tofu output -raw database_connection_string)"
 ```
 
-**Alle eingereichten Stände ansehen:**
-```bash
-curl -H "Authorization: Bearer DEIN_ADMIN_TOKEN" \
-  https://openzirndorfcouyb8pc-flohmarkt-api.functions.fnc.fr-par.scw.cloud/stands/admin
+```sql
+-- Offene Anmeldungen
+SELECT id, name, adresse, status, created_at FROM stands WHERE status != 'APPROVED';
+
+-- Stand löschen
+DELETE FROM stands WHERE id = 42;
+
+-- Statistik
+SELECT status, count(*) FROM stands GROUP BY status;
 ```
-
----
-
-## Wartung & Updates
-
-**Datenbank direkt abfragen:**
-```bash
-cd infra
-psql "$(tofu output -raw database_connection_string)"
-# Beispiele:
-# SELECT * FROM stands WHERE status = 'PENDING';
-# SELECT count(*) FROM stands;
-# DELETE FROM stands WHERE id = 42;
-```
-
-**Logs ansehen:**
-Scaleway Dashboard → Serverless Containers → `flohmarkt-api` → Logs
-
-**API-Token rotieren** (z.B. bei Verdacht auf Missbrauch):
-1. Neues Passwort generieren: `openssl rand -base64 32`
-2. In `terraform.tfvars` eintragen
-3. `tofu apply` ausführen
-4. GitHub Secret `VITE_API_PASSWORD` aktualisieren
-5. Frontend-Deploy neu triggern (manuell in GitHub Actions)
