@@ -1,9 +1,25 @@
+<p align="center">
+  <img src="docs/logo.png" alt="Garagenflohmarkt Zirndorf" width="320">
+</p>
+
 # Garagenflohmarkt Zirndorf
 
-React-Frontend + FastAPI-Backend + Scaleway-Infrastruktur für den Garagenflohmarkt Zirndorf.
+Der **Garagenflohmarkt Zirndorf** ist ein jährliches Stadtteilfest, bei dem Anwohnerinnen und Anwohner ihre Garagen, Einfahrten und Vorgärten in kleine Verkaufsstände verwandeln. Die ganze Stadt wird zur Flohmarktmeile.
 
-Live: `https://openzirndorf.github.io/garagenflohmarkt2.0/`
-API: `https://api.openzirndorf.de`
+Diese App macht es einfach, mitzumachen und den Überblick zu behalten:
+
+- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte.
+- **Karte** — Alle freigegebenen Stände auf einer interaktiven Karte, filterbar nach Kategorien (Kleidung, Spielzeug, Bücher …)
+- **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit zurückziehen, ohne Anmeldung, nur mit dem persönlichen Link aus der Bestätigungsmail.
+
+Die App ist kostenlos, ohne Account und ohne Tracking nutzbar.
+
+**→ [openzirndorf.github.io/garagenflohmarkt2.0](https://openzirndorf.github.io/garagenflohmarkt2.0/)**
+
+---
+
+<details>
+<summary><strong>Technische Dokumentation</strong> (für Entwicklerinnen und Entwickler)</summary>
 
 ---
 
@@ -309,3 +325,5 @@ DELETE FROM stands WHERE id = 42;
 -- Statistik
 SELECT status, count(*) FROM stands GROUP BY status;
 ```
+
+</details>
