@@ -1,142 +1,160 @@
-OpenZirndorf Community License (OZCL)
-Version 1.0
-Copyright (c) 2024–2026 OpenZirndorf Contributors
+# OpenZirndorf Community License (OZCL)
+**Version 2.0**
+Gültig ab: 2026 · Copyright (c) 2024–2026 OpenZirndorf Contributors
 
-Präambel
+---
 
-OpenZirndorf ist ein ehrenamtliches Open-Community-Projekt zur
-Förderung digitaler Lösungen für Kommunen, Vereine, Bildung,
-Nachbarschaften und das Gemeinwohl.
+## Präambel
 
-Diese Lizenz soll eine freie Nutzung und Weiterentwicklung der
-Software ermöglichen und gleichzeitig sicherstellen, dass die
-ehrenamtliche Arbeit der OpenZirndorf-Community anerkannt wird und
-nicht für parteipolitische Zwecke vereinnahmt wird.
+OpenZirndorf ist ein ehrenamtliches Open-Community-Projekt zur Förderung digitaler Lösungen für Kommunen, Vereine, Bildung, Nachbarschaften und das Gemeinwohl.
 
-──────────────────────────────────────────────────────────────
+Diese Lizenz ermöglicht eine freie Nutzung und Weiterentwicklung der Software. Sie stellt sicher, dass die ehrenamtliche Arbeit der Community anerkannt wird, OpenZirndorf politisch unabhängig bleibt und nicht mit parteipolitischen Interessen in Verbindung gebracht wird.
 
-1. Erlaubte Nutzung
+---
 
-Jede natürliche oder juristische Person erhält unentgeltlich das
-Recht,
+## 1. Erlaubte Nutzung
 
-- die Software zu verwenden,
-- zu kopieren,
-- zu verändern,
-- weiterzugeben,
-- öffentlich bereitzustellen,
-- selbst zu hosten,
-- Unterprojekte und Erweiterungen zu entwickeln,
+Jede natürliche oder juristische Person erhält unentgeltlich das Recht, die Software zu verwenden, zu kopieren, zu verändern, weiterzugeben, öffentlich bereitzustellen, selbst zu hosten sowie Unterprojekte und Erweiterungen zu entwickeln – sofern die Bedingungen dieser Lizenz eingehalten werden.
 
-sofern die Bedingungen dieser Lizenz eingehalten werden.
+---
 
-──────────────────────────────────────────────────────────────
+## 2. Namensnennung
 
-2. Namensnennung
+Jede öffentlich erreichbare Instanz der Software muss gut sichtbar folgenden Hinweis enthalten:
 
-Jede öffentlich erreichbare Instanz der Software muss gut sichtbar
-folgenden Hinweis enthalten:
+> **Powered by OpenZirndorf**
 
-    Powered by OpenZirndorf
+Dieser Hinweis muss im Footer, auf der About-Seite und im Impressum erscheinen. Bei öffentlicher Bewerbung ist OpenZirndorf als Urheber der Software zu nennen.
 
-Dieser Hinweis muss mindestens an folgenden Stellen erscheinen:
+**Ausnahme:** Politische Parteien, Wählergruppen und parteinahe Organisationen sind von der Namensnennung ausgeschlossen und dürfen den Namen OpenZirndorf sowie zugehörige Logos nicht ohne Zustimmung verwenden.
 
-- Footer
-- About-Seite
-- Impressum
+---
 
-Darüber hinaus ist bei öffentlicher Bewerbung der Software oder einer
-damit betriebenen Veranstaltung (z. B. Webseite, Flyer, Social Media,
-Pressemitteilungen oder vergleichbare Veröffentlichungen)
-OpenZirndorf als Urheber der Software zu nennen.
+## 3. Weitergabe geänderter Versionen
 
-Beispiel:
+Wer eine geänderte Version öffentlich betreibt oder veröffentlicht, muss diese Lizenz beibehalten, Änderungen dokumentieren und den vollständigen Quellcode der eingesetzten Version kostenlos zugänglich machen.
 
-    Diese Veranstaltung wird mit der Software
-    "OpenZirndorf" durchgeführt.
+---
 
-──────────────────────────────────────────────────────────────
+## 4. Schutz der Marke
 
-3. Weitergabe geänderter Versionen
+Diese Lizenz gewährt keinerlei Rechte an den Marken, Logos oder geschützten Kennzeichen von OpenZirndorf. Der Name „OpenZirndorf" darf ausschließlich zur Namensnennung gemäß Abschnitt 2 verwendet werden. Es darf nicht der Eindruck entstehen, eine veränderte Version sei eine offizielle OpenZirndorf-Version.
 
-Wer eine geänderte Version öffentlich betreibt oder veröffentlicht,
-muss
+---
 
-- diese Lizenz beibehalten,
-- Änderungen dokumentieren,
-- den vollständigen Quellcode der eingesetzten Version
-  kostenlos zugänglich machen.
+## 5. Verbot parteipolitischer Nutzung
 
-──────────────────────────────────────────────────────────────
+Die Nutzung dieser Software ist unzulässig, wenn der Betreiber oder Veranstalter eine politische Partei, eine Wählergruppe oder eine parteinahe Organisation ist.
 
-4. Schutz der Marke
+Unzulässig ist insbesondere jede Nutzung für:
 
-Diese Lizenz gewährt keinerlei Rechte an den Marken,
-Logos oder geschützten Kennzeichen von OpenZirndorf.
+- Wahlkampfveranstaltungen und Mitgliederwerbung
+- Spendenkampagnen und parteipolitische Öffentlichkeitsarbeit
+- Veranstaltungen, die von einer einzelnen Partei oder Wählergruppe getragen werden
 
-Der Name "OpenZirndorf" darf ausschließlich zur
-Namensnennung gemäß Abschnitt 2 verwendet werden.
+### Parteiübergreifende Initiativen sind ausdrücklich erlaubt
 
-Insbesondere darf nicht der Eindruck entstehen,
-eine veränderte Version sei eine offizielle
-OpenZirndorf-Version.
+Veranstaltungen und Projekte, die von Vereinen, Initiativen, Kommunen oder sonstigen gemeinwohlorientierten Trägern organisiert werden, sind erlaubt – auch wenn politische Parteien oder deren Mitglieder daran teilnehmen oder mitwirken.
 
-──────────────────────────────────────────────────────────────
+*Maßgeblich ist der Träger der Veranstaltung, nicht die Teilnehmer. Eine Partei als Mitveranstalterin neben anderen Organisationen begründet kein Verbot, solange der Gesamtcharakter gemeinwohlorientiert ist.*
 
-5. Ausschluss parteipolitischer Nutzung
+---
 
-Die Nutzung dieser Software ist unzulässig, wenn sie überwiegend
-parteipolitischen Zwecken dient.
+## 6. Keine Assoziation
 
-Hierzu zählen insbesondere:
+Jede Nutzung der Software, die den Eindruck erweckt, OpenZirndorf unterstütze, befürworte oder stehe hinter einer politischen Partei, Wählergruppe oder parteinahen Organisation, ist untersagt – unabhängig davon, ob der Name OpenZirndorf dabei explizit genannt wird.
 
-- Wahlkampfveranstaltungen,
-- Mitgliederwerbung,
-- Spendenkampagnen,
-- parteipolitische Öffentlichkeitsarbeit,
-- Veranstaltungen einer einzelnen politischen Partei oder Wählergruppe,
-- sonstige Maßnahmen zur Förderung einer einzelnen politischen Partei,
-  Wählergruppe oder parteinahen Organisation.
+OpenZirndorf behält sich vor, öffentlich zu erklären, dass eine bestimmte Nutzung nicht autorisiert wurde und gegen diese Lizenz verstößt.
 
-Hiervon ausdrücklich ausgenommen sind überparteiliche,
-gemeinwohlorientierte oder gesellschaftliche Veranstaltungen, an denen
-politische Parteien oder deren Mitglieder lediglich gemeinsam mit
-anderen Organisationen teilnehmen oder mitwirken.
+---
 
-Beispiele hierfür sind insbesondere:
+## 7. Keine Gewährleistung
 
-- Stadt- und Gemeindefeste,
-- Bürgerfeste,
-- Vereinsveranstaltungen,
-- Garagen- und Hofflohmärkte,
-- Nachhaltigkeits- oder Klimatage,
-- Bildungsveranstaltungen,
-- Aktionstage,
-- Veranstaltungen kommunaler Einrichtungen,
-- sonstige Veranstaltungen, die allen Bürgerinnen und Bürgern
-  unabhängig von ihrer politischen Einstellung offenstehen.
+Die Software wird „wie sie ist" bereitgestellt, ohne ausdrückliche oder stillschweigende Gewährleistung. Die Urheber übernehmen keine Haftung für Schäden, die aus der Nutzung der Software entstehen.
 
-Maßgeblich ist der Gesamtcharakter der Veranstaltung.
-Eine bloße Beteiligung oder Unterstützung durch politische Parteien
-macht eine Veranstaltung nicht zu einer parteipolitischen Nutzung im
-Sinne dieser Lizenz.
+---
 
-──────────────────────────────────────────────────────────────
+## 8. Zustimmung
 
-6. Keine Gewährleistung
+Durch Verwendung, Änderung, Verbreitung oder öffentliches Bereitstellen der Software akzeptiert der Nutzer diese Lizenz.
 
-Die Software wird "wie sie ist" bereitgestellt.
+# OpenZirndorf Community License (OZCL)
+**Version 2.0**
+Effective: 2026 · Copyright (c) 2024–2026 OpenZirndorf Contributors
 
-Es bestehen keinerlei ausdrückliche oder stillschweigende
-Gewährleistungen.
+---
 
-Die Urheber übernehmen keine Haftung für Schäden,
-Folgeschäden oder sonstige Ansprüche, die aus der Nutzung
-der Software entstehen.
+## Preamble
 
-──────────────────────────────────────────────────────────────
+OpenZirndorf is a volunteer-based open-community project to promote digital solutions for municipalities, associations, education, neighborhoods, and the common good.
 
-7. Zustimmung
+This license enables free use and further development of the software. It ensures that the voluntary work of the community is acknowledged, that OpenZirndorf remains politically independent, and that it is not associated with party-political interests.
 
-Durch Verwendung, Änderung, Verbreitung oder öffentliches
-Bereitstellen der Software akzeptiert der Nutzer diese Lizenz.
+---
+
+## 1. Permitted Use
+
+Any natural or legal person is granted, free of charge, the right to use, copy, modify, distribute, make publicly available, self-host the software, and develop sub-projects and extensions – provided the conditions of this license are met.
+
+---
+
+## 2. Attribution
+
+Every publicly accessible instance of the software must prominently display the following notice:
+
+> **Powered by OpenZirndorf**
+
+This notice must appear in the footer, on the about page, and in the legal notice. When publicly promoting the software, OpenZirndorf must be named as the author.
+
+**Exception:** Political parties, voter groups, and party-affiliated organizations are excluded from attribution and may not use the name OpenZirndorf or associated logos without permit.
+
+---
+
+## 3. Distribution of Modified Versions
+
+Anyone who publicly operates or publishes a modified version must retain this license, document all changes, and make the complete source code of the deployed version freely available.
+
+---
+
+## 4. Trademark Protection
+
+This license grants no rights to the trademarks, logos, or protected marks of OpenZirndorf. The name "OpenZirndorf" may only be used for attribution as specified in Section 2. No impression may be created that a modified version is an official OpenZirndorf release.
+
+---
+
+## 5. Prohibition of Party-Political Use
+
+Use of this software is not permitted if the operator or organizer is a political party, a voter group, or a party-affiliated organization.
+
+In particular, use is prohibited for:
+
+- Election campaign events and membership recruitment
+- Donation campaigns and party-political public relations
+- Events organized and run by a single party or voter group
+
+### Cross-party initiatives are expressly permitted
+
+Events and projects organized by associations, initiatives, municipalities, or other community-oriented bodies are permitted – even if political parties or their members participate or contribute.
+
+*What matters is who organizes the event, not who attends. A party as co-organizer alongside other organizations does not trigger the prohibition, as long as the overall character is community-oriented.*
+
+---
+
+## 6. No Association
+
+Any use of the software that creates the impression that OpenZirndorf supports, endorses, or stands behind a political party, voter group, or party-affiliated organization is prohibited – regardless of whether the name OpenZirndorf is explicitly mentioned.
+
+OpenZirndorf reserves the right to publicly state that a particular use was not authorized and violates this license.
+
+---
+
+## 7. No Warranty
+
+The software is provided "as is", without express or implied warranty. The authors assume no liability for damages arising from the use of the software.
+
+---
+
+## 8. Acceptance
+
+By using, modifying, distributing, or publicly making the software available, the user accepts this license.
+
