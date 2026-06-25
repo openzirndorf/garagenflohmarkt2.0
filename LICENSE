@@ -1,112 +1,142 @@
-MIT-Lizenz mit Landkreis-Fürth-Klausel
-MIT License with Landkreis Fürth Clause
+OpenZirndorf Community License (OZCL)
+Version 1.0
+Copyright (c) 2024–2026 OpenZirndorf Contributors
 
-══════════════════════════════════════════════════════════════════
-DEUTSCH
-══════════════════════════════════════════════════════════════════
+Präambel
 
-Copyright (c) 2024–2026 openzirndorf Contributors
+OpenZirndorf ist ein ehrenamtliches Open-Community-Projekt zur
+Förderung digitaler Lösungen für Kommunen, Vereine, Bildung,
+Nachbarschaften und das Gemeinwohl.
 
-Hiermit wird jeder Person unentgeltlich die Erlaubnis erteilt, diese
-Software und die zugehörigen Dokumentationsdateien (die „Software")
-zu verwenden, zu kopieren, zu verändern, zusammenzuführen, zu
-veröffentlichen, weiterzugeben, zu unterlizenzieren und/oder zu
-verkaufen, sowie Personen, denen die Software überlassen wird,
-dies ebenfalls zu gestatten – und zwar unter den folgenden Bedingungen:
+Diese Lizenz soll eine freie Nutzung und Weiterentwicklung der
+Software ermöglichen und gleichzeitig sicherstellen, dass die
+ehrenamtliche Arbeit der OpenZirndorf-Community anerkannt wird und
+nicht für parteipolitische Zwecke vereinnahmt wird.
 
-1. STANDARDBEDINGUNGEN (MIT)
+──────────────────────────────────────────────────────────────
 
-   Der obige Urheberrechtshinweis und dieser Erlaubnishinweis sind
-   in allen Kopien oder wesentlichen Teilen der Software beizufügen.
+1. Erlaubte Nutzung
 
-2. LANDKREIS-FÜRTH-KLAUSEL
+Jede natürliche oder juristische Person erhält unentgeltlich das
+Recht,
 
-   Wer diese Software – in unveränderter oder abgewandelter Form –
-   zum Betrieb, zur Organisation oder zur Bewerbung eines
-   Garagenflohmarkts, Straßenflohmarkts oder vergleichbaren
-   Tausch- oder Verkaufsevents im Landkreis Fürth (inkl. aller
-   Städte und Gemeinden wie Zirndorf, Oberasbach, Stein, Cadolzburg,
-   Langenzenn, Wilhermsdorf, Veitsbronn, Roßtal u. a.) einsetzt,
-   ist dazu verpflichtet:
+- die Software zu verwenden,
+- zu kopieren,
+- zu verändern,
+- weiterzugeben,
+- öffentlich bereitzustellen,
+- selbst zu hosten,
+- Unterprojekte und Erweiterungen zu entwickeln,
 
-   a) in der Benutzeroberfläche der Anwendung (Header, Footer, Impressum
-      und About-Seite) gut sichtbar den Hinweis
-      „Powered by openzirndorf" zu platzieren, und
+sofern die Bedingungen dieser Lizenz eingehalten werden.
 
-   b) in jeglicher öffentlicher Kommunikation zum Event (Flyer, Social
-      Media, Pressemitteilungen, Webseiten) das Projekt „openzirndorf"
-      namentlich als Urheber zu erwähnen.
+──────────────────────────────────────────────────────────────
 
-   Diese Klausel dient der Anerkennung ehrenamtlicher Arbeit für das
-   Gemeinwohl im Landkreis Fürth. Sie schränkt die Nutzung in keiner
-   Weise ein – sie verlangt lediglich, dass Veranstalter:innen von
-   Flohmärkten im Landkreis Fürth sagen, woher die Software kommt.
+2. Namensnennung
 
-   Kurzfassung: Flohmarkt im Landkreis Fürth? Dann sag „Danke, openzirndorf."
+Jede öffentlich erreichbare Instanz der Software muss gut sichtbar
+folgenden Hinweis enthalten:
 
-3. HAFTUNGSAUSSCHLUSS
+    Powered by OpenZirndorf
 
-   DIE SOFTWARE WIRD „WIE SIE IST" BEREITGESTELLT, OHNE JEGLICHE
-   AUSDRÜCKLICHE ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG, EINSCHLIESSLICH,
-   ABER NICHT BESCHRÄNKT AUF DIE GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT,
-   DER EIGNUNG FÜR EINEN BESTIMMTEN ZWECK UND DER NICHTVERLETZUNG VON
-   RECHTEN DRITTER. IN KEINEM FALL HAFTEN DIE URHEBER:INNEN ODER
-   URHEBERRECHTSINHABER:INNEN FÜR ANSPRÜCHE, SCHÄDEN ODER SONSTIGE
-   VERBINDLICHKEITEN – GLEICH OB AUS VERTRAG, DELIKT ODER SONSTWIE –,
-   DIE SICH AUS DER SOFTWARE, IHRER NUTZUNG ODER SONSTIGEN VORGÄNGEN
-   MIT DER SOFTWARE ERGEBEN.
+Dieser Hinweis muss mindestens an folgenden Stellen erscheinen:
 
-══════════════════════════════════════════════════════════════════
-ENGLISH
-══════════════════════════════════════════════════════════════════
+- Footer
+- About-Seite
+- Impressum
 
-Copyright (c) 2024–2026 openzirndorf Contributors
+Darüber hinaus ist bei öffentlicher Bewerbung der Software oder einer
+damit betriebenen Veranstaltung (z. B. Webseite, Flyer, Social Media,
+Pressemitteilungen oder vergleichbare Veröffentlichungen)
+OpenZirndorf als Urheber der Software zu nennen.
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+Beispiel:
 
-1. STANDARD CONDITIONS (MIT)
+    Diese Veranstaltung wird mit der Software
+    "OpenZirndorf" durchgeführt.
 
-   The above copyright notice and this permission notice shall be
-   included in all copies or substantial portions of the Software.
+──────────────────────────────────────────────────────────────
 
-2. THE LANDKREIS FÜRTH CLAUSE
+3. Weitergabe geänderter Versionen
 
-   Any person or organisation that uses this Software – in original or
-   modified form – to operate, organise, or promote a garage sale,
-   street flea market, or comparable swap/sales event within the
-   district of Landkreis Fürth (including all municipalities such as
-   Zirndorf, Oberasbach, Stein, Cadolzburg, Langenzenn, Wilhermsdorf,
-   Veitsbronn, Roßtal, and others) must:
+Wer eine geänderte Version öffentlich betreibt oder veröffentlicht,
+muss
 
-   a) display a clearly visible credit reading "Powered by openzirndorf"
-      in the application's user interface (header, footer, imprint,
-      about page), and
+- diese Lizenz beibehalten,
+- Änderungen dokumentieren,
+- den vollständigen Quellcode der eingesetzten Version
+  kostenlos zugänglich machen.
 
-   b) mention the project "openzirndorf" by name as creator in any public
-      communication related to the event (flyers, social media, press
-      releases, websites).
+──────────────────────────────────────────────────────────────
 
-   This clause exists to acknowledge the volunteer work done for the
-   common good in Landkreis Fürth. It does not restrict use in any
-   meaningful way – it simply asks that flea market organisers in
-   Landkreis Fürth give credit where credit is due.
+4. Schutz der Marke
 
-   TL;DR: Hosting a flea market in Landkreis Fürth? Just say
-   "Thanks, openzirndorf."
+Diese Lizenz gewährt keinerlei Rechte an den Marken,
+Logos oder geschützten Kennzeichen von OpenZirndorf.
 
-3. DISCLAIMER
+Der Name "OpenZirndorf" darf ausschließlich zur
+Namensnennung gemäß Abschnitt 2 verwendet werden.
 
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
-   BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-   ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-   SOFTWARE.
+Insbesondere darf nicht der Eindruck entstehen,
+eine veränderte Version sei eine offizielle
+OpenZirndorf-Version.
+
+──────────────────────────────────────────────────────────────
+
+5. Ausschluss parteipolitischer Nutzung
+
+Die Nutzung dieser Software ist unzulässig, wenn sie überwiegend
+parteipolitischen Zwecken dient.
+
+Hierzu zählen insbesondere:
+
+- Wahlkampfveranstaltungen,
+- Mitgliederwerbung,
+- Spendenkampagnen,
+- parteipolitische Öffentlichkeitsarbeit,
+- Veranstaltungen einer einzelnen politischen Partei oder Wählergruppe,
+- sonstige Maßnahmen zur Förderung einer einzelnen politischen Partei,
+  Wählergruppe oder parteinahen Organisation.
+
+Hiervon ausdrücklich ausgenommen sind überparteiliche,
+gemeinwohlorientierte oder gesellschaftliche Veranstaltungen, an denen
+politische Parteien oder deren Mitglieder lediglich gemeinsam mit
+anderen Organisationen teilnehmen oder mitwirken.
+
+Beispiele hierfür sind insbesondere:
+
+- Stadt- und Gemeindefeste,
+- Bürgerfeste,
+- Vereinsveranstaltungen,
+- Garagen- und Hofflohmärkte,
+- Nachhaltigkeits- oder Klimatage,
+- Bildungsveranstaltungen,
+- Aktionstage,
+- Veranstaltungen kommunaler Einrichtungen,
+- sonstige Veranstaltungen, die allen Bürgerinnen und Bürgern
+  unabhängig von ihrer politischen Einstellung offenstehen.
+
+Maßgeblich ist der Gesamtcharakter der Veranstaltung.
+Eine bloße Beteiligung oder Unterstützung durch politische Parteien
+macht eine Veranstaltung nicht zu einer parteipolitischen Nutzung im
+Sinne dieser Lizenz.
+
+──────────────────────────────────────────────────────────────
+
+6. Keine Gewährleistung
+
+Die Software wird "wie sie ist" bereitgestellt.
+
+Es bestehen keinerlei ausdrückliche oder stillschweigende
+Gewährleistungen.
+
+Die Urheber übernehmen keine Haftung für Schäden,
+Folgeschäden oder sonstige Ansprüche, die aus der Nutzung
+der Software entstehen.
+
+──────────────────────────────────────────────────────────────
+
+7. Zustimmung
+
+Durch Verwendung, Änderung, Verbreitung oder öffentliches
+Bereitstellen der Software akzeptiert der Nutzer diese Lizenz.
