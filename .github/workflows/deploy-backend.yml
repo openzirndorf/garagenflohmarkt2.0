@@ -146,8 +146,10 @@ jobs:
           SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
           SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: fr-par
+        # "update" redeployt automatisch, sobald sich registry-image ändert -
+        # der scw-CLI kennt kein eigenständiges "deploy"-Subkommando.
         run: |
-          scw container container deploy \
+          scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
             registry-image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
             region=fr-par
@@ -179,7 +181,7 @@ jobs:
           SCW_DEFAULT_REGION: fr-par
         run: |
           curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
-          scw container container deploy \
+          scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
             registry-image=${{ needs.deploy.outputs.previous_image }} \
             region=fr-par
