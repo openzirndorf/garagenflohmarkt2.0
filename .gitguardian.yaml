@@ -1,0 +1,12 @@
+version: 2
+secret:
+  ignored_paths:
+    # Platzhalter-/Beispieldateien - spiegelt die Ausnahme in .gitleaks.toml,
+    # die GitGuardian als separater Dienst nicht automatisch mitliest.
+    - "*.example"
+    - "*.tfvars.example"
+    # Ephemere Postgres-Zugangsdaten für den CI-Testcontainer - existieren
+    # nur für die Dauer eines einzelnen Workflow-Laufs, keine echte,
+    # erreichbare Datenbank.
+    - ".github/workflows/test.yml"
+    - ".github/workflows/deploy-backend.yml"
