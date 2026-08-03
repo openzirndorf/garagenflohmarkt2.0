@@ -146,12 +146,14 @@ jobs:
           SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
           SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: fr-par
-        # "update" redeployt automatisch, sobald sich registry-image ändert -
-        # der scw-CLI kennt kein eigenständiges "deploy"-Subkommando.
+        # "update" redeployt automatisch, sobald sich das Image ändert - der
+        # scw-CLI kennt kein eigenständiges "deploy"-Subkommando. Das Update-
+        # Argument heißt "image" (die REST-API selbst nennt das Feld weiterhin
+        # "registry_image", siehe jq-Pfad oben - reine CLI-Umbenennung).
         run: |
           scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
-            registry-image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
+            image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
             region=fr-par
 
   smoke-test:
@@ -183,6 +185,6 @@ jobs:
           curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
           scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
-            registry-image=${{ needs.deploy.outputs.previous_image }} \
+            image=${{ needs.deploy.outputs.previous_image }} \
             region=fr-par
           echo "::error::Deploy fehlgeschlagen, vorheriges Image (${{ needs.deploy.outputs.previous_image }}) wiederhergestellt."
