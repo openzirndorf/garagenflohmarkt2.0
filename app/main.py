@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes.stands import router as stands_router
+
 from app.database import close_pool
+from app.routes.stands import router as stands_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

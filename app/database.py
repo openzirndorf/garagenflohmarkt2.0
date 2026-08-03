@@ -1,6 +1,7 @@
 # asyncpg – plain SQL, kein ORM (analog zu postgres.js im Node-Backend)
-import asyncpg
 import os
+
+import asyncpg
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 

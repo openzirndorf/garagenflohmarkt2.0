@@ -1,7 +1,8 @@
 import os
 import secrets
+
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBasic, HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBasic, HTTPBearer
 
 # --- Basic Auth für Frontend-Endpunkte (POST /stands) ---
 
@@ -12,7 +13,7 @@ _API_PASSWORD = os.environ.get("API_PASSWORD", "")
 
 
 def require_api_auth(
-    credentials: HTTPAuthorizationCredentials = Depends(_basic),
+    credentials: HTTPAuthorizationCredentials = Depends(_basic),  # noqa: B008 - FastAPI-Idiom
 ) -> None:
     """Timing-sicherer Vergleich verhindert Timing-Angriffe."""
     username_ok = secrets.compare_digest(
@@ -37,7 +38,7 @@ _ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 
 
 def require_admin_auth(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),  # noqa: B008 - FastAPI-Idiom
 ) -> None:
     if not secrets.compare_digest(credentials.credentials.encode(), _ADMIN_TOKEN.encode()):
         raise HTTPException(

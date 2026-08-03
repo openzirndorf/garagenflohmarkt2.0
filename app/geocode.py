@@ -19,5 +19,5 @@ async def geocode(adresse: str) -> tuple[float, float] | None:
             if not data:
                 return None
             return float(data[0]["lat"]), float(data[0]["lon"])
-        except Exception:
+        except Exception:  # noqa: BLE001 - Geocoding-Fehler sollen nie die Anmeldung blockieren
             return None
