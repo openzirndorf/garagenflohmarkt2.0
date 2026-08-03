@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "app/**"
+      - "scripts/**"
+      - "migrations/**"
       - "Dockerfile"
       - "pyproject.toml"
   workflow_dispatch:
@@ -13,9 +15,44 @@ concurrency:
   group: backend-deploy
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  # Nicht überspringbar: kein Deploy ohne grüne Tests, insbesondere die
+  # Datenschutz-Tests aus app/tests/test_stands_public_allowlist.py &co.
+  test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: flohmarkt
+          POSTGRES_PASSWORD: flohmarkt
+          POSTGRES_DB: flohmarkt_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flohmarkt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://flohmarkt:flohmarkt@localhost:5432/flohmarkt_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check app scripts
+      - run: python -m pytest app/tests -v
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      sha_tag: ${{ steps.tags.outputs.sha_tag }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,26 +63,124 @@ jobs:
           username: nologin
           password: ${{ secrets.SCW_SECRET_KEY }}
 
+      - id: tags
+        run: echo "sha_tag=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
+      # :latest bleibt als gewohnter Zeiger bestehen; der SHA-Tag macht das
+      # tatsächlich deployte Image eindeutig identifizierbar (für den
+      # Rollback-Schritt unten) statt sich auf das bewegliche :latest zu verlassen.
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:latest
+          tags: |
+            rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:latest
+            rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ steps.tags.outputs.sha_tag }}
 
-      - name: Deploy container
+  # Wendet ausstehende Migrationen automatisiert an, VOR dem Deploy des neuen
+  # Images (das evtl. schon das neue Schema voraussetzt). Migrationsdateien
+  # sind bereits über den normalen PR-Prozess reviewt, bevor sie auf main
+  # landen - automatisches Anwenden hier ist kein unreviewter Blindflug.
+  # Kein Downgrade-Mechanismus: die nummerierten SQL-Dateien sind reine
+  # Forward-Migrationen (siehe scripts/migrate.py) - ein "Rollback" bedeutet
+  # hier "vorheriges Container-Image erneut deployen" (siehe unten), nicht
+  # "Schemaänderung rückgängig machen". Bei einer inkompatiblen Schemaänderung
+  # würde ein Image-Rollback allein nicht ausreichen - das ist eine bekannte
+  # Grenze von reinen Forward-Migrationen, kein gelöstes Problem.
+  migrate:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: opentofu/setup-opentofu@v1
+
+      - name: DATABASE_URL aus Terraform-State lesen
+        working-directory: infra
+        run: |
+          cat > backend.hcl << EOF
+          access_key = "${{ secrets.TF_STATE_ACCESS_KEY }}"
+          secret_key = "${{ secrets.TF_STATE_SECRET_KEY }}"
+          EOF
+          tofu init -backend-config=backend.hcl
+          echo "DATABASE_URL=$(tofu output -raw database_connection_string)" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e .
+      - run: python -m scripts.migrate
+
+  # Produktions-Deploy: pausiert für manuelle Freigabe (GitHub Environment
+  # "production" mit Required Reviewers - in den Repo-Settings einzurichten,
+  # der Solo-Maintainer kann seine eigene Freigabe erteilen, es braucht
+  # keinen zweiten Menschen).
+  deploy:
+    needs: [build-and-push, migrate]
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      previous_image: ${{ steps.capture.outputs.previous_image }}
+    steps:
+      - name: Scaleway CLI installieren
+        run: curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+
+      - name: Aktuell deploytes Image merken (für Rollback)
+        id: capture
         env:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
           SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
           SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: fr-par
-          TF_STATE_ACCESS_KEY: ${{ secrets.TF_STATE_ACCESS_KEY }}
-          TF_STATE_SECRET_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
         run: |
-          # Install Scaleway CLI
-          curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
-          # Trigger redeploy (pulls the new :latest image)
+          current=$(scw container container list name=flohmarkt-api -o json | jq -r '.[0].registry_image')
+          echo "previous_image=$current" >> "$GITHUB_OUTPUT"
+
+      - name: Neues Image deployen
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_DEFAULT_REGION: fr-par
+        run: |
           scw container container deploy \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
+            registry-image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
             region=fr-par
+
+  smoke-test:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health-Check nach dem Deploy
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf https://api.openzirndorf.de/health | grep -q '"ok":true'; then
+              echo "Smoke-Test erfolgreich."
+              exit 0
+            fi
+            echo "Noch nicht bereit, warte 10s ... ($i/12)"
+            sleep 10
+          done
+          echo "Smoke-Test fehlgeschlagen." >&2
+          exit 1
+
+      - name: Rollback bei Fehler
+        if: failure()
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_DEFAULT_REGION: fr-par
+        run: |
+          curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+          scw container container deploy \
+            $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
+            registry-image=${{ needs.deploy.outputs.previous_image }} \
+            region=fr-par
+          echo "::error::Deploy fehlgeschlagen, vorheriges Image (${{ needs.deploy.outputs.previous_image }}) wiederhergestellt."

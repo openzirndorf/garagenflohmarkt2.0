@@ -17,7 +17,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -p tsconfig.json --noEmit
+      - run: npx vitest --run
+
   build:
+    needs: test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -28,10 +46,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
-      - run: npm install
-
-      - run: npm run lint
+      - run: npm ci
 
       - name: Build
         run: npm run build
@@ -40,13 +58,29 @@ jobs:
           VITE_API_URL: https://api.openzirndorf.de
           VITE_API_USERNAME: ${{ secrets.VITE_API_USERNAME }}
           VITE_API_PASSWORD: ${{ secrets.VITE_API_PASSWORD }}
+          # Nicht geheim (öffentlicher Bucket) - als Repo-Variable statt
+          # Secret gepflegt: Settings → Secrets and variables → Actions → Variables.
+          # Leer lassen ist sicher: api.ts fällt dann auf die Live-API zurück.
+          VITE_STATIC_BASE_URL: ${{ vars.VITE_STATIC_BASE_URL }}
 
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
 
-  deploy:
+  # Pausiert für manuelle Freigabe wie beim Backend-Deploy (GitHub Environment
+  # "production" mit Required Reviewers) - eigener Zwischenschritt, damit der
+  # eigentliche Deploy-Job weiterhin im von actions/deploy-pages erwarteten
+  # Environment "github-pages" läuft (sonst verliert man die Pages-spezifische
+  # Anzeige in der GitHub-UI).
+  approve-production:
     needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Freigegeben für Produktions-Deploy."
+
+  deploy:
+    needs: approve-production
     runs-on: ubuntu-latest
     environment:
       name: github-pages

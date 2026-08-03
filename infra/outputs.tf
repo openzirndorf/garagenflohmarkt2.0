@@ -1,5 +1,5 @@
 output "database_connection_string" {
-  description = "Vollständiger PostgreSQL Connection String (IAM Credentials eingebettet)"
+  description = "Vollständiger PostgreSQL Connection String (DB-Passwort eingebettet)"
   value       = local.database_url
   sensitive   = true
 }
@@ -17,4 +17,9 @@ output "container_url" {
 output "api_url" {
   description = "Öffentliche API URL (direkte Scaleway URL)"
   value       = "https://${scaleway_container.flohmarkt_api.domain_name}"
+}
+
+output "stands_bucket_url" {
+  description = "Öffentliche Basis-URL des Stands-Artefakt-Buckets - für VITE_STATIC_BASE_URL im Frontend"
+  value       = "https://${scaleway_object_bucket.stands.name}.s3.${var.scw_region}.scw.cloud"
 }

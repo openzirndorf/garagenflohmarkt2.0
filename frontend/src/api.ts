@@ -2,27 +2,65 @@ import type { Stand, StandFormData } from "./types";
 
 const API = import.meta.env.VITE_API_URL ?? "http://localhost:8080";
 
+// Basis-URL des statischen Karten-Artefakts (Object Storage) - Produktion
+// setzt das über VITE_STATIC_BASE_URL; lokal ohne Bucket bleibt es leer und
+// die Funktionen unten fallen auf die Live-API zurück.
+const STATIC_BASE_URL = import.meta.env.VITE_STATIC_BASE_URL as string | undefined;
+
 // Basic-Auth Header für POST /stands – Credentials kommen aus Vite-Env
 const apiAuth = btoa(
   `${import.meta.env.VITE_API_USERNAME ?? ""}:${import.meta.env.VITE_API_PASSWORD ?? ""}`,
 );
 
+interface StandsManifest {
+  list_url: string;
+  geojson_url: string;
+  generated_at: string;
+}
+
+async function fetchManifest(): Promise<StandsManifest | null> {
+  if (!STATIC_BASE_URL) return null;
+  try {
+    const res = await fetch(`${STATIC_BASE_URL}/stands/manifest.json`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// Liest primär vom statischen Artefakt (kein DB-Zugriff, übersteht einen
+// DB-Ausfall); nur wenn das nicht konfiguriert oder nicht erreichbar ist,
+// fällt es auf die Live-API zurück (lokale Entwicklung, Storage-Störung).
 export async function fetchStands(): Promise<Stand[]> {
+  const manifest = await fetchManifest();
+  if (manifest) {
+    const res = await fetch(`${STATIC_BASE_URL}/${manifest.list_url}`);
+    if (res.ok) return res.json();
+  }
   const res = await fetch(`${API}/stands`);
   if (!res.ok) throw new Error("Stände konnten nicht geladen werden");
   return res.json();
 }
 
 export async function fetchGeoJSON(): Promise<GeoJSON.FeatureCollection> {
+  const manifest = await fetchManifest();
+  if (manifest) {
+    const res = await fetch(`${STATIC_BASE_URL}/${manifest.geojson_url}`);
+    if (res.ok) return res.json();
+  }
   const res = await fetch(`${API}/stands/geojson`);
   if (!res.ok) throw new Error("GeoJSON konnte nicht geladen werden");
   return res.json();
 }
 
+// Der Admin-Zugang sieht nie Tokens - nur Auskunfts-relevante Felder
+// zusätzlich zum öffentlichen Datensatz.
 export interface AdminStand extends Stand {
-  email: string | null;
+  email: string;
   status: string;
-  edit_token: string;
+  login_token_expires_at: string | null;
+  session_token_expires_at: string | null;
 }
 
 export async function fetchAdminStands(token: string): Promise<AdminStand[]> {
@@ -41,12 +79,12 @@ export async function approveStand(id: number, token: string): Promise<void> {
   if (!res.ok) throw new Error("Freigabe fehlgeschlagen");
 }
 
-export interface CreatedStand extends Stand {
-  edit_token: string;
+// Eigene Sicht (per session_token) - nie mit E-Mail oder einem Token.
+export interface OwnStand extends Stand {
   status: string;
 }
 
-export async function createStand(data: StandFormData): Promise<CreatedStand> {
+export async function createStand(data: StandFormData): Promise<OwnStand> {
   const res = await fetch(`${API}/stands/`, {
     method: "POST",
     headers: {
@@ -62,22 +100,51 @@ export async function createStand(data: StandFormData): Promise<CreatedStand> {
   return res.json();
 }
 
-export async function fetchMyStand(editToken: string): Promise<CreatedStand> {
-  const res = await fetch(`${API}/stands/by-token/${editToken}`);
-  if (!res.ok) throw new Error("Stand nicht gefunden");
+// Fordert einen frischen Magic-Link an - Antwort ist immer gleich,
+// unabhängig davon, ob die E-Mail-Adresse existiert (verhindert
+// E-Mail-Enumeration).
+export async function requestLogin(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API}/stands/request-login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${apiAuth}`,
+    },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error("Anfrage fehlgeschlagen");
   return res.json();
+}
+
+export async function fetchMyStand(sessionToken: string): Promise<OwnStand> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}`);
+  if (!res.ok) throw new Error("Sitzung abgelaufen oder ungültig");
+  return res.json();
+}
+
+// Art. 15 DSGVO Selbstauskunft - enthält als einziger Endpunkt neben E-Mail
+// auch wieder alle eigenen Daten im Klartext.
+export interface StandExport extends OwnStand {
+  email: string;
+}
+
+export async function exportMyStandData(sessionToken: string): Promise<StandExport> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}/export`);
+  if (!res.ok) throw new Error("Daten konnten nicht geladen werden");
+  return res.json();
+}
+
+interface StandPatchData {
+  adresse?: string;
+  beschreibung?: string;
+  kategorien?: string[];
+  uhrzeit?: string;
 }
 
 export async function updateStandAdmin(
   id: number,
   token: string,
-  data: {
-    name?: string;
-    adresse?: string;
-    beschreibung?: string;
-    kategorien?: string[];
-    uhrzeit?: string;
-  },
+  data: StandPatchData,
 ): Promise<AdminStand> {
   const res = await fetch(`${API}/stands/${id}`, {
     method: "PATCH",
@@ -99,17 +166,8 @@ export async function deleteStandAdmin(id: number, token: string): Promise<void>
   if (!res.ok) throw new Error("Löschen fehlgeschlagen");
 }
 
-export async function updateStand(
-  editToken: string,
-  data: {
-    name?: string;
-    adresse?: string;
-    beschreibung?: string;
-    kategorien?: string[];
-    uhrzeit?: string;
-  },
-): Promise<CreatedStand> {
-  const res = await fetch(`${API}/stands/by-token/${editToken}`, {
+export async function updateStand(sessionToken: string, data: StandPatchData): Promise<OwnStand> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -118,8 +176,8 @@ export async function updateStand(
   return res.json();
 }
 
-export async function cancelStand(editToken: string): Promise<void> {
-  const res = await fetch(`${API}/stands/by-token/${editToken}`, {
+export async function cancelStand(sessionToken: string): Promise<void> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Stand konnte nicht zurückgezogen werden");

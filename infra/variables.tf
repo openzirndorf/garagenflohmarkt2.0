@@ -11,7 +11,12 @@ variable "scw_secret_key" {
 }
 
 variable "scw_project_id" {
-  description = "Scaleway Project ID"
+  description = "Scaleway Project ID für die App-Ressourcen (Container, Storage, Datenbank, Jobs) - eigenes 'Garagenflohmarkt'-Projekt, getrennt vom OpenZirndorf-Projekt"
+  type        = string
+}
+
+variable "smtp_project_id" {
+  description = "Scaleway Project ID, unter der Transactional Email/die Absenderdomain verifiziert ist (OpenZirndorf-Projekt, bewusst nicht dasselbe wie scw_project_id)"
   type        = string
 }
 
@@ -19,6 +24,12 @@ variable "scw_region" {
   description = "Scaleway Region"
   type        = string
   default     = "fr-par"
+}
+
+variable "db_password" {
+  description = "Passwort für den Datenbank-Benutzer 'flohmarkt' (starkes Zufallspasswort)"
+  type        = string
+  sensitive   = true
 }
 
 variable "admin_token" {

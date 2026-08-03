@@ -77,32 +77,45 @@ def _send_sync(to: str, subject: str, body_text: str, body_html: str) -> None:
             smtp.sendmail(sender, [to], msg.as_string())
 
 
-async def send_confirmation_email(email: str, name: str, edit_token: str) -> None:
-    """Schickt eine Bestätigungsmail. Tut nichts wenn SMTP nicht konfiguriert."""
+async def send_login_email(email: str, nickname: str, login_token: str, *, first_time: bool) -> None:
+    """Schickt einen Magic-Link. Tut nichts wenn SMTP nicht konfiguriert.
+
+    Ein Klick führt zu GET /stands/session/{login_token} - einer
+    Bestätigungsseite (siehe app/routes/stands.py), die den Token erst bei
+    einem echten Klick auf "Einloggen" einlöst. Das verhindert, dass
+    automatische Link-Scanner in E-Mail-Gateways den einmalig gültigen
+    Token verbrauchen, bevor die Person selbst geklickt hat. Beim ersten
+    Login wird der Stand automatisch freigeschaltet.
+    """
     if not smtp_configured():
         return
 
     backend_url = os.getenv("BACKEND_URL", BACKEND_URL).rstrip("/")
-    frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
-    confirm_url = f"{backend_url}/stands/confirm/{edit_token}"
-    manage_url = f"{frontend_url}#mein-stand/{edit_token}"
+    login_url = f"{backend_url}/stands/session/{login_token}"
 
-    subject = "Garagenflohmarkt Zirndorf – Bitte bestätige dein Inserat"
+    if first_time:
+        subject = "Garagenflohmarkt Zirndorf – Bitte bestätige dein Inserat"
+        intro = "vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf!"
+        action_text = "Bitte bestätige deine E-Mail-Adresse, damit dein Stand auf der Karte erscheint:"
+        button_label = "E-Mail bestätigen & Stand verwalten"
+    else:
+        subject = "Garagenflohmarkt Zirndorf – Dein Anmeldelink"
+        intro = "du hast einen Zugangslink für deinen Stand angefordert."
+        action_text = "Über diesen Link kannst du deinen Stand verwalten oder zurückziehen:"
+        button_label = "Stand verwalten"
 
     body_text = f"""\
-Hallo {name},
+Hallo {nickname},
 
-vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf!
+{intro}
 
-Bitte bestätige deine E-Mail-Adresse, damit dein Stand auf der Karte erscheint:
+{action_text}
 
-  {confirm_url}
+  {login_url}
 
-Nach dem Klick wird dein Stand automatisch freigeschaltet.
-
-Mit diesem Link kannst du deinen Stand jederzeit verwalten oder zurückziehen:
-
-  {manage_url}
+Der Link ist {"24 Stunden" if first_time else "30 Minuten"} lang gültig und nur einmal verwendbar.
+Falls du ihn verlierst oder er abläuft, kannst du dir jederzeit einen neuen
+über "Zugang anfordern" schicken lassen.
 
 Viele Grüße
 Das Garagenflohmarkt-Team
@@ -114,23 +127,21 @@ Das Garagenflohmarkt-Team
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
   <h2 style="color:#2563eb">Garagenflohmarkt Zirndorf</h2>
-  <p>Hallo <strong>{name}</strong>,</p>
-  <p>vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf!</p>
-  <p>Bitte bestätige deine E-Mail-Adresse, damit dein Stand auf der Karte erscheint:</p>
+  <p>Hallo <strong>{nickname}</strong>,</p>
+  <p>{intro}</p>
+  <p>{action_text}</p>
   <p style="margin:24px 0">
-    <a href="{confirm_url}"
+    <a href="{login_url}"
        style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">
-      E-Mail bestätigen &amp; Stand freischalten
+      {button_label}
     </a>
   </p>
   <p style="font-size:0.85em;color:#666">
     Oder kopiere diesen Link in deinen Browser:<br>
-    <a href="{confirm_url}">{confirm_url}</a>
+    <a href="{login_url}">{login_url}</a>
   </p>
-  <hr style="margin:32px 0;border:none;border-top:1px solid #e5e7eb">
-  <p style="font-size:0.85em;color:#666">
-    Stand verwalten / zurückziehen:<br>
-    <a href="{manage_url}">{manage_url}</a>
+  <p style="font-size:0.8em;color:#999">
+    Gültig für {"24 Stunden" if first_time else "30 Minuten"}, nur einmal verwendbar.
   </p>
 </body>
 </html>

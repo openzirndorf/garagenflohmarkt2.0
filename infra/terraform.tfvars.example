@@ -6,17 +6,21 @@
 
 scw_access_key      = "<Scaleway Access Key>"
 scw_secret_key      = "<Scaleway Secret Key>"
-scw_project_id      = "<Scaleway Project ID>"
+scw_project_id      = "<Scaleway Project ID für die App-Ressourcen>"
+# Projekt, in dem Transactional Email/die Absenderdomain verifiziert ist -
+# kann dasselbe wie scw_project_id sein, muss aber nicht.
+smtp_project_id     = "<Scaleway Project ID für Transactional Email>"
+db_password         = "<openssl rand -base64 32>"
 admin_token         = "<openssl rand -base64 32>"
 api_username        = "flohmarkt"
 api_password        = "<openssl rand -base64 32>"
 container_image_tag = "latest"
-# database_url wird automatisch aus scaleway_sdb_sql_database.flohmarkt.endpoint abgeleitet
+# database_url wird automatisch aus scaleway_rdb_instance.flohmarkt + db_password abgeleitet
 
 # SMTP – Scaleway Transactional Email, wird automatisch aus main.tf gesetzt:
 #   SMTP_HOST     = smtp.tem.scaleway.com  (hardcoded)
 #   SMTP_PORT     = 465                    (hardcoded, SSL)
-#   SMTP_USER     = scw_project_id         (hardcoded)
+#   SMTP_USER     = smtp_project_id        (hardcoded)
 #   SMTP_PASSWORD = scw_secret_key         (hardcoded)
 smtp_from     = "noreply@automail.DEINE_DOMAIN.de"  # Absenderadresse, muss in Scaleway TEM verifiziert sein
 

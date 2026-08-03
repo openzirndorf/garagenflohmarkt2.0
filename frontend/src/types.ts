@@ -1,6 +1,6 @@
 export interface Stand {
   id: number;
-  name: string;
+  nickname: string;
   adresse: string;
   lat: number | null;
   lng: number | null;
@@ -11,7 +11,6 @@ export interface Stand {
 }
 
 export interface StandFormData {
-  name: string;
   adresse: string;
   beschreibung: string;
   email: string;
