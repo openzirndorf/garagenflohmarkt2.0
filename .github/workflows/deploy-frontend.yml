@@ -63,7 +63,7 @@ jobs:
           # Leer lassen ist sicher: api.ts fällt dann auf die Live-API zurück.
           VITE_STATIC_BASE_URL: ${{ vars.VITE_STATIC_BASE_URL }}
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: frontend/dist
 
