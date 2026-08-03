@@ -61,6 +61,18 @@ resource "scaleway_rdb_database" "flohmarkt" {
   name        = "flohmarkt"
 }
 
+# Der über user_name/password auf der Instanz angelegte "flohmarkt"-Nutzer
+# bekommt auf frisch angelegten Datenbanken KEIN automatisches CONNECT-Recht
+# (anders als auf der von Scaleway mitgelieferten Default-Datenbank) - ohne
+# diese explizite Grant-Ressource schlägt jede Verbindung mit
+# "permission denied for database" fehl.
+resource "scaleway_rdb_privilege" "flohmarkt" {
+  instance_id   = scaleway_rdb_instance.flohmarkt.id
+  database_name = scaleway_rdb_database.flohmarkt.name
+  user_name     = scaleway_rdb_instance.flohmarkt.user_name
+  permission    = "all"
+}
+
 # Ohne ACL-Regel blockiert Scaleway jeglichen Zugriff auf die Instanz.
 resource "scaleway_rdb_acl" "flohmarkt" {
   instance_id = scaleway_rdb_instance.flohmarkt.id
