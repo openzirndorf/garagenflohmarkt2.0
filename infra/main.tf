@@ -72,7 +72,11 @@ resource "scaleway_rdb_acl" "flohmarkt" {
 }
 
 locals {
-  database_url = "postgresql://${scaleway_rdb_instance.flohmarkt.user_name}:${var.db_password}@${scaleway_rdb_instance.flohmarkt.load_balancer[0].ip}:${scaleway_rdb_instance.flohmarkt.load_balancer[0].port}/${scaleway_rdb_database.flohmarkt.name}?sslmode=require"
+  # urlencode() ist Pflicht: das Passwort kann Zeichen wie "/" oder "="
+  # enthalten (z.B. aus einem base64-basierten Generator), die in einer
+  # Connection-URI sonst die Parser-Struktur zerstören (asyncpg deutet
+  # ein unkodiertes "/" dann fälschlich als Host/Port-Trenner).
+  database_url = "postgresql://${scaleway_rdb_instance.flohmarkt.user_name}:${urlencode(var.db_password)}@${scaleway_rdb_instance.flohmarkt.load_balancer[0].ip}:${scaleway_rdb_instance.flohmarkt.load_balancer[0].port}/${scaleway_rdb_database.flohmarkt.name}?sslmode=require"
 }
 
 # Object Storage Bucket für die statischen Karten-Artefakte (stands.json,
