@@ -9,15 +9,22 @@ permissions:
   contents: read
 
 jobs:
+  # Bewusst die freie gitleaks-CLI direkt statt gitleaks/gitleaks-action@v2 -
+  # die Action verlangt seit einem Lizenzmodell-Wechsel eine kostenpflichtige
+  # Lizenz für jedes Organisations-Repo (auch öffentliche). Die CLI selbst
+  # ist weiterhin frei - dieselbe, die auch lokal per pre-commit läuft.
   gitleaks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: gitleaks installieren
+        run: |
+          version=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest | grep -Po '"tag_name": "v\K[^"]*')
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_linux_x64.tar.gz" | tar xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+      - run: gitleaks detect --source . --redact -v
 
   pip-audit:
     runs-on: ubuntu-latest
