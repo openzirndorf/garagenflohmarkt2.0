@@ -31,6 +31,6 @@
     "vite": "^7.0.0",
     "vite-plugin-pwa": "^1.0.0",
     "vite-tsconfig-paths": "^6.0.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.10"
   }
 }
