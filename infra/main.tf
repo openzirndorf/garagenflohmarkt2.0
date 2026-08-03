@@ -17,7 +17,7 @@ terraform {
     skip_metadata_api_check     = true
     skip_region_validation      = true
     force_path_style            = true
-    use_lockfile                = true  # OpenTofu 1.10+ native S3 locking ohne DynamoDB
+    use_lockfile                = true # OpenTofu 1.10+ native S3 locking ohne DynamoDB
   }
 }
 
@@ -40,9 +40,9 @@ resource "scaleway_rdb_instance" "flohmarkt" {
   engine        = "PostgreSQL-16"
   is_ha_cluster = false
 
-  disable_backup             = false
-  backup_schedule_frequency  = 24 # Stunden
-  backup_schedule_retention  = 3  # Tage - bewusst kurz, damit Backups zeitnah nach dem 07.10. auslaufen
+  disable_backup            = false
+  backup_schedule_frequency = 24 # Stunden
+  backup_schedule_retention = 3  # Tage - bewusst kurz, damit Backups zeitnah nach dem 07.10. auslaufen
 
   user_name = "flohmarkt"
   password  = var.db_password
@@ -105,6 +105,61 @@ resource "scaleway_object_bucket_acl" "stands" {
   acl    = "public-read"
 }
 
+# Die Bucket-ACL allein macht nur den Bucket selbst öffentlich lesbar, nicht
+# einzelne Objekte - ohne eigenes ACL="public-read" bei jedem put_object()
+# (siehe app/jobs/stands_artifact.py) bleiben hochgeladene Objekte privat und
+# liefern 403 statt der Karten-Daten. Eine Bucket-Policy wirkt unabhängig
+# davon, wie/von wem ein Objekt hochgeladen wurde - robuster als sich auf
+# ACL-Parameter in jedem einzelnen Upload-Aufruf zu verlassen.
+resource "scaleway_object_bucket_policy" "stands" {
+  bucket = scaleway_object_bucket.stands.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "PublicReadStands"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = ["s3:GetObject"]
+      Resource  = ["${scaleway_object_bucket.stands.name}/*"]
+    }]
+  })
+}
+
+# Eigener API-Key nur für den S3-Zugriff der Jobs: die org-weiten
+# Terraform/Mailing-Zugangsdaten (var.scw_access_key/secret_key) haben
+# default_project_id = OpenZirndorf-Projekt - Scaleways S3-kompatible API
+# löst den Projekt-Kontext eines Requests über den Access Key auf, nicht
+# über die Bucket-URL. Mit diesen Zugangsdaten schlägt PutObject auf einen
+# Bucket im Garagenflohmarkt-Projekt deshalb mit AccessDenied fehl, obwohl
+# Terraform selbst (das project_id explizit mitschickt) den Bucket anlegen
+# konnte. Eigener, auf dieses Projekt beschränkter Key mit reinem
+# Object-Storage-Recht behebt das und ist zugleich das kleinere Berechtigungs-
+# Scope als der breite Ausgangs-Key.
+resource "scaleway_iam_application" "stands_storage" {
+  name        = "garagenflohmarkt-stands-storage"
+  description = "S3-Zugriff für stands_artifact_cron/deletion_job auf den stands-Bucket"
+}
+
+resource "scaleway_iam_policy" "stands_storage" {
+  name           = "garagenflohmarkt-stands-storage"
+  application_id = scaleway_iam_application.stands_storage.id
+
+  rule {
+    project_ids          = [var.scw_project_id]
+    permission_set_names = ["ObjectStorageFullAccess"]
+  }
+}
+
+resource "scaleway_iam_api_key" "stands_storage" {
+  application_id     = scaleway_iam_application.stands_storage.id
+  default_project_id = var.scw_project_id
+  description        = "S3-Zugriff stands-Bucket (garagenflohmarkt-Projekt)"
+  # Die Organisation verlangt ein Ablaufdatum für API-Keys - bewusst kurz nach
+  # der Löschfrist (07.10.2026) gesetzt statt eines fernen Standardwerts,
+  # da der Key ohnehin nur für die Laufzeit des Events gebraucht wird.
+  expires_at = "2026-10-31T00:00:00Z"
+}
+
 # Container Registry Namespace – speichert das Docker Image der API
 resource "scaleway_registry_namespace" "flohmarkt" {
   name      = "openzirndorf-flohmarkt"
@@ -136,10 +191,12 @@ resource "scaleway_container" "flohmarkt_api" {
     API_USERNAME  = var.api_username
     API_PASSWORD  = var.api_password
     SMTP_PASSWORD = var.scw_secret_key
-    # Scaleway Object Storage nutzt dieselben Projekt-API-Keys wie
-    # OpenTofu selbst als S3-Zugangsdaten - kein eigenes IAM-Setup nötig.
-    S3_ACCESS_KEY = var.scw_access_key
-    S3_SECRET_KEY = var.scw_secret_key
+    # Eigener, auf dieses Projekt beschränkter Key (siehe
+    # scaleway_iam_api_key.stands_storage oben) - der breite
+    # Terraform/Mailing-Key hat default_project_id = OpenZirndorf-Projekt und
+    # bekäme beim S3-PutObject auf diesen Bucket AccessDenied.
+    S3_ACCESS_KEY = scaleway_iam_api_key.stands_storage.access_key
+    S3_SECRET_KEY = scaleway_iam_api_key.stands_storage.secret_key
   }
 
   environment_variables = {
@@ -176,8 +233,8 @@ resource "scaleway_job_definition" "stands_artifact_cron" {
     STANDS_BUCKET = scaleway_object_bucket.stands.name
     S3_ENDPOINT   = "https://s3.${var.scw_region}.scw.cloud"
     S3_REGION     = var.scw_region
-    S3_ACCESS_KEY = var.scw_access_key
-    S3_SECRET_KEY = var.scw_secret_key
+    S3_ACCESS_KEY = scaleway_iam_api_key.stands_storage.access_key
+    S3_SECRET_KEY = scaleway_iam_api_key.stands_storage.secret_key
   }
 
   cron {
@@ -207,8 +264,8 @@ resource "scaleway_job_definition" "deletion_job" {
     STANDS_BUCKET = scaleway_object_bucket.stands.name
     S3_ENDPOINT   = "https://s3.${var.scw_region}.scw.cloud"
     S3_REGION     = var.scw_region
-    S3_ACCESS_KEY = var.scw_access_key
-    S3_SECRET_KEY = var.scw_secret_key
+    S3_ACCESS_KEY = scaleway_iam_api_key.stands_storage.access_key
+    S3_SECRET_KEY = scaleway_iam_api_key.stands_storage.secret_key
   }
 
   cron {
