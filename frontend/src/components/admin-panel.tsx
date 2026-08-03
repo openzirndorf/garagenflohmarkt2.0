@@ -18,7 +18,6 @@ export function AdminPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
-    name: "",
     adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
@@ -55,8 +54,8 @@ export function AdminPanel() {
     }
   };
 
-  const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`„${name}" wirklich löschen?`)) return;
+  const handleDelete = async (id: number, nickname: string) => {
+    if (!confirm(`„${nickname}" wirklich löschen?`)) return;
     setDeletingId(id);
     try {
       await deleteStandAdmin(id, token);
@@ -70,7 +69,6 @@ export function AdminPanel() {
 
   const startEdit = (s: AdminStand) => {
     setEditForm({
-      name: s.name,
       adresse: s.adresse,
       beschreibung: s.beschreibung ?? "",
       kategorien: s.kategorien ?? [],
@@ -219,7 +217,7 @@ export function AdminPanel() {
                     ) : (
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-semibold">{s.name}</p>
+                          <p className="font-semibold">{s.nickname}</p>
                           <p className="text-sm text-gray-600">{s.adresse}</p>
                           {s.uhrzeit && <p className="text-xs text-gray-500">🕐 {s.uhrzeit}</p>}
                           {s.kategorien && s.kategorien.length > 0 && (
@@ -255,7 +253,7 @@ export function AdminPanel() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(s.id, s.name)}
+                            onClick={() => handleDelete(s.id, s.nickname)}
                             disabled={deletingId === s.id}
                             className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
                           >
@@ -293,7 +291,7 @@ export function AdminPanel() {
                       <div className="flex items-center gap-3 px-4 py-2 text-sm">
                         <span className="text-green-600">✓</span>
                         <div className="flex-1 min-w-0">
-                          <span className="font-medium">{s.name}</span>
+                          <span className="font-medium">{s.nickname}</span>
                           <span className="ml-2 text-gray-500">{s.adresse}</span>
                           {s.uhrzeit && (
                             <span className="ml-2 text-xs text-gray-400">🕐 {s.uhrzeit}</span>
@@ -321,7 +319,7 @@ export function AdminPanel() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(s.id, s.name)}
+                            onClick={() => handleDelete(s.id, s.nickname)}
                             disabled={deletingId === s.id}
                             className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50"
                           >
@@ -343,7 +341,6 @@ export function AdminPanel() {
 
 interface EditFormProps {
   form: {
-    name: string;
     adresse: string;
     beschreibung: string;
     kategorien: string[];
@@ -351,7 +348,6 @@ interface EditFormProps {
   };
   setForm: React.Dispatch<
     React.SetStateAction<{
-      name: string;
       adresse: string;
       beschreibung: string;
       kategorien: string[];
@@ -367,30 +363,17 @@ interface EditFormProps {
 function EditForm({ form, setForm, onToggleKat, onSave, onCancel, saving }: EditFormProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="edit-admin-name" className="text-xs font-medium text-gray-600">
-            Name
-          </label>
-          <input
-            id="edit-admin-name"
-            className="rounded border px-2 py-1.5 text-sm"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="edit-admin-uhrzeit" className="text-xs font-medium text-gray-600">
-            Uhrzeit
-          </label>
-          <input
-            id="edit-admin-uhrzeit"
-            className="rounded border px-2 py-1.5 text-sm"
-            placeholder="z.B. 9:00 – 14:00 Uhr"
-            value={form.uhrzeit}
-            onChange={(e) => setForm((f) => ({ ...f, uhrzeit: e.target.value }))}
-          />
-        </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="edit-admin-uhrzeit" className="text-xs font-medium text-gray-600">
+          Uhrzeit
+        </label>
+        <input
+          id="edit-admin-uhrzeit"
+          className="rounded border px-2 py-1.5 text-sm"
+          placeholder="z.B. 9:00 – 14:00 Uhr"
+          value={form.uhrzeit}
+          onChange={(e) => setForm((f) => ({ ...f, uhrzeit: e.target.value }))}
+        />
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="edit-admin-adresse" className="text-xs font-medium text-gray-600">

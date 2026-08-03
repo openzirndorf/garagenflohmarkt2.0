@@ -1,23 +1,42 @@
 import { useCallback, useEffect, useState } from "react";
-import { type CreatedStand, cancelStand, fetchMyStand, updateStand } from "../api";
+import {
+  type OwnStand,
+  cancelStand,
+  exportMyStandData,
+  fetchMyStand,
+  requestLogin,
+  updateStand,
+} from "../api";
 import { KATEGORIEN } from "./stand-form";
 
-const EDIT_TOKEN_KEY = "flohmarkt_edit_token";
+const SESSION_TOKEN_KEY = "flohmarkt_session_token";
 
 interface Props {
   onCancelled: () => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Warte auf E-Mail-Bestätigung",
+  PENDING: "Warte auf Bestätigung",
   APPROVED: "Freigeschaltet ✓",
 };
 
+// Liest ein Session-Token aus der URL (#mein-stand/session/{token}), wie es
+// aus dem Magic-Link in der E-Mail ankommt, und säubert danach die URL -
+// das Token soll nicht dauerhaft sichtbar/bookmarkbar in der Adresszeile
+// stehenbleiben.
+function consumeSessionTokenFromHash(): string | null {
+  const match = window.location.hash.match(/^#mein-stand\/session\/(.+)$/);
+  if (!match) return null;
+  window.location.hash = "mein-stand";
+  return match[1];
+}
+
 export function MeinStand({ onCancelled }: Props) {
-  const [stand, setStand] = useState<CreatedStand | null>(null);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [stand, setStand] = useState<OwnStand | null>(null);
+  const [checkedStorage, setCheckedStorage] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    name: "",
     adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
@@ -25,24 +44,101 @@ export function MeinStand({ onCancelled }: Props) {
   });
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const token = localStorage.getItem(EDIT_TOKEN_KEY);
+  // Zugang-anfordern-Formular
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestEmail, setRequestEmail] = useState("");
+  const [requestStatus, setRequestStatus] = useState<"idle" | "loading" | "sent">("idle");
+  const [requestMessage, setRequestMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fromHash = consumeSessionTokenFromHash();
+    if (fromHash) {
+      sessionStorage.setItem(SESSION_TOKEN_KEY, fromHash);
+      setSessionToken(fromHash);
+    } else {
+      setSessionToken(sessionStorage.getItem(SESSION_TOKEN_KEY));
+    }
+    setCheckedStorage(true);
+  }, []);
 
   const load = useCallback(async () => {
-    if (!token) return;
+    if (!sessionToken) return;
     try {
-      setStand(await fetchMyStand(token));
+      setStand(await fetchMyStand(sessionToken));
     } catch {
-      localStorage.removeItem(EDIT_TOKEN_KEY);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      setSessionToken(null);
     }
-  }, [token]);
+  }, [sessionToken]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  if (!token || !stand) return null;
+  const handleRequestLogin = async () => {
+    if (!requestEmail) return;
+    setRequestStatus("loading");
+    try {
+      const res = await requestLogin(requestEmail);
+      setRequestMessage(res.message);
+      setRequestStatus("sent");
+    } catch (err) {
+      setRequestMessage(err instanceof Error ? err.message : "Fehler");
+      setRequestStatus("idle");
+    }
+  };
+
+  if (!checkedStorage) return null;
+
+  if (!sessionToken || !stand) {
+    return (
+      <section className="rounded-xl border border-dashed border-gray-200 p-4">
+        {!showRequestForm ? (
+          <button
+            type="button"
+            onClick={() => setShowRequestForm(true)}
+            className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
+          >
+            Schon einen Stand angemeldet? Zugang anfordern
+          </button>
+        ) : requestStatus === "sent" ? (
+          <p className="text-sm text-gray-700">{requestMessage}</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <label htmlFor="request-login-email" className="text-sm font-medium text-gray-700">
+              Zugang zu deinem Stand anfordern
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="request-login-email"
+                type="email"
+                className="flex-1 rounded-md border border-input px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="deine@email.de"
+                value={requestEmail}
+                onChange={(e) => setRequestEmail(e.target.value)}
+                disabled={requestStatus === "loading"}
+              />
+              <button
+                type="button"
+                onClick={handleRequestLogin}
+                disabled={requestStatus === "loading" || !requestEmail}
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                {requestStatus === "loading" ? "…" : "Link senden"}
+              </button>
+            </div>
+            <p className="text-xs text-gray-500">
+              Wir schicken dir einen Anmeldelink, mit dem du deinen Stand bearbeiten oder
+              zurückziehen kannst.
+            </p>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   const isApproved = stand.status === "APPROVED";
 
@@ -57,7 +153,6 @@ export function MeinStand({ onCancelled }: Props) {
 
   const handleEdit = () => {
     setEditForm({
-      name: stand.name,
       adresse: stand.adresse,
       beschreibung: stand.beschreibung ?? "",
       kategorien: stand.kategorien ?? [],
@@ -67,11 +162,32 @@ export function MeinStand({ onCancelled }: Props) {
     setError(null);
   };
 
+  const handleExport = async () => {
+    if (!sessionToken) return;
+    setExporting(true);
+    setError(null);
+    try {
+      const data = await exportMyStandData(sessionToken);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "meine-daten.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export fehlgeschlagen");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const handleSave = async () => {
+    if (!sessionToken) return;
     setSaving(true);
     setError(null);
     try {
-      const updated = await updateStand(token, editForm);
+      const updated = await updateStand(sessionToken, editForm);
       setStand(updated);
       setEditing(false);
     } catch (err) {
@@ -82,12 +198,14 @@ export function MeinStand({ onCancelled }: Props) {
   };
 
   const handleCancel = async () => {
+    if (!sessionToken) return;
     if (!confirm("Stand wirklich zurückziehen? Das kann nicht rückgängig gemacht werden.")) return;
     setCancelling(true);
     setError(null);
     try {
-      await cancelStand(token);
-      localStorage.removeItem(EDIT_TOKEN_KEY);
+      await cancelStand(sessionToken);
+      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      setSessionToken(null);
       setStand(null);
       onCancelled();
     } catch (err) {
@@ -108,17 +226,6 @@ export function MeinStand({ onCancelled }: Props) {
 
       {editing ? (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="edit-name" className="text-xs font-medium text-gray-600">
-              Name
-            </label>
-            <input
-              id="edit-name"
-              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              value={editForm.name}
-              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
-            />
-          </div>
           <div className="flex flex-col gap-1">
             <label htmlFor="edit-adresse" className="text-xs font-medium text-gray-600">
               Adresse
@@ -197,7 +304,7 @@ export function MeinStand({ onCancelled }: Props) {
       ) : (
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-0.5">
-            <p className="font-semibold text-gray-900">{stand.name}</p>
+            <p className="font-semibold text-gray-900">{stand.nickname}</p>
             <p className="text-sm text-gray-500">{stand.adresse}</p>
             {stand.uhrzeit && <p className="mt-0.5 text-xs text-gray-500">🕐 {stand.uhrzeit}</p>}
             {stand.kategorien && stand.kategorien.length > 0 && (
@@ -217,11 +324,6 @@ export function MeinStand({ onCancelled }: Props) {
             >
               {STATUS_LABEL[stand.status] ?? stand.status}
             </p>
-            {stand.status === "PENDING" && (
-              <p className="mt-1 text-xs text-blue-500">
-                Bitte bestätige deine E-Mail-Adresse über den Link in der Bestätigungsmail.
-              </p>
-            )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             <button
@@ -238,6 +340,14 @@ export function MeinStand({ onCancelled }: Props) {
               className="text-sm text-red-500 transition-colors hover:text-red-700 disabled:opacity-50"
             >
               {cancelling ? "…" : "Zurückziehen"}
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              className="text-xs text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-50"
+            >
+              {exporting ? "…" : "Meine Daten herunterladen"}
             </button>
           </div>
         </div>

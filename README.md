@@ -8,9 +8,9 @@ Der **Garagenflohmarkt Zirndorf** ist ein jährliches Stadtteilfest, bei dem Anw
 
 Diese App macht es einfach, mitzumachen und den Überblick zu behalten:
 
-- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte.
+- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte, unter einer automatisch vergebenen Kennung (z.B. „Gscheide Bratwurst") statt des echten Namens.
 - **Karte** — Alle freigegebenen Stände auf einer interaktiven Karte, filterbar nach Kategorien (Kleidung, Spielzeug, Bücher …)
-- **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit zurückziehen, ohne Anmeldung, nur mit dem persönlichen Link aus der Bestätigungsmail.
+- **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit zurückziehen, ohne Konto/Passwort: ein Magic Link aus der Mail loggt für eine Sitzung ein; verloren gegangen ist er nicht schlimm, ein neuer lässt sich jederzeit anfordern.
 
 Die App ist kostenlos, ohne Account und ohne Tracking nutzbar.
 
@@ -27,51 +27,75 @@ Die App ist kostenlos, ohne Account und ohne Tracking nutzbar.
 
 ```
 Browser
-  └── GitHub Pages (React-SPA, statisch)
-        └── https://api.openzirndorf.de
-              └── Scaleway Serverless Container (FastAPI, Docker)
-                    └── Scaleway Serverless SQL (PostgreSQL)
+  ├── GitHub Pages (React-SPA, statisch)
+  │     └── Object Storage: stands.json / stands.geojson
+  │           (öffentliche Karte liest direkt hier - kein DB-Zugriff,
+  │            übersteht einen Ausfall von Backend/DB)
+  └── https://api.openzirndorf.de  (nur Anmeldung, Login, Verwaltung, Admin)
+        └── Scaleway Serverless Container (FastAPI, Docker)
+              ├── Scaleway Datenbank-Instanz (PostgreSQL, RDB)
+              └── Scaleway Object Storage (Artefakt-Upload)
+
+Scaleway Serverless Jobs (Cron, kein Container-Dauerbetrieb):
+  ├── alle 5 Min:  Karten-Artefakt neu erzeugen (Sicherheitsnetz)
+  └── täglich 03:00: Löschjob (ab 07.10.2026 - siehe unten)
 ```
 
 ```
 garagenflohmarkt2.0/
 ├── frontend/          React-App (Karte, Formular, Admin-UI)
 │   └── src/
-│       ├── api.ts                  API-Client
+│       ├── api.ts                  API-Client (liest Karte primär vom Storage)
 │       ├── types.ts                TypeScript-Typen
+│       ├── lib/stand-popup.ts      Popup-Inhalt (XSS-sicher, DOM statt HTML-String)
 │       └── components/
-│           ├── flohmarkt-app.tsx   Hauptansicht
+│           ├── flohmarkt-app.tsx   Hauptansicht, Hash-Routing
 │           ├── flohmarkt-map.tsx   MapLibre-Karte
+│           ├── map-or-list.tsx     Fällt bei Kartenfehler auf Listenansicht zurück
 │           ├── stand-form.tsx      Anmeldeformular
 │           ├── stand-liste.tsx     Standliste
-│           ├── mein-stand.tsx      Eigener Stand (via edit_token)
-│           └── admin-panel.tsx     Admin-UI (#admin)
+│           ├── mein-stand.tsx      Eigener Stand (Magic Link → Session-Token)
+│           ├── admin-panel.tsx     Admin-UI (#admin)
+│           ├── footer.tsx          Veranstalter/Unterstützer-Zeile
+│           ├── impressum.tsx       #impressum
+│           └── datenschutz.tsx     #datenschutz
 ├── app/               FastAPI-Backend
-│   ├── main.py        App-Einstiegspunkt, CORS
-│   ├── auth.py        Basic Auth (API) + Bearer Token (Admin)
-│   ├── database.py    asyncpg-Connection-Pool
-│   ├── email.py       Bestätigungsmail via Scaleway TEM
-│   ├── geocode.py     Adresse → GPS (Nominatim/OSM)
+│   ├── main.py           App-Einstiegspunkt, CORS
+│   ├── auth.py            Basic Auth (API) + Bearer Token (Admin)
+│   ├── database.py        asyncpg-Connection-Pool
+│   ├── email.py            Magic-Link-Mail via Scaleway TEM
+│   ├── geocode.py          Adresse → GPS (Nominatim/OSM)
+│   ├── tokens.py           Login-/Session-Token: erzeugen, hashen, prüfen
+│   ├── nicknames.py        Serverseitige Nickname-Generierung (fränkisch)
+│   ├── rate_limit.py       DB-gestütztes Ratelimiting (überlebt Multi-Instance)
+│   ├── public_fields.py    Positivliste öffentlicher Felder (eine Quelle der Wahrheit)
+│   ├── jobs/
+│   │   └── stands_artifact.py  Baut/lädt stands.json+geojson hoch, Cron + inline
 │   └── routes/
-│       └── stands.py  Alle Endpunkte, Rate-Limiter, Honeypot
-├── infra/             OpenTofu (Scaleway-Infrastruktur)
-│   ├── main.tf        Ressourcen + S3-Backend
-│   ├── variables.tf   Eingabevariablen
-│   ├── outputs.tf     Ausgabewerte
+│       └── stands.py       Alle Endpunkte
+├── migrations/         Nummerierte SQL-Dateien, per scripts/migrate.py angewendet
+├── scripts/
+│   ├── migrate.py                  Wendet ausstehende Migrationen an (manuell)
+│   ├── deletion_job.py              Löscht alles ab dem 07.10.2026 (Cron)
+│   └── purge_scaleway_backups.sh    Räumt DB-Backups danach manuell weg
+├── tiles/              Anleitung + Ablage für selbstgehostete Kartenkacheln (PMTiles)
+├── infra/              OpenTofu (Scaleway-Infrastruktur)
+│   ├── main.tf         Ressourcen (RDB, Object Storage, Container, Jobs) + S3-Backend
+│   ├── variables.tf    Eingabevariablen
+│   ├── outputs.tf      Ausgabewerte
 │   ├── terraform.tfvars          Secrets (gitignored)
 │   ├── terraform.tfvars.example  Vorlage
 │   └── backend.hcl               State-Credentials (gitignored)
-├── schema.sql         Datenbankschema
-└── Dockerfile         Multi-Stage (builder + runner)
+└── Dockerfile          Multi-Stage (builder + runner)
 ```
 
 **Ablauf einer Stand-Anmeldung:**
-1. Nutzer füllt Formular aus → `POST /stands` (Basic Auth)
-2. Backend geocodiert die Adresse via Nominatim/OSM
-3. Stand landet als `PENDING` in der Datenbank
-4. Bestätigungsmail geht raus (Scaleway TEM, Port 465/SSL)
-5. Nutzer klickt Link → Stand wird `CONFIRMED`
-6. Admin gibt ihn frei → `APPROVED`, erscheint auf der Karte
+1. Nutzer füllt Formular aus → `POST /stands` (Basic Auth) — kein Namensfeld, nur Adresse/Beschreibung/Kategorien/E-Mail
+2. Backend geocodiert die Adresse via Nominatim/OSM, vergibt einen Nickname
+3. Stand landet als `PENDING` in der Datenbank, ein befristeter, einmaliger Login-Link geht per Mail raus
+4. Klick auf den Link → Bestätigungsseite ("Bist du das?", verbraucht den Link noch nicht) → "Ja, einloggen" → Stand wird `APPROVED`, ein Session-Token für diese Sitzung wird ausgestellt
+5. Das Karten-Artefakt wird im Hintergrund neu erzeugt (`app/jobs/stands_artifact.py`) und auf Object Storage hochgeladen — die Karte zeigt den Stand kurz danach
+6. Verwalten/Zurückziehen später jederzeit über einen neu angeforderten Login-Link (`POST /stands/request-login`, kein Account nötig)
 
 ---
 
@@ -80,7 +104,7 @@ garagenflohmarkt2.0/
 Das Projekt hat sechs Credential-Gruppen:
 
 ### 1. Scaleway Haupt-API-Key
-**Zweck:** OpenTofu verwaltet damit alle Scaleway-Ressourcen (Datenbank, Container, IAM …)
+**Zweck:** OpenTofu verwaltet damit alle Scaleway-Ressourcen (Datenbank, Container, IAM …). Dieselben Keys dienen dem Container auch als S3-Zugangsdaten für Object Storage (`S3_ACCESS_KEY`/`S3_SECRET_KEY`) — Scaleway nutzt dafür direkt die Projekt-API-Keys, kein eigenes IAM-Setup nötig.
 
 | Wo | Variable |
 |----|----------|
@@ -115,23 +139,25 @@ IAM-Application in Scaleway: `terraform-state` mit `ObjectStorageFullAccess`
 
 ---
 
-### 3. Datenbank-IAM-Key
-**Zweck:** Verbindung zwischen Serverless Container und Serverless SQL DB
+### 3. Datenbank-Passwort
+**Zweck:** Verbindung zwischen Serverless Container und der Datenbank-Instanz (`scaleway_rdb_instance`, kein Serverless SQL mehr — siehe unten)
 
-| Wo | |
-|----|-|
-| Scaleway IAM | Application `flohmarkt-db` |
-| Container-Env | `DATABASE_URL` (secret, von OpenTofu gesetzt) |
-
-Dieser Key wird vollständig von OpenTofu verwaltet — nie manuell anfassen.
+| Wo | Variable |
+|----|----------|
+| `infra/terraform.tfvars` | `db_password` |
+| Container-Env | `DATABASE_URL` (secret, von OpenTofu aus `db_password` zusammengebaut) |
 
 **Rotieren:**
 ```bash
-cd infra
-tofu destroy -target=scaleway_iam_api_key.flohmarkt_db
-tofu apply
+openssl rand -base64 32   # neues Passwort generieren
+# in terraform.tfvars eintragen (db_password), dann:
+cd infra && tofu apply
 ```
-OpenTofu erstellt einen neuen Key und aktualisiert `DATABASE_URL` im Container automatisch.
+
+Bewusst eine reguläre Datenbank-Instanz statt Serverless SQL: Serverless SQL
+hatte eine fixe, per Terraform nicht einstellbare 7-Tage-Backup-Aufbewahrung
+— das kollidierte mit der Löschfrist zum 07.10.2026. Bei der regulären
+Instanz ist `backup_schedule_retention` in `infra/main.tf` explizit gesetzt.
 
 ---
 
@@ -184,9 +210,9 @@ openssl rand -base64 32   # neues Passwort generieren
 
 Rotiert automatisch mit Gruppe 1. Die Absenderdomain `automail.openzirndorf.de` muss in Scaleway Console → Transactional Email als verifizierte Domain eingetragen sein (SPF + DKIM im DNS).
 
-SMTP-Konfiguration live prüfen:
+SMTP-Konfiguration live prüfen (verschickt eine Test-Mail):
 ```bash
-curl -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/debug/smtp
+curl -X POST -H "Authorization: Bearer TOKEN" "https://api.openzirndorf.de/stands/test-email?to=test@example.com"
 ```
 
 ---
@@ -218,17 +244,33 @@ pip install pre-commit && pre-commit install
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
+# Lokale Postgres-Instanz, z.B. per Docker:
+docker run -d --name flohmarkt-dev-pg -e POSTGRES_USER=flohmarkt \
+  -e POSTGRES_PASSWORD=flohmarkt -e POSTGRES_DB=flohmarkt_dev \
+  -p 5432:5432 postgres:16
+
 # Lokale Konfiguration (gitignored)
 cat > .env.local << 'EOF'
-DATABASE_URL=postgresql://USER:PASS@HOST:5432/fastapi-db?sslmode=require
+DATABASE_URL=postgresql://flohmarkt:flohmarkt@localhost:5432/flohmarkt_dev
 API_USERNAME=flohmarkt
 API_PASSWORD=lokales-testpasswort
 ADMIN_TOKEN=lokaler-admintoken
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:8080
 EOF
+
+# Migrationen anwenden (schema.sql gibt es nicht mehr, siehe migrations/)
+set -a && source .env.local && set +a
+python -m scripts.migrate
 
 uvicorn app.main:app --reload --env-file .env.local --port 8080
 # → http://localhost:8080/health  →  {"ok": true}
 ```
+
+Ohne `STANDS_BUCKET`/`S3_*`-Variablen überspringt
+`app/jobs/stands_artifact.py` die Artefakt-Regenerierung automatisch
+(Log-Hinweis, kein Fehler) — lokal reicht das, die Live-Endpunkte
+(`GET /stands`, `/stands/geojson`) funktionieren unabhängig davon.
 
 `DATABASE_URL` der Scaleway-Datenbank:
 ```bash
@@ -245,10 +287,23 @@ cat > .env.local << 'EOF'
 VITE_API_URL=http://localhost:8080
 VITE_API_USERNAME=flohmarkt
 VITE_API_PASSWORD=lokales-testpasswort
+# VITE_STATIC_BASE_URL bewusst leer lassen - ohne Bucket fällt api.ts
+# automatisch auf die Live-API zurück (siehe Backend-Abschnitt oben)
 EOF
 
 npm run dev
 # → http://localhost:5173/
+```
+
+### Tests
+
+```bash
+# Backend (braucht die lokale Postgres von oben, migriert)
+TEST_DATABASE_URL=postgresql://flohmarkt:flohmarkt@localhost:5432/flohmarkt_dev \
+  python -m pytest app/tests -v
+
+# Frontend
+cd frontend && npx vitest --run
 ```
 
 ---
@@ -273,12 +328,38 @@ tofu apply
 
 ## Deployment
 
-### Automatisch (bei Push auf `main`)
+### Pipeline-Stufen (bei Push auf `main`)
 
-| Geänderte Pfade | Workflow | Aktion |
+| Geänderte Pfade | Workflow | Stufen |
 |-----------------|----------|--------|
-| `frontend/**` | `deploy-frontend.yml` | Build + GitHub Pages |
-| `app/**`, `Dockerfile`, `pyproject.toml` | `deploy-backend.yml` | Docker Build + Push + Container-Redeploy |
+| `frontend/**` | `deploy-frontend.yml` | Test (Lint+Typecheck+Vitest) → Build → **manuelle Freigabe** → GitHub Pages |
+| `app/**`, `scripts/**`, `migrations/**`, `Dockerfile`, `pyproject.toml` | `deploy-backend.yml` | Test → Image bauen+pushen → Migrationen anwenden → **manuelle Freigabe** → Container-Deploy → Smoke-Test → automatischer Rollback bei Fehler |
+| jeder Push/PR | `test.yml` | Lint, Typecheck, Backend-/Frontend-Tests, **Datenschutz-Tests als eigener Job** |
+| jeder Push/PR | `security.yml` | Secret-Scan (Gitleaks), Dependency-Scan (pip-audit, npm audit, Trivy), IaC-Scan (Checkov) |
+
+Kein Deploy ohne grüne Tests - beide Deploy-Workflows hängen am `test`-Job.
+Die manuelle Freigabe läuft über ein GitHub Environment `production` mit
+Required Reviewers; der Solo-Maintainer kann seine eigene Freigabe erteilen,
+es ist kein zweiter Mensch nötig.
+
+**Einmalige Einrichtung in GitHub** (Settings, nicht per Code):
+1. Settings → Environments → `production` anlegen, **Required reviewers**
+   aktivieren (dich selbst eintragen).
+2. Settings → Branches → Branch-Schutzregel für `main`: Pull Request
+   erzwingen, Required Status Checks: `lint`, `typecheck`, `backend-tests`,
+   `privacy-tests`, `frontend-tests`, `gitleaks`, `pip-audit`, `npm-audit`,
+   `trivy-fs`, `trivy-image` (Checkov bewusst nicht als Required Check -
+   `soft_fail: true`, da Checkov kaum dedizierte Scaleway-Regeln hat und nur
+   informativ mitläuft).
+3. Settings → Secrets and variables → Actions → **Variables**:
+   `VITE_STATIC_BASE_URL` (öffentliche Bucket-URL, kein Geheimnis) setzen,
+   sobald `infra/main.tf` angewendet ist (`tofu output stands_bucket_url`).
+
+Migrationen laufen automatisiert (`scripts/migrate.py` im `migrate`-Job),
+aber ohne Downgrade-Mechanismus — reine Forward-Migrationen. Ein "Rollback"
+im Smoke-Test-Schritt setzt das vorherige Container-Image zurück, macht aber
+keine Schemaänderung rückgängig; bei einer inkompatiblen Schemaänderung
+reicht ein reiner Image-Rollback allein nicht aus.
 
 ### Manuell triggern
 
@@ -288,27 +369,35 @@ GitHub → Actions → Workflow → **Run workflow**
 
 ## API-Referenz
 
+Kein Namensfeld, keine permanenten Tokens: Zugriff auf den eigenen Stand
+läuft über einen Magic Link (`login_token`, einmalig, befristet), der gegen
+ein `session_token` (mehrfach nutzbar, befristet) eingetauscht wird. Beide
+werden nur gehasht gespeichert.
+
 | Methode | Pfad | Auth | Beschreibung |
 |---------|------|------|--------------|
 | `GET` | `/health` | – | Statuscheck |
-| `GET` | `/stands` | – | Freigegebene Stände |
-| `GET` | `/stands/geojson` | – | GeoJSON für die Karte |
-| `POST` | `/stands/` | Basic Auth | Stand einreichen |
-| `GET` | `/stands/confirm/{token}` | – | E-Mail bestätigen |
-| `GET` | `/stands/by-token/{token}` | – | Eigenen Stand abrufen |
-| `PATCH` | `/stands/by-token/{token}` | – | Eigenen Stand bearbeiten |
-| `DELETE` | `/stands/by-token/{token}` | – | Eigenen Stand zurückziehen |
-| `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING |
-| `POST` | `/stands/{id}/approve` | Bearer | Stand freigeben |
+| `GET` | `/stands` | – | Freigegebene Stände (Live-DB; primäre Quelle ist Object Storage, siehe `api.ts`) |
+| `GET` | `/stands/geojson` | – | GeoJSON für die Karte (Live-DB, gleiches Prinzip) |
+| `POST` | `/stands/` | Basic Auth | Stand einreichen, löst Login-Mail aus |
+| `POST` | `/stands/request-login` | Basic Auth | Neuen Magic Link anfordern (E-Mail im Body) |
+| `GET` | `/stands/session/{login_token}` | – | Bestätigungsseite ("Bist du das?"), verbraucht den Token nicht |
+| `POST` | `/stands/session/{login_token}` | – | Login einlösen (einmalig), gibt `session_token` zurück |
+| `GET` | `/stands/by-session/{session_token}` | – | Eigenen Stand abrufen |
+| `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
+| `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten |
+| `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand zurückziehen |
+| `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
+| `POST` | `/stands/{id}/approve` | Bearer | Stand manuell freigeben |
 | `PATCH` | `/stands/{id}` | Bearer | Stand bearbeiten (Admin) |
 | `DELETE` | `/stands/{id}` | Bearer | Stand löschen (Admin) |
-| `GET` | `/stands/debug/smtp` | Bearer | SMTP-Konfiguration prüfen |
+| `POST` | `/stands/test-email` | Bearer | SMTP-Konfiguration prüfen (Query-Param `to`) |
 
 ```bash
 # Stand freigeben
 curl -X POST -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/1/approve
 
-# Alle Stände ansehen (inkl. PENDING/CONFIRMED)
+# Alle Stände ansehen (inkl. PENDING)
 curl -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/admin
 
 # Direkte DB-Abfrage
@@ -317,7 +406,7 @@ cd infra && psql "$(tofu output -raw database_connection_string)"
 
 ```sql
 -- Offene Anmeldungen
-SELECT id, name, adresse, status, created_at FROM stands WHERE status != 'APPROVED';
+SELECT id, nickname, adresse, status, created_at FROM stands WHERE status != 'APPROVED';
 
 -- Stand löschen
 DELETE FROM stands WHERE id = 42;
@@ -325,5 +414,24 @@ DELETE FROM stands WHERE id = 42;
 -- Statistik
 SELECT status, count(*) FROM stands GROUP BY status;
 ```
+
+---
+
+## Datenschutz-Automatisierung
+
+- **Karten-Artefakt** (`app/jobs/stands_artifact.py`): wird inline nach
+  jeder Änderung sowie per Cron alle 5 Minuten neu erzeugt und auf Object
+  Storage hochgeladen (Sicherheitsnetz gegen verlorene Background-Tasks bei
+  `min_scale = 0`).
+- **Löschjob** (`scripts/deletion_job.py`, täglicher Cron): löscht ab dem
+  **07.10.2026** alle Stände aus der Datenbank sowie alle zugehörigen
+  Storage-Objekte. Kartenkacheln (`tiles/`) bleiben unangetastet.
+- **Backup-Bereinigung** (`scripts/purge_scaleway_backups.sh`): manuell kurz
+  nach dem Löschjob auszuführen, da automatische DB-Backups (Retention
+  siehe `infra/main.tf`) den Löschtermin sonst knapp überschreiten könnten.
+- **Tests**: `app/tests/test_stands_public_allowlist.py` prüft die
+  öffentlichen Endpunkte gegen eine Positivliste erlaubter Felder;
+  `app/tests/test_deletion_job.py` und `test_stands_artifact.py` decken die
+  beiden Jobs ab.
 
 </details>

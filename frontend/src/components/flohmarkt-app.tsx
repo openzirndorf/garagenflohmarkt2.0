@@ -1,16 +1,32 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchStands } from "../api";
 import type { Stand } from "../types";
+import { Datenschutz } from "./datenschutz";
 import { Faq } from "./faq";
-import { FlohmarktMap } from "./flohmarkt-map";
+import { Footer, PORTAL_URL } from "./footer";
+import { Impressum } from "./impressum";
+import { MapOrList } from "./map-or-list";
 import { MeinStand } from "./mein-stand";
 import { KATEGORIEN } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
-const PORTAL_URL = "https://portal.openzirndorf.de/";
-const IMPRESSUM_URL = "https://portal.openzirndorf.de/#impressum";
-const EVENT_DATE = new Date("2026-04-26T10:00:00+02:00");
+const EVENT_DATE = new Date("2026-10-04T10:00:00+02:00");
+
+type Page = "main" | "faq" | "impressum" | "datenschutz";
+
+function pageFromHash(): Page {
+  switch (window.location.hash) {
+    case "#faq":
+      return "faq";
+    case "#impressum":
+      return "impressum";
+    case "#datenschutz":
+      return "datenschutz";
+    default:
+      return "main";
+  }
+}
 
 const MASKOTTCHEN = [
   { datei: "tuxi.png", name: "Tuxi", text: "Tuxi holt schon die Daten vom Server…" },
@@ -64,8 +80,8 @@ function downloadICS() {
     "VERSION:2.0",
     "PRODID:-//OpenZirndorf//Garagenflohmarkt//DE",
     "BEGIN:VEVENT",
-    "DTSTART:20260426T080000Z",
-    "DTEND:20260426T140000Z",
+    "DTSTART:20261004T080000Z",
+    "DTEND:20261004T140000Z",
     "SUMMARY:Garagenflohmarkt Zirndorf",
     "DESCRIPTION:Stadtgebietsweiter Garagenflohmarkt in Zirndorf",
     "LOCATION:Zirndorf\\, Bayern",
@@ -92,7 +108,7 @@ function OzLogo() {
   );
 }
 
-function Header({ page }: { page: string }) {
+function Header({ page }: { page: Page }) {
   const goHome = () => {
     window.location.hash = "";
   };
@@ -120,10 +136,8 @@ function Header({ page }: { page: string }) {
         Regeln & FAQ
       </a>
       <a
-        href={IMPRESSUM_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-sm text-gray-500 transition-colors hover:text-gray-700"
+        href="#impressum"
+        className={`text-sm transition-colors ${page === "impressum" ? "font-semibold text-[#009a00]" : "text-gray-500 hover:text-gray-700"}`}
       >
         Impressum
       </a>
@@ -131,118 +145,10 @@ function Header({ page }: { page: string }) {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="mt-16 bg-[#1f2937] text-sm text-white/65">
-      <div className="mx-auto flex max-w-4xl flex-wrap justify-between gap-8 px-4 py-8">
-        <div className="flex flex-col gap-2">
-          <a href={PORTAL_URL} className="flex items-center gap-2 no-underline">
-            <img
-              src="https://openzirndorf.de/static/media/logo.png"
-              alt=""
-              aria-hidden="true"
-              width={28}
-              height={28}
-              className="rounded-md"
-            />
-            <span style={{ fontFamily: "var(--oz-font-heading)" }} className="font-extrabold">
-              <span className="text-white/50">open</span>
-              <span className="text-[#009a00]">zirndorf</span>
-            </span>
-          </a>
-          <p className="text-xs text-white/45">Digitale Möglichkeiten für Zirndorf.</p>
-        </div>
-
-        <div className="flex flex-wrap gap-8">
-          <div className="flex flex-col gap-1">
-            <strong className="text-white/85">Digitale Angebote</strong>
-            <a
-              href={PORTAL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Alle Angebote
-            </a>
-            <a
-              href="https://wahl2026.openzirndorf.de/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Wahlanalyse 2026
-            </a>
-            <a
-              href="https://ideen.openzirndorf.de/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Ideenbörse
-            </a>
-          </div>
-          <div className="flex flex-col gap-1">
-            <strong className="text-white/85">Community</strong>
-            <a
-              href="https://join.slack.com/t/openzirndorf/shared_invite/zt-3qt1trev5-UZDu3QpOfFfLKcIQTndZ6Q"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Slack
-            </a>
-            <a
-              href="https://github.com/openzirndorf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              GitHub
-            </a>
-            <a
-              href="https://instagram.com/openzirndorf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Instagram
-            </a>
-          </div>
-          <div className="flex flex-col gap-1">
-            <strong className="text-white/85">Rechtliches</strong>
-            <a
-              href={IMPRESSUM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Impressum
-            </a>
-            <a
-              href="https://openzirndorf.de/datenschutz.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#009a00]"
-            >
-              Datenschutz
-            </a>
-            <a href="#faq" className="hover:text-[#009a00]">
-              Regeln & FAQ
-            </a>
-          </div>
-        </div>
-      </div>
-      <div className="border-t border-white/10 px-4 py-3 text-center text-xs text-white/40">
-        © {new Date().getFullYear()} OpenZirndorf · Entwickelt mit ❤️ in Zirndorf
-      </div>
-    </footer>
-  );
-}
-
 export function FlohmarktApp() {
   const [stands, setStands] = useState<Stand[]>([]);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(() => (window.location.hash === "#faq" ? "faq" : "main"));
+  const [page, setPage] = useState<Page>(pageFromHash);
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
 
@@ -262,7 +168,7 @@ export function FlohmarktApp() {
   }, [loadStands]);
 
   useEffect(() => {
-    const onHash = () => setPage(window.location.hash === "#faq" ? "faq" : "main");
+    const onHash = () => setPage(pageFromHash());
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -296,11 +202,23 @@ export function FlohmarktApp() {
           </button>
           <Faq />
         </main>
+      ) : page === "impressum" ? (
+        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+          <Impressum />
+        </main>
+      ) : page === "datenschutz" ? (
+        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+          <Datenschutz />
+        </main>
       ) : (
         <main className="flex-1">
           {/* Karte als Startseite – volle Breite, prominent */}
           <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
-            <FlohmarktMap kategorienFilter={kategorienFilter} />
+            <MapOrList
+              kategorienFilter={kategorienFilter}
+              stands={filteredStands}
+              loading={loading}
+            />
             {/* Kategorie-Filter-Overlay */}
             <div className="absolute bottom-3 left-0 right-0 z-10 flex justify-center px-4">
               <div className="flex flex-wrap justify-center gap-1.5 rounded-2xl bg-white/90 px-3 py-2 shadow-md backdrop-blur-sm">
@@ -339,7 +257,7 @@ export function FlohmarktApp() {
             <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-4 gap-y-1">
               <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                 <p className="text-sm font-semibold text-[#009a00]">
-                  Sonntag, 26. April 2026 · 10:00 – 16:00 Uhr
+                  Sonntag, 4. Oktober 2026 · 10:00 – 16:00 Uhr
                 </p>
                 {daysUntilEvent() > 0 && (
                   <span className="text-xs text-green-600">in {daysUntilEvent()} Tagen</span>

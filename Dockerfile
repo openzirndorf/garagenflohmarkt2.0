@@ -13,4 +13,6 @@ COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/pytho
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 COPY app/ ./app/
 EXPOSE 8080
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# --no-access-log: Tokens reisen als URL-Pfadsegment (z.B. /stands/confirm/{token}) -
+# Uvicorns Standard-Access-Log würde sie sonst im Klartext in die Container-Logs schreiben.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]

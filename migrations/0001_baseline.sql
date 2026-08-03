@@ -1,3 +1,7 @@
+-- Baseline: Stand der Datenbank vor dem Datenschutz-Umbau (entspricht dem
+-- bisherigen schema.sql). Wird nur für frische Datenbanken gebraucht --
+-- bestehende Produktionsdatenbanken haben dieses Schema bereits.
+
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 CREATE TABLE IF NOT EXISTS stands (
@@ -16,8 +20,3 @@ CREATE TABLE IF NOT EXISTS stands (
 );
 
 CREATE INDEX IF NOT EXISTS stands_status_idx ON stands(status);
-
--- Migration für bestehende Datenbanken (einmalig ausführen):
--- ALTER TABLE stands ALTER COLUMN email SET NOT NULL;
--- ALTER TABLE stands ADD COLUMN IF NOT EXISTS kategorien TEXT[] NOT NULL DEFAULT '{}';
--- ALTER TABLE stands ADD COLUMN IF NOT EXISTS uhrzeit TEXT;

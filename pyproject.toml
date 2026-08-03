@@ -9,12 +9,24 @@ dependencies = [
     "httpx>=0.28.1",
     "python-dotenv>=1.2.2",
     "email-validator>=2.0.0",
+    "boto3>=1.35.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "ruff>=0.6.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
 ]
+
+[tool.setuptools]
+packages = ["app", "app.routes", "app.jobs", "app.tests", "scripts"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["app/tests"]

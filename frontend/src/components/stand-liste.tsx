@@ -36,7 +36,7 @@ export function StandListe({ stands, loading }: Props) {
           <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#009a00]" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <p className="font-semibold leading-tight text-gray-900">{s.name}</p>
+              <p className="font-semibold leading-tight text-gray-900">{s.nickname}</p>
               {s.uhrzeit && <span className="text-xs text-gray-500">🕐 {s.uhrzeit}</span>}
             </div>
             <p className="mt-0.5 text-sm text-gray-500">{s.adresse}</p>

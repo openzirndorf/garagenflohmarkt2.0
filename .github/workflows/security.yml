@@ -1,0 +1,93 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e . pip-audit
+      # Prüft das tatsächlich installierte Environment - deckt so auch
+      # transitive Abhängigkeiten ab, nicht nur die direkt gelisteten.
+      - run: pip-audit
+
+  npm-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      # Nur Produktionsabhängigkeiten - Dev-Tooling (Vite-Plugins etc.) hat
+      # bekannte, für die ausgelieferte App irrelevante Advisories.
+      - run: npm audit --omit=dev --audit-level=high
+
+  # Findet IaC-Fehlkonfigurationen in infra/ (z.B. offene Security Groups,
+  # fehlende Verschlüsselung) - unabhängig davon, ob `tofu validate` durchläuft
+  # (das prüft nur Syntax, keine Sicherheitsfragen).
+  checkov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra
+          framework: terraform
+          soft_fail: true # Scaleway-Ressourcen haben kaum Checkov-Regeln - siehe unten
+
+  # Dependency-Scan über den Dateibaum (Python + npm gemeinsam, ergänzt
+  # pip-audit/npm-audit um eine zweite, unabhängige Quelle).
+  trivy-fs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  # Scannt das tatsächlich gebaute Docker-Image (Basis-Image + installierte
+  # Pakete), nicht nur die Abhängigkeitsdateien.
+  trivy-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: flohmarkt-api:scan
+      - uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: flohmarkt-api:scan
+          severity: HIGH,CRITICAL
+          exit-code: "1"

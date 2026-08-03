@@ -2,6 +2,7 @@ import maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchGeoJSON } from "../api";
+import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
 
 // Zirndorf Zentrum
 const CENTER: [number, number] = [10.9557, 49.4467];
@@ -9,12 +10,18 @@ const ZOOM = 13;
 
 interface Props {
   kategorienFilter?: string[];
+  onError?: () => void;
 }
 
-export function FlohmarktMap({ kategorienFilter = [] }: Props) {
+export function FlohmarktMap({ kategorienFilter = [], onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const allGeoJSONRef = useRef<GeoJSON.FeatureCollection | null>(null);
+  // "Latest ref"-Muster: der Mount-once-Effekt unten soll onError nicht neu
+  // registrieren müssen, wenn die Elternkomponente eine neue Funktionsreferenz
+  // übergibt (z.B. eine Inline-Arrow-Function bei jedem Render).
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -26,6 +33,12 @@ export function FlohmarktMap({ kategorienFilter = [] }: Props) {
       zoom: ZOOM,
     });
     mapRef.current = map;
+
+    // Kein Live-Fallback auf einen Drittanbieter (z.B. OpenFreeMap), wenn
+    // die eigenen Kacheln/der Style nicht laden - das würde die
+    // EU-only-Garantie im Fehlerfall aufweichen. Stattdessen wird auf die
+    // (bereits barrierefreie) Listenansicht umgeschaltet, siehe map-or-list.tsx.
+    map.on("error", () => onErrorRef.current?.());
 
     // Geolocation-Button (built-in MapLibre control)
     map.addControl(
@@ -56,21 +69,8 @@ export function FlohmarktMap({ kategorienFilter = [] }: Props) {
         map.on("click", "stands-pins", (e) => {
           const feature = e.features?.[0];
           if (!feature) return;
-          const { name, adresse, beschreibung, uhrzeit } = feature.properties as {
-            name: string;
-            adresse: string;
-            beschreibung: string;
-            uhrzeit: string | null;
-          };
-          const lines = [
-            `<strong>${name}</strong>`,
-            adresse,
-            uhrzeit ? `🕐 ${uhrzeit}` : null,
-            beschreibung || null,
-          ]
-            .filter(Boolean)
-            .join("<br>");
-          new maplibregl.Popup().setLngLat(e.lngLat).setHTML(lines).addTo(map);
+          const popupNode = buildStandPopupContent(feature.properties as StandPopupProperties);
+          new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(popupNode).addTo(map);
         });
         map.on("mouseenter", "stands-pins", () => {
           map.getCanvas().style.cursor = "pointer";
