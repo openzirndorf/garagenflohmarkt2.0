@@ -307,9 +307,14 @@ export function FlohmarktApp() {
               stands={filteredStands}
               loading={loading}
             />
-            {/* Kategorie-Filter-Overlay */}
-            <div className="absolute bottom-3 left-0 right-0 z-10 flex justify-center px-4">
-              <div className="flex flex-wrap justify-center gap-1.5 rounded-2xl bg-white/90 px-3 py-2 shadow-md backdrop-blur-sm">
+            {/* Kategorie-Filter-Overlay - horizontal scrollbar statt Umbruch,
+                da 18 Kategorien sonst mehrzeilig die Karte zu stark verdecken
+                (v.a. mobil). */}
+            <div className="absolute bottom-3 left-0 right-0 z-10 px-4">
+              <div
+                style={{ scrollbarWidth: "none" }}
+                className="flex gap-1.5 overflow-x-auto rounded-2xl bg-white/90 px-3 py-2 shadow-md backdrop-blur-sm [&::-webkit-scrollbar]:hidden"
+              >
                 {KATEGORIEN.map((k) => {
                   const active = kategorienFilter.includes(k);
                   return (
@@ -317,7 +322,7 @@ export function FlohmarktApp() {
                       key={k}
                       type="button"
                       onClick={() => toggleFilter(k)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                         active
                           ? "border-[#009a00] bg-[#009a00] text-white"
                           : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
@@ -331,7 +336,7 @@ export function FlohmarktApp() {
                   <button
                     type="button"
                     onClick={() => setKategorienFilter([])}
-                    className="rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
+                    className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
                   >
                     ✕ Alle
                   </button>

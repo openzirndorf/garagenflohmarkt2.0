@@ -172,7 +172,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                 type="button"
                 onClick={handleRequestLogin}
                 disabled={requestStatus === "loading" || !requestEmail}
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded-md bg-[#009a00] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#008400] disabled:opacity-50"
               >
                 {requestStatus === "loading" ? "…" : "Link senden"}
               </button>
@@ -271,9 +271,9 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   return (
     <section
       style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
-      className="border border-blue-100 bg-blue-50 p-4"
+      className="border border-green-100 bg-green-50 p-4"
     >
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-blue-500">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-green-600">
         Dein angemeldeter Stand
       </p>
 
@@ -314,8 +314,8 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                     onClick={() => toggleKategorie(k)}
                     className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
                       active
-                        ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-gray-300 bg-white text-gray-600 hover:border-blue-400"
+                        ? "border-[#009a00] bg-[#009a00] text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-green-400"
                     }`}
                   >
                     {k}
@@ -340,7 +340,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="rounded bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+              className="rounded bg-[#009a00] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#008400] disabled:opacity-50"
             >
               {saving ? "Speichern…" : "Speichern"}
             </button>
@@ -363,14 +363,14 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                 <button
                   type="button"
                   onClick={openNicknamePicker}
-                  className="text-xs text-blue-500 transition-colors hover:text-blue-700 hover:underline"
+                  className="text-xs text-green-700 transition-colors hover:text-green-900 hover:underline"
                 >
                   Namen ändern
                 </button>
               )}
             </div>
             {showNicknamePicker && (
-              <div className="mt-1 flex flex-col gap-2 rounded-lg border border-blue-100 bg-white p-2.5">
+              <div className="mt-1 flex flex-col gap-2 rounded-lg border border-green-100 bg-white p-2.5">
                 {nicknameLoading ? (
                   <p className="text-xs text-gray-400">Würfelt…</p>
                 ) : (
@@ -404,7 +404,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                     type="button"
                     onClick={applyNickname}
                     disabled={!selectedNickname || nicknameSaving}
-                    className="rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="rounded bg-[#009a00] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#008400] disabled:opacity-50"
                   >
                     {nicknameSaving ? "Speichern…" : "Übernehmen"}
                   </button>
@@ -427,7 +427,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                 {stand.kategorien.map((k) => (
                   <span
                     key={k}
-                    className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700"
+                    className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-[#009a00]"
                   >
                     {k}
                   </span>
@@ -435,7 +435,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
               </div>
             )}
             <p
-              className={`mt-1 text-xs font-medium ${isApproved ? "text-[#009a00]" : "text-blue-600"}`}
+              className={`mt-1 text-xs font-medium ${isApproved ? "text-[#009a00]" : "text-amber-600"}`}
             >
               {STATUS_LABEL[stand.status] ?? stand.status}
             </p>
@@ -444,7 +444,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
             <button
               type="button"
               onClick={handleEdit}
-              className="text-sm text-blue-600 transition-colors hover:text-blue-800"
+              className="text-sm text-green-700 transition-colors hover:text-green-900"
             >
               Bearbeiten
             </button>
