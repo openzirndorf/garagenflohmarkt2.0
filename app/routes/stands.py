@@ -46,7 +46,7 @@ _OWNER_COLUMNS = (
 _ADMIN_COLUMNS = (
     "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, "
     "status, created_at, login_token_expires_at, session_token_expires_at, "
-    "content_locked, content_lock_message"
+    "content_locked, content_lock_message, lock_reply_message, lock_reply_created_at"
 )
 
 
@@ -364,12 +364,15 @@ class LockReplyIn(BaseModel):
 
 # POST /stands/by-session/{session_token}/lock-reply - einzige Möglichkeit
 # für einen gesperrten Inhaber, den Admin zu erreichen (z.B. um die Sperre
-# zu erklären oder ihre Aufhebung zu bitten). Wird bewusst nicht in der DB
-# gespeichert (auch nicht im Audit-Log, das ohnehin nie Inhalte speichert -
-# siehe app/audit.py), nur per Mail an den Admin weitergeleitet.
+# zu erklären oder ihre Aufhebung zu bitten). Wird sowohl per Mail an den
+# Admin geschickt als auch auf lock_reply_message gespeichert, damit sie
+# im Admin-Panel sichtbar ist - nicht im Audit-Log, das weiterhin nie
+# Inhalte speichert (siehe app/audit.py). Wird beim Entsperren automatisch
+# wieder gelöscht (siehe update_stand_admin).
 @router.post("/by-session/{session_token}/lock-reply")
 async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request):
-    if not body.message.strip():
+    message = body.message.strip()
+    if not message:
         raise HTTPException(status_code=400, detail="Nachricht darf nicht leer sein")
 
     pool = await get_pool()
@@ -391,8 +394,13 @@ async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request)
     if not row["content_locked"]:
         raise HTTPException(status_code=400, detail="Dein Stand ist nicht gesperrt")
 
+    await pool.execute(
+        "UPDATE stands SET lock_reply_message = $1, lock_reply_created_at = now() WHERE id = $2",
+        message, row["id"],
+    )
+
     try:
-        await send_lock_reply_email(row["id"], row["nickname"], body.message.strip())
+        await send_lock_reply_email(row["id"], row["nickname"], message)
     except Exception as exc:  # noqa: BLE001 - Mailversand darf die Anfrage nie fehlschlagen lassen
         logger.error("Sperr-Antwort-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
 
@@ -485,6 +493,13 @@ async def update_stand_admin(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
+
+    # Entsperren gilt als "Antwort gelesen/erledigt" - räumt die
+    # gespeicherte Sperr-Antwort mit auf, statt sie unbegrenzt stehen zu
+    # lassen.
+    if updates.get("content_locked") is False:
+        updates["lock_reply_message"] = None
+        updates["lock_reply_created_at"] = None
 
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])

@@ -372,6 +372,14 @@ export function AdminPanel() {
                           )}
                           {s.beschreibung && <p className="mt-1 text-sm">{s.beschreibung}</p>}
                           {s.email && <p className="mt-1 text-sm text-gray-500">{s.email}</p>}
+                          {s.lock_reply_message && (
+                            <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-sm text-blue-900">
+                              <p className="text-xs font-medium text-blue-700">
+                                Antwort des Inhabers auf die Sperre:
+                              </p>
+                              <p className="mt-0.5">{s.lock_reply_message}</p>
+                            </div>
+                          )}
                         </div>
                         <div className="flex shrink-0 flex-col gap-2">
                           <button
@@ -458,6 +466,14 @@ export function AdminPanel() {
                                   {k}
                                 </span>
                               ))}
+                            </div>
+                          )}
+                          {s.lock_reply_message && (
+                            <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+                              <p className="font-medium text-blue-700">
+                                Antwort des Inhabers auf die Sperre:
+                              </p>
+                              <p className="mt-0.5">{s.lock_reply_message}</p>
                             </div>
                           )}
                         </div>

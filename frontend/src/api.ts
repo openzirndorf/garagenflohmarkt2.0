@@ -63,6 +63,8 @@ export interface AdminStand extends Stand {
   session_token_expires_at: string | null;
   content_locked: boolean;
   content_lock_message: string | null;
+  lock_reply_message: string | null;
+  lock_reply_created_at: string | null;
 }
 
 export async function fetchAdminStands(token: string): Promise<AdminStand[]> {

@@ -152,7 +152,7 @@ async def test_lock_reply_rejects_empty_message(client, api_auth, admin_headers,
     assert resp.status_code == 400
 
 
-async def test_lock_reply_never_stores_message_content(
+async def test_lock_reply_message_not_stored_in_audit_log(
     client, api_auth, admin_headers, captured_emails, pool
 ):
     stand = (await _register(client, api_auth)).json()
@@ -161,7 +161,7 @@ async def test_lock_reply_never_stores_message_content(
         f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
     )
 
-    secret_message = "darf-nirgendwo-gespeichert-werden"
+    secret_message = "darf-nicht-im-audit-log-landen"
     await client.post(
         f"/stands/by-session/{session_token}/lock-reply", json={"message": secret_message}
     )
@@ -172,3 +172,32 @@ async def test_lock_reply_never_stores_message_content(
         stand["id"],
     )
     assert secret_message not in str(dict(row))
+
+
+async def test_lock_reply_message_visible_to_admin_and_cleared_on_unlock(
+    client, api_auth, admin_headers, captured_emails
+):
+    stand = (await _register(client, api_auth)).json()
+    session_token = await _login(client, captured_emails[0]["login_code"])
+    await client.patch(
+        f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
+    )
+
+    reply_message = "Bitte um Überprüfung, das war ein Missverständnis."
+    await client.post(
+        f"/stands/by-session/{session_token}/lock-reply", json={"message": reply_message}
+    )
+
+    admin_view = (await client.get("/stands/admin", headers=admin_headers)).json()
+    entry = next(s for s in admin_view if s["id"] == stand["id"])
+    assert entry["lock_reply_message"] == reply_message
+    assert entry["lock_reply_created_at"] is not None
+
+    await client.patch(
+        f"/stands/{stand['id']}", json={"content_locked": False}, headers=admin_headers
+    )
+
+    admin_view = (await client.get("/stands/admin", headers=admin_headers)).json()
+    entry = next(s for s in admin_view if s["id"] == stand["id"])
+    assert entry["lock_reply_message"] is None
+    assert entry["lock_reply_created_at"] is None
