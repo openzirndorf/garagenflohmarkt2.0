@@ -69,7 +69,14 @@ export function FlohmarktMap({ kategorienFilter = [], onError }: Props) {
         map.on("click", "stands-pins", (e) => {
           const feature = e.features?.[0];
           if (!feature) return;
-          const popupNode = buildStandPopupContent(feature.properties as StandPopupProperties);
+          const coords =
+            feature.geometry.type === "Point"
+              ? { lng: feature.geometry.coordinates[0], lat: feature.geometry.coordinates[1] }
+              : null;
+          const popupNode = buildStandPopupContent(
+            feature.properties as StandPopupProperties,
+            coords,
+          );
           new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(popupNode).addTo(map);
         });
         map.on("mouseenter", "stands-pins", () => {

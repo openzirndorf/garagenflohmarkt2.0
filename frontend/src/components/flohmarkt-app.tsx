@@ -6,7 +6,7 @@ import { Faq } from "./faq";
 import { Footer, PORTAL_URL } from "./footer";
 import { Impressum } from "./impressum";
 import { MapOrList } from "./map-or-list";
-import { MeinStand } from "./mein-stand";
+import { MeinStand, type MeinStandHandle } from "./mein-stand";
 import { KATEGORIEN } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
@@ -131,10 +131,12 @@ function Header({
   page,
   hasOwnStand,
   onOpenStandForm,
+  onOpenLoginRequest,
 }: {
   page: Page;
   hasOwnStand: boolean;
   onOpenStandForm: () => void;
+  onOpenLoginRequest: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -208,12 +210,16 @@ function Header({
                 📍 Eigenen Stand anmelden
               </button>
             )}
-            <a
-              href="#mein-stand"
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            <button
+              type="button"
+              onClick={() => {
+                onOpenLoginRequest();
+                closeMenu();
+              }}
+              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
             >
               🔑 Schon angemeldet? Zugang anfordern
-            </a>
+            </button>
             <div className="my-1 border-t border-gray-100" />
             <a href="#faq" className={menuLinkClass(page === "faq")}>
               Regeln & FAQ
@@ -238,6 +244,7 @@ export function FlohmarktApp() {
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [hasOwnStand, setHasOwnStand] = useState(false);
+  const meinStandRef = useRef<MeinStandHandle>(null);
 
   const handleStandChange = useCallback((stand: OwnStand | null) => {
     setHasOwnStand(stand !== null);
@@ -247,6 +254,11 @@ export function FlohmarktApp() {
   const handleOpenStandForm = useCallback(() => {
     setShowForm(true);
     document.getElementById("stand-anmelden")?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  const handleOpenLoginRequest = useCallback(() => {
+    meinStandRef.current?.openRequestForm();
+    document.getElementById("mein-stand")?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   const loadStands = useCallback(async () => {
@@ -284,7 +296,12 @@ export function FlohmarktApp() {
   return (
     <div className="flex min-h-screen flex-col">
       {initialLoading && <MascotLoading />}
-      <Header page={page} hasOwnStand={hasOwnStand} onOpenStandForm={handleOpenStandForm} />
+      <Header
+        page={page}
+        hasOwnStand={hasOwnStand}
+        onOpenStandForm={handleOpenStandForm}
+        onOpenLoginRequest={handleOpenLoginRequest}
+      />
 
       {page === "faq" ? (
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
@@ -371,7 +388,11 @@ export function FlohmarktApp() {
           </div>
 
           <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-6">
-            <MeinStand onCancelled={loadStands} onStandChange={handleStandChange} />
+            <MeinStand
+              ref={meinStandRef}
+              onCancelled={loadStands}
+              onStandChange={handleStandChange}
+            />
 
             <section aria-label="Alle Stände">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

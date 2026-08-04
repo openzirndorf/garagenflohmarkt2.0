@@ -139,6 +139,18 @@ interface StandPatchData {
   beschreibung?: string;
   kategorien?: string[];
   uhrzeit?: string;
+  nickname?: string;
+}
+
+// Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst
+// updateStand() mit dem gewählten Namen schreibt in die DB.
+export async function suggestNicknames(sessionToken: string): Promise<string[]> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}/nickname-suggestions`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Vorschläge konnten nicht geladen werden");
+  const data = await res.json();
+  return data.suggestions;
 }
 
 export async function updateStandAdmin(
@@ -172,7 +184,10 @@ export async function updateStand(sessionToken: string, data: StandPatchData): P
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error("Speichern fehlgeschlagen");
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail ?? "Speichern fehlgeschlagen");
+  }
   return res.json();
 }
 

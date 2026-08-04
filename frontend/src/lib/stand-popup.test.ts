@@ -45,4 +45,22 @@ describe("buildStandPopupContent", () => {
     });
     expect(withoutTime.textContent).not.toContain("Uhr");
   });
+
+  it("includes a navigation link only when coordinates are given", () => {
+    const withCoords = buildStandPopupContent(
+      { nickname: "Flotte Eule", adresse: "Teststraße 2", beschreibung: null, uhrzeit: null },
+      { lat: 49.4, lng: 10.9 },
+    );
+    const link = withCoords.querySelector("a");
+    expect(link).not.toBeNull();
+    expect(link?.href).toContain("49.4");
+
+    const withoutCoords = buildStandPopupContent({
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      uhrzeit: null,
+    });
+    expect(withoutCoords.querySelector("a")).toBeNull();
+  });
 });

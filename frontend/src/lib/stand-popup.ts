@@ -1,3 +1,5 @@
+import { navigationUrl } from "./navigation-url";
+
 export interface StandPopupProperties {
   nickname: string;
   adresse: string;
@@ -14,7 +16,13 @@ export interface StandPopupProperties {
 // löst beim Import Seiteneffekte aus (Web-Worker-Setup via
 // window.URL.createObjectURL), die in jsdom-Tests nicht funktionieren -
 // diese reine Funktion lässt sich so ohne Karten-Mock testen.
-export function buildStandPopupContent(properties: StandPopupProperties): HTMLElement {
+//
+// coords kommt separat aus feature.geometry (nicht aus properties) - so wie
+// es das GeoJSON von rows_to_geojson() im Backend auch trennt.
+export function buildStandPopupContent(
+  properties: StandPopupProperties,
+  coords: { lat: number; lng: number } | null = null,
+): HTMLElement {
   const { nickname, adresse, beschreibung, uhrzeit } = properties;
 
   const popupNode = document.createElement("div");
@@ -29,6 +37,20 @@ export function buildStandPopupContent(properties: StandPopupProperties): HTMLEl
   addLine(adresse);
   if (uhrzeit) addLine(`🕐 ${uhrzeit}`);
   if (beschreibung) addLine(beschreibung);
+
+  if (coords) {
+    popupNode.appendChild(document.createElement("br"));
+    const navLink = document.createElement("a");
+    navLink.href = navigationUrl(coords.lat, coords.lng, nickname);
+    navLink.target = "_blank";
+    navLink.rel = "noopener noreferrer";
+    navLink.textContent = "Navigieren";
+    navLink.style.display = "inline-block";
+    navLink.style.marginTop = "6px";
+    navLink.style.fontWeight = "600";
+    navLink.style.color = "#009a00";
+    popupNode.appendChild(navLink);
+  }
 
   return popupNode;
 }

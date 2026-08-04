@@ -10,7 +10,7 @@ from app.database import get_pool
 from app.email import FRONTEND_URL, send_login_email, smtp_configured, smtp_debug_info
 from app.geocode import geocode
 from app.jobs.stands_artifact import regenerate_stands_artifact
-from app.nicknames import generate_unique_nickname
+from app.nicknames import generate_unique_nickname, is_valid_nickname
 from app.public_fields import PUBLIC_GEOJSON_COLUMNS, PUBLIC_LIST_COLUMNS, rows_to_geojson
 from app.rate_limit import check_rate_limit
 from app.tokens import (
@@ -59,6 +59,10 @@ class StandPatch(BaseModel):
     beschreibung: str | None = None
     kategorien: list[str] | None = None
     uhrzeit: str | None = None
+    # Nur einer der vom Server vorgeschlagenen Namen (siehe
+    # POST .../nickname-suggestions), nie Freitext - is_valid_nickname()
+    # unten erzwingt das serverseitig, unabhängig vom Frontend.
+    nickname: str | None = None
 
 
 class LoginRequestIn(BaseModel):
@@ -351,6 +355,9 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
 
+    if "nickname" in updates and not is_valid_nickname(updates["nickname"]):
+        raise HTTPException(status_code=400, detail="Ungültiger Standname")
+
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])
         updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
@@ -359,17 +366,51 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     values = list(updates.values())
 
     pool = await get_pool()
-    row = await pool.fetchrow(
-        f"UPDATE stands SET {set_clause} "
-        "WHERE session_token_hash = $1 AND session_token_expires_at > now() "
-        f"RETURNING {_OWNER_COLUMNS}",
-        hash_token(session_token), *values,
-    )
+    try:
+        row = await pool.fetchrow(
+            f"UPDATE stands SET {set_clause} "
+            "WHERE session_token_hash = $1 AND session_token_expires_at > now() "
+            f"RETURNING {_OWNER_COLUMNS}",
+            hash_token(session_token), *values,
+        )
+    except asyncpg.UniqueViolationError as exc:
+        if "nickname" in str(exc):
+            raise HTTPException(
+                status_code=409,
+                detail="Dieser Standname ist inzwischen vergeben. Bitte neu würfeln.",
+            ) from exc
+        raise
     if not row:
         raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
     if row["status"] == "APPROVED":
         background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)
+
+
+# POST /stands/by-session/{session_token}/nickname-suggestions - würfelt
+# 3 alternative Standnamen zur Auswahl, ohne sie zu reservieren (reine
+# Vorschau; erst PATCH mit dem gewählten Namen schreibt in die DB).
+@router.post("/by-session/{session_token}/nickname-suggestions")
+async def suggest_nicknames(session_token: str):
+    pool = await get_pool()
+    session_valid = await pool.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM stands "
+        "WHERE session_token_hash = $1 AND session_token_expires_at > now())",
+        hash_token(session_token),
+    )
+    if not session_valid:
+        raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
+
+    batch: set[str] = set()
+
+    async def taken(candidate: str) -> bool:
+        return candidate in batch or await _nickname_exists(pool, candidate)
+
+    for _ in range(3):
+        candidate = await generate_unique_nickname(taken)
+        batch.add(candidate)
+
+    return {"suggestions": sorted(batch)}
 
 
 # DELETE /stands/by-session/{session_token} - eigenen Stand zurückziehen

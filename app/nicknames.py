@@ -7,6 +7,7 @@ echten Namens) als auch der Vorzeige-Nachweis bei Gewinn-Drop-
 Reservierungen.
 """
 
+import re
 import secrets
 from collections.abc import Awaitable, Callable
 
@@ -31,6 +32,20 @@ NOMEN = [
 
 def generate_nickname() -> str:
     return f"{secrets.choice(ADJEKTIVE)} {secrets.choice(NOMEN)}"
+
+
+# Erlaubt zusätzlich das Zahlensuffix aus dem max_attempts-Fallback unten
+# (z.B. "Gscheide Bratwurst-4213"). Serverseitig gegen Direktaufrufe der
+# API geprüft, nicht nur im Frontend - ein Klarname kann so selbst bei
+# einer manuellen PATCH-Anfrage nicht ins System gelangen.
+_NICKNAME_PATTERN = re.compile(
+    "^(" + "|".join(re.escape(a) for a in ADJEKTIVE) + ") ("
+    + "|".join(re.escape(n) for n in NOMEN) + r")(-\d{4})?$"
+)
+
+
+def is_valid_nickname(candidate: str) -> bool:
+    return bool(_NICKNAME_PATTERN.fullmatch(candidate))
 
 
 async def generate_unique_nickname(

@@ -1,3 +1,4 @@
+import { navigationUrl } from "../lib/navigation-url";
 import type { Stand } from "../types";
 
 interface Props {
@@ -56,6 +57,16 @@ export function StandListe({ stands, loading }: Props) {
               <p className="mt-1 text-sm leading-snug text-gray-600">{s.beschreibung}</p>
             )}
           </div>
+          {s.lat !== null && s.lng !== null && (
+            <a
+              href={navigationUrl(s.lat, s.lng, s.nickname)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 self-center rounded-full border border-[#009a00] px-3 py-1.5 text-xs font-semibold text-[#009a00] transition-colors hover:bg-green-50"
+            >
+              Navigieren
+            </a>
+          )}
         </div>
       ))}
     </div>
