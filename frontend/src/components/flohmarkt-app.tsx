@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type OwnStand, fetchStands } from "../api";
 import type { Stand } from "../types";
 import { Datenschutz } from "./datenschutz";
@@ -108,10 +108,65 @@ function OzLogo() {
   );
 }
 
-function Header({ page }: { page: Page }) {
+function MenuIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <line x1="2" y1="5" x2="18" y2="5" />
+      <line x1="2" y1="10" x2="18" y2="10" />
+      <line x1="2" y1="15" x2="18" y2="15" />
+    </svg>
+  );
+}
+
+function Header({
+  page,
+  hasOwnStand,
+  onOpenStandForm,
+}: {
+  page: Page;
+  hasOwnStand: boolean;
+  onOpenStandForm: () => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const goHome = () => {
     window.location.hash = "";
   };
+  const closeMenu = () => setMenuOpen(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [menuOpen]);
+
+  // Schließt das Menü bei jeder Hash-Navigation (Klick auf einen der Links
+  // unten) - onClick direkt an den Anker-Elementen würde biomes
+  // a11y/useValidAnchor-Regel verletzen ("Anchor statt Button").
+  useEffect(() => {
+    const handleHashChange = () => setMenuOpen(false);
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, []);
+
+  const menuLinkClass = (active: boolean) =>
+    `block px-4 py-2 text-sm hover:bg-gray-50 ${active ? "font-semibold text-[#009a00]" : "text-gray-700"}`;
+
   return (
     <header
       style={{ height: "var(--oz-header-height)" }}
@@ -129,24 +184,49 @@ function Header({ page }: { page: Page }) {
       <a href={PORTAL_URL} className="hidden text-sm text-gray-400 hover:text-gray-600 sm:block">
         OpenZirndorf ↗
       </a>
-      <a
-        href="#mein-stand"
-        className="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-800"
-      >
-        Mein Stand
-      </a>
-      <a
-        href="#faq"
-        className={`text-sm transition-colors ${page === "faq" ? "font-semibold text-[#009a00]" : "text-gray-500 hover:text-gray-700"}`}
-      >
-        Regeln & FAQ
-      </a>
-      <a
-        href="#impressum"
-        className={`text-sm transition-colors ${page === "impressum" ? "font-semibold text-[#009a00]" : "text-gray-500 hover:text-gray-700"}`}
-      >
-        Impressum
-      </a>
+      <div ref={menuRef} className="relative">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label="Menü"
+          aria-expanded={menuOpen}
+          className="flex h-9 w-9 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
+        >
+          <MenuIcon />
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
+            {!hasOwnStand && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenStandForm();
+                  closeMenu();
+                }}
+                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+              >
+                📍 Eigenen Stand anmelden
+              </button>
+            )}
+            <a
+              href="#mein-stand"
+              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              🔑 Schon angemeldet? Zugang anfordern
+            </a>
+            <div className="my-1 border-t border-gray-100" />
+            <a href="#faq" className={menuLinkClass(page === "faq")}>
+              Regeln & FAQ
+            </a>
+            <a href="#impressum" className={menuLinkClass(page === "impressum")}>
+              Impressum
+            </a>
+            <a href="#datenschutz" className={menuLinkClass(page === "datenschutz")}>
+              Datenschutz
+            </a>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -162,6 +242,11 @@ export function FlohmarktApp() {
   const handleStandChange = useCallback((stand: OwnStand | null) => {
     setHasOwnStand(stand !== null);
     if (stand !== null) setShowForm(false);
+  }, []);
+
+  const handleOpenStandForm = useCallback(() => {
+    setShowForm(true);
+    document.getElementById("stand-anmelden")?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   const loadStands = useCallback(async () => {
@@ -199,7 +284,7 @@ export function FlohmarktApp() {
   return (
     <div className="flex min-h-screen flex-col">
       {initialLoading && <MascotLoading />}
-      <Header page={page} />
+      <Header page={page} hasOwnStand={hasOwnStand} onOpenStandForm={handleOpenStandForm} />
 
       {page === "faq" ? (
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
@@ -335,7 +420,7 @@ export function FlohmarktApp() {
             </section>
 
             {!hasOwnStand && (
-              <section aria-label="Stand anmelden">
+              <section id="stand-anmelden" aria-label="Stand anmelden">
                 {showForm ? (
                   <StandForm
                     onSuccess={() => {
