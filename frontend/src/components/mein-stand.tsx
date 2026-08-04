@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   type OwnStand,
   cancelStand,
@@ -17,10 +17,6 @@ interface Props {
   onStandChange?: (stand: OwnStand | null) => void;
 }
 
-export interface MeinStandHandle {
-  openRequestForm: () => void;
-}
-
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Warte auf Bestätigung",
   APPROVED: "Freigeschaltet ✓",
@@ -37,10 +33,7 @@ function consumeSessionTokenFromHash(): string | null {
   return match[1];
 }
 
-export const MeinStand = forwardRef<MeinStandHandle, Props>(function MeinStand(
-  { onCancelled, onStandChange },
-  ref,
-) {
+export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [stand, setStand] = useState<OwnStand | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
@@ -57,7 +50,6 @@ export const MeinStand = forwardRef<MeinStandHandle, Props>(function MeinStand(
   const [error, setError] = useState<string | null>(null);
 
   // Zugang-anfordern-Formular
-  const [showRequestForm, setShowRequestForm] = useState(false);
   const [requestEmail, setRequestEmail] = useState("");
   const [requestStatus, setRequestStatus] = useState<"idle" | "loading" | "sent">("idle");
   const [requestMessage, setRequestMessage] = useState<string | null>(null);
@@ -70,10 +62,6 @@ export const MeinStand = forwardRef<MeinStandHandle, Props>(function MeinStand(
   const [nicknameLoading, setNicknameLoading] = useState(false);
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
-
-  useImperativeHandle(ref, () => ({
-    openRequestForm: () => setShowRequestForm(true),
-  }));
 
   useEffect(() => {
     const fromHash = consumeSessionTokenFromHash();
@@ -155,24 +143,14 @@ export const MeinStand = forwardRef<MeinStandHandle, Props>(function MeinStand(
   if (!checkedStorage) return null;
 
   if (!sessionToken || !stand) {
-    // Bewusst minimal: die meisten Besucher suchen nur, haben keinen Stand -
-    // der eigentliche Einstiegspunkt ist das Hamburger-Menü, das direkt
-    // hierher scrollt und das Formular unten gleich aufklappt.
-    if (!showRequestForm) {
-      return (
-        <section id="mein-stand" className="text-center">
-          <button
-            type="button"
-            onClick={() => setShowRequestForm(true)}
-            className="text-xs text-gray-400 transition-colors hover:text-gray-600 hover:underline"
-          >
-            Schon einen Stand angemeldet? Zugang anfordern
-          </button>
-        </section>
-      );
-    }
+    // Diese Ansicht wird nur über den eigenen Menüpunkt "Mein Stand"
+    // erreicht (eigene Seite, kein Scroll-Ziel mehr) - kein zusätzlicher
+    // Zwischenklick nötig, das Formular steht direkt da.
     return (
-      <section id="mein-stand" className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
+      <section>
+        <h1 style={{ fontFamily: "var(--oz-font-heading)" }} className="mb-4 text-xl font-bold">
+          Mein Stand
+        </h1>
         {requestStatus === "sent" ? (
           <p className="text-sm text-gray-700">{requestMessage}</p>
         ) : (
@@ -286,7 +264,6 @@ export const MeinStand = forwardRef<MeinStandHandle, Props>(function MeinStand(
 
   return (
     <section
-      id="mein-stand"
       style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
       className="border border-blue-100 bg-blue-50 p-4"
     >
@@ -488,4 +465,4 @@ export const MeinStand = forwardRef<MeinStandHandle, Props>(function MeinStand(
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </section>
   );
-});
+}

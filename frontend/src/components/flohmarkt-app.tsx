@@ -6,26 +6,39 @@ import { Faq } from "./faq";
 import { Footer, PORTAL_URL } from "./footer";
 import { Impressum } from "./impressum";
 import { MapOrList } from "./map-or-list";
-import { MeinStand, type MeinStandHandle } from "./mein-stand";
+import { MeinStand } from "./mein-stand";
 import { KATEGORIEN } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
 const EVENT_DATE = new Date("2026-10-04T10:00:00+02:00");
 
-type Page = "main" | "faq" | "impressum" | "datenschutz";
+type Page = "main" | "faq" | "impressum" | "datenschutz" | "stand-anmelden" | "mein-stand";
 
 function pageFromHash(): Page {
-  switch (window.location.hash) {
-    case "#faq":
-      return "faq";
-    case "#impressum":
-      return "impressum";
-    case "#datenschutz":
-      return "datenschutz";
-    default:
-      return "main";
-  }
+  const hash = window.location.hash;
+  if (hash === "#faq") return "faq";
+  if (hash === "#impressum") return "impressum";
+  if (hash === "#datenschutz") return "datenschutz";
+  if (hash === "#stand-anmelden") return "stand-anmelden";
+  // Der Magic-Link landet als "#mein-stand/session/{token}", nicht als
+  // exakter Match - siehe consumeSessionTokenFromHash() in mein-stand.tsx.
+  if (hash.startsWith("#mein-stand")) return "mein-stand";
+  return "main";
+}
+
+function BackButton() {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        window.location.hash = "";
+      }}
+      className="mb-6 text-sm text-[#009a00] hover:underline"
+    >
+      ← Zurück
+    </button>
+  );
 }
 
 const MASKOTTCHEN = [
@@ -127,24 +140,13 @@ function MenuIcon() {
   );
 }
 
-function Header({
-  page,
-  hasOwnStand,
-  onOpenStandForm,
-  onOpenLoginRequest,
-}: {
-  page: Page;
-  hasOwnStand: boolean;
-  onOpenStandForm: () => void;
-  onOpenLoginRequest: () => void;
-}) {
+function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const goHome = () => {
     window.location.hash = "";
   };
-  const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -199,27 +201,13 @@ function Header({
         {menuOpen && (
           <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
             {!hasOwnStand && (
-              <button
-                type="button"
-                onClick={() => {
-                  onOpenStandForm();
-                  closeMenu();
-                }}
-                className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-              >
+              <a href="#stand-anmelden" className={menuLinkClass(page === "stand-anmelden")}>
                 📍 Eigenen Stand anmelden
-              </button>
+              </a>
             )}
-            <button
-              type="button"
-              onClick={() => {
-                onOpenLoginRequest();
-                closeMenu();
-              }}
-              className="block w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-            >
-              🔑 Schon angemeldet? Zugang anfordern
-            </button>
+            <a href="#mein-stand" className={menuLinkClass(page === "mein-stand")}>
+              🔑 Mein Stand
+            </a>
             <div className="my-1 border-t border-gray-100" />
             <a href="#faq" className={menuLinkClass(page === "faq")}>
               Regeln & FAQ
@@ -242,23 +230,10 @@ export function FlohmarktApp() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<Page>(pageFromHash);
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
-  const [showForm, setShowForm] = useState(false);
   const [hasOwnStand, setHasOwnStand] = useState(false);
-  const meinStandRef = useRef<MeinStandHandle>(null);
 
   const handleStandChange = useCallback((stand: OwnStand | null) => {
     setHasOwnStand(stand !== null);
-    if (stand !== null) setShowForm(false);
-  }, []);
-
-  const handleOpenStandForm = useCallback(() => {
-    setShowForm(true);
-    document.getElementById("stand-anmelden")?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
-  const handleOpenLoginRequest = useCallback(() => {
-    meinStandRef.current?.openRequestForm();
-    document.getElementById("mein-stand")?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   const loadStands = useCallback(async () => {
@@ -296,35 +271,34 @@ export function FlohmarktApp() {
   return (
     <div className="flex min-h-screen flex-col">
       {initialLoading && <MascotLoading />}
-      <Header
-        page={page}
-        hasOwnStand={hasOwnStand}
-        onOpenStandForm={handleOpenStandForm}
-        onOpenLoginRequest={handleOpenLoginRequest}
-      />
+      <Header page={page} hasOwnStand={hasOwnStand} />
 
       {page === "faq" ? (
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
-          <button
-            type="button"
-            onClick={() => {
-              window.location.hash = "";
-            }}
-            className="mb-6 text-sm text-[#009a00] hover:underline"
-          >
-            ← Zurück
-          </button>
+          <BackButton />
           <Faq />
         </main>
       ) : page === "impressum" ? (
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+          <BackButton />
           <Impressum />
         </main>
       ) : page === "datenschutz" ? (
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+          <BackButton />
           <Datenschutz />
         </main>
-      ) : (
+      ) : page === "stand-anmelden" ? (
+        <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+          <BackButton />
+          <StandForm
+            onSuccess={() => {
+              loadStands();
+              window.location.hash = "";
+            }}
+          />
+        </main>
+      ) : page === "mein-stand" ? null : (
         <main className="flex-1">
           {/* Karte als Startseite – volle Breite, prominent */}
           <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
@@ -388,12 +362,6 @@ export function FlohmarktApp() {
           </div>
 
           <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-6">
-            <MeinStand
-              ref={meinStandRef}
-              onCancelled={loadStands}
-              onStandChange={handleStandChange}
-            />
-
             <section aria-label="Alle Stände">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <h2
@@ -439,30 +407,21 @@ export function FlohmarktApp() {
               </div>
               <StandListe stands={filteredStands} loading={loading} />
             </section>
-
-            {!hasOwnStand && (
-              <section id="stand-anmelden" aria-label="Stand anmelden">
-                {showForm ? (
-                  <StandForm
-                    onSuccess={() => {
-                      loadStands();
-                      setShowForm(false);
-                    }}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(true)}
-                    className="w-full rounded-xl border-2 border-dashed border-[#009a00] py-4 text-sm font-semibold text-[#009a00] transition-colors hover:bg-green-50"
-                  >
-                    + Eigenen Stand anmelden
-                  </button>
-                )}
-              </section>
-            )}
           </div>
         </main>
       )}
+
+      {/* Immer gemountet (nicht nur auf der "mein-stand"-Seite), damit eine
+          vorhandene Session sofort erkannt wird - sonst würde der Menüpunkt
+          "Eigenen Stand anmelden" kurz aufblitzen, bevor die Session geladen
+          ist. Sichtbar nur, wenn die Seite tatsächlich aktiv ist. */}
+      <main
+        className="mx-auto w-full max-w-2xl flex-1 px-4 py-10"
+        style={{ display: page === "mein-stand" ? "block" : "none" }}
+      >
+        <BackButton />
+        <MeinStand onCancelled={loadStands} onStandChange={handleStandChange} />
+      </main>
 
       <Footer />
     </div>
