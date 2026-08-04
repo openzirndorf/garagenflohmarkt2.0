@@ -4,7 +4,7 @@ export const PORTAL_URL = "https://portal.openzirndorf.de/";
 // (und optional eine URL) statt des Platzhalters eintragen.
 const VERANSTALTER = "wird ergänzt";
 
-const UNTERSTUETZER = ["CSU", "Die Linke", "FDP", "Freie Wähler", "Grüne", "SPD", "Volt", "ZBG"];
+const UNTERSTUETZER = ["CSU", "Die Linke", "Freie Wähler", "Grüne", "SPD", "Volt", "ZBG"];
 
 const linkStyle = { color: "#009a00" } as const;
 

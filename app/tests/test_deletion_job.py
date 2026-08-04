@@ -45,6 +45,22 @@ async def test_idempotent_when_run_again_after_already_empty(pool, monkeypatch):
     assert count == 0
 
 
+async def test_deletes_audit_log_alongside_stands(pool, monkeypatch):
+    await _seed_stand(pool)
+    stand_id = await pool.fetchval("SELECT id FROM stands")
+    await pool.execute(
+        "INSERT INTO admin_audit_log (stand_id, action, actor) VALUES ($1, 'CREATED', 'owner')",
+        stand_id,
+    )
+    monkeypatch.setattr(deletion_job, "purge_all_stand_objects", lambda: 0)
+
+    on_cutoff = datetime(2026, 10, 7, 0, 0, tzinfo=deletion_job.TIMEZONE)
+    await deletion_job.run(now=on_cutoff)
+
+    count = await pool.fetchval("SELECT count(*) FROM admin_audit_log")
+    assert count == 0
+
+
 async def test_never_logs_email_or_nickname(pool, monkeypatch, caplog):
     import logging
 

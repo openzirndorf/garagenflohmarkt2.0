@@ -79,6 +79,22 @@ export async function approveStand(id: number, token: string): Promise<void> {
   if (!res.ok) throw new Error("Freigabe fehlgeschlagen");
 }
 
+export interface AuditLogEntry {
+  id: number;
+  stand_id: number;
+  action: "CREATED" | "APPROVED" | "EDITED" | "DELETED";
+  actor: "owner" | "admin";
+  created_at: string;
+}
+
+export async function fetchAuditLog(token: string): Promise<AuditLogEntry[]> {
+  const res = await fetch(`${API}/stands/admin/audit-log`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Audit-Log konnte nicht geladen werden");
+  return res.json();
+}
+
 // Eigene Sicht (per session_token) - nie mit E-Mail oder einem Token.
 export interface OwnStand extends Stand {
   status: string;

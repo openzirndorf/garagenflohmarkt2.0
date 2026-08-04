@@ -5,6 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 
+from app.audit import log_action
 from app.auth import require_admin_auth, require_api_auth
 from app.database import get_pool
 from app.email import FRONTEND_URL, send_login_email, smtp_configured, smtp_debug_info
@@ -133,6 +134,7 @@ async def create_stand(body: StandIn, request: Request):
         raise
 
     result = dict(row)
+    await log_action(pool, result["id"], "CREATED", "owner")
 
     # Login-Mail versenden (Fehler hier dürfen die Anmeldung nicht blockieren)
     try:
@@ -236,6 +238,7 @@ async def session_login(login_token: str, background_tasks: BackgroundTasks):
     if was_pending:
         # Stand ist gerade erst öffentlich geworden (PENDING→APPROVED).
         background_tasks.add_task(regenerate_stands_artifact)
+        await log_action(pool, row["id"], "APPROVED", "owner")
     return HTMLResponse(_confirmation_html(
         title="Eingeloggt",
         heading=(
@@ -382,6 +385,7 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
         raise
     if not row:
         raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
+    await log_action(pool, row["id"], "EDITED", "owner")
     if row["status"] == "APPROVED":
         background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)
@@ -413,16 +417,18 @@ async def suggest_nicknames(session_token: str):
     return {"suggestions": sorted(batch)}
 
 
-# DELETE /stands/by-session/{session_token} - eigenen Stand zurückziehen
+# DELETE /stands/by-session/{session_token} - eigenen Stand vollständig löschen
 @router.delete("/by-session/{session_token}", status_code=204)
 async def cancel_stand(session_token: str, background_tasks: BackgroundTasks):
     pool = await get_pool()
-    result = await pool.execute(
-        "DELETE FROM stands WHERE session_token_hash = $1 AND session_token_expires_at > now()",
+    row = await pool.fetchrow(
+        "DELETE FROM stands WHERE session_token_hash = $1 AND session_token_expires_at > now() "
+        "RETURNING id",
         hash_token(session_token),
     )
-    if result == "DELETE 0":
+    if not row:
         raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
+    await log_action(pool, row["id"], "DELETED", "owner")
     background_tasks.add_task(regenerate_stands_artifact)
 
 
@@ -444,6 +450,17 @@ async def test_email(to: str):
 async def admin_list():
     pool = await get_pool()
     rows = await pool.fetch(f"SELECT {_ADMIN_COLUMNS} FROM stands ORDER BY created_at DESC")
+    return [dict(r) for r in rows]
+
+
+# GET /stands/admin/audit-log - Bearer Token, letzte Aktionen (kein Personenbezug)
+@router.get("/admin/audit-log", dependencies=[Depends(require_admin_auth)])
+async def admin_audit_log():
+    pool = await get_pool()
+    rows = await pool.fetch(
+        "SELECT id, stand_id, action, actor, created_at FROM admin_audit_log "
+        "ORDER BY created_at DESC LIMIT 200"
+    )
     return [dict(r) for r in rows]
 
 
@@ -469,6 +486,7 @@ async def update_stand_admin(stand_id: int, body: StandPatch, background_tasks: 
     )
     if not row:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    await log_action(pool, stand_id, "EDITED", "admin")
     if row["status"] == "APPROVED":
         background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)
@@ -481,6 +499,7 @@ async def delete_stand_admin(stand_id: int, background_tasks: BackgroundTasks):
     result = await pool.execute("DELETE FROM stands WHERE id = $1", stand_id)
     if result == "DELETE 0":
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    await log_action(pool, stand_id, "DELETED", "admin")
     background_tasks.add_task(regenerate_stands_artifact)
 
 
@@ -495,5 +514,6 @@ async def approve_stand(stand_id: int, background_tasks: BackgroundTasks):
     )
     if not row:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    await log_action(pool, stand_id, "APPROVED", "admin")
     background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)

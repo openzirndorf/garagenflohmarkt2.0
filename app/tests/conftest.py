@@ -64,7 +64,7 @@ async def _clean_tables(_migrated_db):
     async with pool.acquire() as conn:
         tables = await conn.fetch(
             "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
-            "AND tablename IN ('stands', 'rate_limit_buckets')"
+            "AND tablename IN ('stands', 'rate_limit_buckets', 'admin_audit_log')"
         )
         if tables:
             names = ", ".join(r["tablename"] for r in tables)

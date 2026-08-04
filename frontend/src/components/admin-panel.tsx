@@ -1,16 +1,33 @@
 import { useCallback, useState } from "react";
 import {
   type AdminStand,
+  type AuditLogEntry,
   approveStand,
   deleteStandAdmin,
   fetchAdminStands,
+  fetchAuditLog,
   updateStandAdmin,
 } from "../api";
 import { KATEGORIEN } from "./stand-form";
 
+const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
+  CREATED: "Angemeldet",
+  APPROVED: "Freigegeben",
+  EDITED: "Bearbeitet",
+  DELETED: "Gelöscht",
+};
+
+const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
+  CREATED: "bg-gray-100 text-gray-600",
+  APPROVED: "bg-green-100 text-green-700",
+  EDITED: "bg-blue-100 text-blue-700",
+  DELETED: "bg-red-100 text-red-700",
+};
+
 export function AdminPanel() {
   const [token, setToken] = useState("");
   const [stands, setStands] = useState<AdminStand[] | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
@@ -28,7 +45,12 @@ export function AdminPanel() {
     setLoading(true);
     setError(null);
     try {
-      setStands(await fetchAdminStands(t));
+      const [standsResult, auditResult] = await Promise.all([
+        fetchAdminStands(t),
+        fetchAuditLog(t).catch(() => []),
+      ]);
+      setStands(standsResult);
+      setAuditLog(auditResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler");
       setStands(null);
@@ -112,13 +134,35 @@ export function AdminPanel() {
   })).filter((x) => x.count > 0);
   const maxCount = Math.max(...catStats.map((x) => x.count), 1);
 
+  // Anmeldungen pro Tag - reine Auswertung der schon geladenen Standdaten,
+  // kein Tracking: nutzt nur das ohnehin gespeicherte created_at.
+  const dayCounts = new Map<string, number>();
+  for (const s of all) {
+    const day = s.created_at.slice(0, 10);
+    dayCounts.set(day, (dayCounts.get(day) ?? 0) + 1);
+  }
+  const dayStats = [...dayCounts.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const maxDayCount = Math.max(...dayStats.map(([, count]) => count), 1);
+
+  const nicknameForStand = (standId: number) =>
+    all.find((s) => s.id === standId)?.nickname ?? `Stand #${standId}`;
+
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
-      <h1 className="text-3xl font-bold">Admin – Garagenflohmarkt</h1>
+      <h1
+        style={{ fontFamily: "var(--oz-font-heading)" }}
+        className="text-3xl font-extrabold text-gray-900"
+      >
+        Admin <span className="text-[#009a00]">Garagenflohmarkt</span>
+      </h1>
 
       {stands === null ? (
-        <form onSubmit={handleLogin} className="flex max-w-sm flex-col gap-3">
-          <label htmlFor="token" className="font-medium">
+        <form
+          onSubmit={handleLogin}
+          style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+          className="flex max-w-sm flex-col gap-3 border border-gray-100 bg-white p-6"
+        >
+          <label htmlFor="token" className="text-sm font-medium text-gray-700">
             Admin-Token
           </label>
           <input
@@ -126,7 +170,7 @@ export function AdminPanel() {
             type="password"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            className="rounded border px-3 py-2 font-mono text-sm"
+            className="rounded-md border border-input px-3 py-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             placeholder="Token eingeben…"
             required
           />
@@ -134,7 +178,7 @@ export function AdminPanel() {
           <button
             type="submit"
             disabled={loading}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded-md bg-[#009a00] px-4 py-2 font-medium text-white hover:bg-[#008400] disabled:opacity-50"
           >
             {loading ? "Laden…" : "Anmelden"}
           </button>
@@ -158,13 +202,16 @@ export function AdminPanel() {
 
           {/* Statistiken */}
           {all.length > 0 && (
-            <section className="rounded-xl border bg-gray-50 p-4">
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-gray-100 bg-white p-5"
+            >
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
                 Statistiken
               </h2>
               <div className="mb-4 flex gap-6">
                 <div>
-                  <p className="text-2xl font-bold">{all.length}</p>
+                  <p className="text-2xl font-bold text-gray-900">{all.length}</p>
                   <p className="text-xs text-gray-500">Gesamt</p>
                 </div>
                 <div>
@@ -176,35 +223,113 @@ export function AdminPanel() {
                   <p className="text-xs text-gray-500">Freigegeben</p>
                 </div>
               </div>
+
               {catStats.length > 0 && (
-                <div className="flex flex-col gap-1.5">
-                  {catStats
-                    .sort((a, b) => b.count - a.count)
-                    .map(({ k, count }) => (
-                      <div key={k} className="flex items-center gap-2 text-sm">
-                        <span className="w-20 shrink-0 text-gray-600">{k}</span>
-                        <div className="flex-1 overflow-hidden rounded-full bg-gray-200">
+                <div className="mb-4">
+                  <p className="mb-1.5 text-xs font-medium text-gray-400">Nach Kategorie</p>
+                  <div className="flex flex-col gap-1.5">
+                    {catStats
+                      .sort((a, b) => b.count - a.count)
+                      .map(({ k, count }) => (
+                        <div key={k} className="flex items-center gap-2 text-sm">
+                          <span className="w-20 shrink-0 text-gray-600">{k}</span>
+                          <div className="flex-1 overflow-hidden rounded-full bg-gray-100">
+                            <div
+                              className="h-2 rounded-full bg-[#009a00]"
+                              style={{ width: `${(count / maxCount) * 100}%` }}
+                            />
+                          </div>
+                          <span className="w-4 shrink-0 text-right text-gray-500">{count}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {dayStats.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-gray-400">Anmeldungen pro Tag</p>
+                  <div className="flex flex-col gap-1.5">
+                    {dayStats.map(([day, count]) => (
+                      <div key={day} className="flex items-center gap-2 text-sm">
+                        <span className="w-20 shrink-0 text-gray-600">
+                          {new Date(day).toLocaleDateString("de-DE", {
+                            day: "2-digit",
+                            month: "2-digit",
+                          })}
+                        </span>
+                        <div className="flex-1 overflow-hidden rounded-full bg-gray-100">
                           <div
-                            className="h-2 rounded-full bg-[#009a00]"
-                            style={{ width: `${(count / maxCount) * 100}%` }}
+                            className="h-2 rounded-full bg-blue-500"
+                            style={{ width: `${(count / maxDayCount) * 100}%` }}
                           />
                         </div>
                         <span className="w-4 shrink-0 text-right text-gray-500">{count}</span>
                       </div>
                     ))}
+                  </div>
                 </div>
               )}
             </section>
           )}
 
+          {/* Audit-Log */}
+          {auditLog.length > 0 && (
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-gray-100 bg-white p-5"
+            >
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Verlauf
+              </h2>
+              <ul className="flex flex-col gap-1.5">
+                {auditLog.slice(0, 30).map((entry) => (
+                  <li key={entry.id} className="flex items-center gap-2 text-sm">
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_COLOR[entry.action]}`}
+                    >
+                      {ACTION_LABEL[entry.action]}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-gray-700">
+                      {nicknameForStand(entry.stand_id)}
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {entry.actor === "admin" ? "Admin" : "Inhaber"}
+                    </span>
+                    <span className="shrink-0 text-xs text-gray-400">
+                      {new Date(entry.created_at).toLocaleString("de-DE", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section>
-            <h2 className="mb-3 text-xl font-semibold">Ausstehend</h2>
+            <h2
+              style={{ fontFamily: "var(--oz-font-heading)" }}
+              className="mb-3 text-xl font-bold text-gray-900"
+            >
+              Ausstehend
+            </h2>
             {pending.length === 0 ? (
               <p className="text-sm text-gray-500">Keine ausstehenden Stände.</p>
             ) : (
               <ul className="flex flex-col gap-3">
                 {pending.map((s) => (
-                  <li key={s.id} className="flex flex-col gap-2 rounded border p-4">
+                  <li
+                    key={s.id}
+                    style={{
+                      borderRadius: "var(--oz-radius-lg)",
+                      boxShadow: "var(--oz-shadow-sm)",
+                    }}
+                    className="flex flex-col gap-2 border border-amber-100 bg-amber-50/40 p-4"
+                  >
                     {editingId === s.id ? (
                       <EditForm
                         form={editForm}
@@ -240,7 +365,7 @@ export function AdminPanel() {
                             type="button"
                             onClick={() => handleApprove(s.id)}
                             disabled={approvingId === s.id}
-                            className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+                            className="rounded-md bg-[#009a00] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#008400] disabled:opacity-50"
                           >
                             {approvingId === s.id ? "…" : "Freigeben"}
                           </button>
@@ -269,13 +394,22 @@ export function AdminPanel() {
           </section>
 
           <section>
-            <h2 className="mb-3 text-xl font-semibold">Freigegeben</h2>
+            <h2
+              style={{ fontFamily: "var(--oz-font-heading)" }}
+              className="mb-3 text-xl font-bold text-gray-900"
+            >
+              Freigegeben
+            </h2>
             {approved.length === 0 ? (
               <p className="text-sm text-gray-500">Noch keine freigegebenen Stände.</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {approved.map((s) => (
-                  <li key={s.id} className="rounded border">
+                  <li
+                    key={s.id}
+                    style={{ borderRadius: "var(--oz-radius-lg)" }}
+                    className="border border-gray-100 bg-white"
+                  >
                     {editingId === s.id ? (
                       <div className="p-4">
                         <EditForm

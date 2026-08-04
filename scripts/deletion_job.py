@@ -40,6 +40,12 @@ async def run(now: datetime | None = None) -> None:
         stands_deleted = await conn.fetchval(
             "WITH deleted AS (DELETE FROM stands RETURNING 1) SELECT count(*) FROM deleted"
         )
+        # Audit-Log enthält keine PII, gehört aber zu denselben Event-Daten -
+        # wird bewusst mitgelöscht statt separat aufbewahrt (siehe
+        # migrations/0005_admin_audit_log.sql).
+        audit_deleted = await conn.fetchval(
+            "WITH deleted AS (DELETE FROM admin_audit_log RETURNING 1) SELECT count(*) FROM deleted"
+        )
     finally:
         await conn.close()
 
@@ -47,8 +53,9 @@ async def run(now: datetime | None = None) -> None:
 
     # Nur Zahlen loggen - keine Nicknamen, E-Mails oder sonstige Inhalte.
     logger.info(
-        "Löschjob ausgeführt: %s Stände aus der DB gelöscht, %s Storage-Objekte gelöscht.",
-        stands_deleted, objects_deleted,
+        "Löschjob ausgeführt: %s Stände, %s Audit-Log-Einträge aus der DB gelöscht, "
+        "%s Storage-Objekte gelöscht.",
+        stands_deleted, audit_deleted, objects_deleted,
     )
 
 

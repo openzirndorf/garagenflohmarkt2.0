@@ -385,9 +385,11 @@ werden nur gehasht gespeichert.
 | `POST` | `/stands/session/{login_token}` | – | Login einlösen (einmalig), gibt `session_token` zurück |
 | `GET` | `/stands/by-session/{session_token}` | – | Eigenen Stand abrufen |
 | `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
-| `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten |
-| `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand zurückziehen |
+| `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (inkl. Standname wechseln) |
+| `POST` | `/stands/by-session/{session_token}/nickname-suggestions` | – | 3 alternative Standnamen würfeln |
+| `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand vollständig löschen |
 | `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
+| `GET` | `/stands/admin/audit-log` | Bearer | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel, kein Personenbezug) |
 | `POST` | `/stands/{id}/approve` | Bearer | Stand manuell freigeben |
 | `PATCH` | `/stands/{id}` | Bearer | Stand bearbeiten (Admin) |
 | `DELETE` | `/stands/{id}` | Bearer | Stand löschen (Admin) |
