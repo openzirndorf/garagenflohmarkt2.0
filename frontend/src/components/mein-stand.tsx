@@ -13,6 +13,7 @@ const SESSION_TOKEN_KEY = "flohmarkt_session_token";
 
 interface Props {
   onCancelled: () => void;
+  onStandChange?: (stand: OwnStand | null) => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -31,7 +32,7 @@ function consumeSessionTokenFromHash(): string | null {
   return match[1];
 }
 
-export function MeinStand({ onCancelled }: Props) {
+export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [stand, setStand] = useState<OwnStand | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
@@ -78,6 +79,10 @@ export function MeinStand({ onCancelled }: Props) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    onStandChange?.(stand);
+  }, [stand, onStandChange]);
+
   const handleRequestLogin = async () => {
     if (!requestEmail) return;
     setRequestStatus("loading");
@@ -95,12 +100,15 @@ export function MeinStand({ onCancelled }: Props) {
 
   if (!sessionToken || !stand) {
     return (
-      <section className="rounded-xl border border-dashed border-gray-200 p-4">
+      <section
+        id="mein-stand"
+        className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/50 p-4"
+      >
         {!showRequestForm ? (
           <button
             type="button"
             onClick={() => setShowRequestForm(true)}
-            className="text-sm text-gray-500 hover:text-gray-700 hover:underline"
+            className="w-full rounded-lg border-2 border-blue-500 bg-white py-2.5 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
           >
             Schon einen Stand angemeldet? Zugang anfordern
           </button>
@@ -217,6 +225,7 @@ export function MeinStand({ onCancelled }: Props) {
 
   return (
     <section
+      id="mein-stand"
       style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
       className="border border-blue-100 bg-blue-50 p-4"
     >

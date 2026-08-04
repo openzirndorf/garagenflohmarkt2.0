@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchStands } from "../api";
+import { type OwnStand, fetchStands } from "../api";
 import type { Stand } from "../types";
 import { Datenschutz } from "./datenschutz";
 import { Faq } from "./faq";
@@ -130,6 +130,12 @@ function Header({ page }: { page: Page }) {
         OpenZirndorf ↗
       </a>
       <a
+        href="#mein-stand"
+        className="text-sm font-semibold text-blue-600 transition-colors hover:text-blue-800"
+      >
+        Mein Stand
+      </a>
+      <a
         href="#faq"
         className={`text-sm transition-colors ${page === "faq" ? "font-semibold text-[#009a00]" : "text-gray-500 hover:text-gray-700"}`}
       >
@@ -151,6 +157,12 @@ export function FlohmarktApp() {
   const [page, setPage] = useState<Page>(pageFromHash);
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [hasOwnStand, setHasOwnStand] = useState(false);
+
+  const handleStandChange = useCallback((stand: OwnStand | null) => {
+    setHasOwnStand(stand !== null);
+    if (stand !== null) setShowForm(false);
+  }, []);
 
   const loadStands = useCallback(async () => {
     setLoading(true);
@@ -274,7 +286,7 @@ export function FlohmarktApp() {
           </div>
 
           <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-6">
-            <MeinStand onCancelled={loadStands} />
+            <MeinStand onCancelled={loadStands} onStandChange={handleStandChange} />
 
             <section aria-label="Alle Stände">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -322,24 +334,26 @@ export function FlohmarktApp() {
               <StandListe stands={filteredStands} loading={loading} />
             </section>
 
-            <section aria-label="Stand anmelden">
-              {showForm ? (
-                <StandForm
-                  onSuccess={() => {
-                    loadStands();
-                    setShowForm(false);
-                  }}
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowForm(true)}
-                  className="w-full rounded-xl border-2 border-dashed border-[#009a00] py-4 text-sm font-semibold text-[#009a00] transition-colors hover:bg-green-50"
-                >
-                  + Eigenen Stand anmelden
-                </button>
-              )}
-            </section>
+            {!hasOwnStand && (
+              <section aria-label="Stand anmelden">
+                {showForm ? (
+                  <StandForm
+                    onSuccess={() => {
+                      loadStands();
+                      setShowForm(false);
+                    }}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowForm(true)}
+                    className="w-full rounded-xl border-2 border-dashed border-[#009a00] py-4 text-sm font-semibold text-[#009a00] transition-colors hover:bg-green-50"
+                  >
+                    + Eigenen Stand anmelden
+                  </button>
+                )}
+              </section>
+            )}
           </div>
         </main>
       )}
