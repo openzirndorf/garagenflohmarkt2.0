@@ -10,11 +10,23 @@ interface Props {
 }
 
 export const KATEGORIEN = [
-  "Kleidung",
+  "Babyausstattung",
+  "Kinderbekleidung",
+  "Damenbekleidung",
+  "Herrenbekleidung",
   "Spielzeug",
-  "Möbel",
   "Bücher",
-  "Elektro",
+  "Schallplatten",
+  "Videospiele",
+  "Möbel",
+  "Haushaltswaren",
+  "Deko",
+  "Elektronik",
+  "Fahrräder",
+  "Werkzeug",
+  "Schmuck",
+  "Kunst",
+  "Handgemachtes",
   "Sonstiges",
 ] as const;
 
