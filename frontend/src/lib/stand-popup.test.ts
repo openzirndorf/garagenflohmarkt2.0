@@ -86,13 +86,13 @@ describe("buildStandPopupContent", () => {
         },
       },
     );
-    const star = withFavorite.querySelector("button");
-    expect(star).not.toBeNull();
-    expect(star?.textContent).toBe("☆");
+    const favBtn = withFavorite.querySelector("button");
+    expect(favBtn).not.toBeNull();
+    expect(favBtn?.textContent).toBe("☆ Zu Favoriten hinzufügen");
 
-    star?.click();
+    favBtn?.click();
     expect(favorited).toBe(true);
-    expect(star?.textContent).toBe("★");
+    expect(favBtn?.textContent).toBe("★ Favorit");
 
     const withoutFavorite = buildStandPopupContent({
       id: 1,

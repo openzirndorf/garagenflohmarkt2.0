@@ -36,35 +36,6 @@ export function buildStandPopupContent(
   title.textContent = nickname;
   popupNode.appendChild(title);
 
-  if (favorite) {
-    const starBtn = document.createElement("button");
-    starBtn.type = "button";
-    starBtn.setAttribute(
-      "aria-label",
-      favorite.isFavorite(id) ? "Von Favoriten entfernen" : "Als Favorit merken",
-    );
-    Object.assign(starBtn.style, {
-      marginLeft: "6px",
-      border: "none",
-      background: "transparent",
-      cursor: "pointer",
-      color: "#f59e0b",
-      fontSize: "1.3rem",
-      lineHeight: "1",
-      verticalAlign: "middle",
-      padding: "0",
-    });
-    const updateStar = () => {
-      starBtn.textContent = favorite.isFavorite(id) ? "★" : "☆";
-    };
-    updateStar();
-    starBtn.addEventListener("click", () => {
-      favorite.onToggle(id);
-      updateStar();
-    });
-    popupNode.appendChild(starBtn);
-  }
-
   const addLine = (text: string) => {
     popupNode.appendChild(document.createElement("br"));
     popupNode.appendChild(document.createTextNode(text));
@@ -72,18 +43,57 @@ export function buildStandPopupContent(
   addLine(adresse);
   if (beschreibung) addLine(beschreibung);
 
+  // "Navigieren" und Favorit-Umschalter als gleichwertige Aktions-Buttons
+  // in einer Zeile - der Stern allein (nur neben dem Namen) war zu
+  // unauffällig, um als eigene Aktion erkannt zu werden.
+  const actionsRow = document.createElement("div");
+  Object.assign(actionsRow.style, {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    marginTop: "8px",
+  });
+
   if (coords) {
-    popupNode.appendChild(document.createElement("br"));
     const navLink = document.createElement("a");
     navLink.href = navigationUrl(coords.lat, coords.lng, nickname);
     navLink.target = "_blank";
     navLink.rel = "noopener noreferrer";
     navLink.textContent = "Navigieren";
-    navLink.style.display = "inline-block";
-    navLink.style.marginTop = "6px";
-    navLink.style.fontWeight = "600";
-    navLink.style.color = "#009a00";
-    popupNode.appendChild(navLink);
+    Object.assign(navLink.style, {
+      fontWeight: "600",
+      color: "#009a00",
+    });
+    actionsRow.appendChild(navLink);
+  }
+
+  if (favorite) {
+    const favBtn = document.createElement("button");
+    favBtn.type = "button";
+    Object.assign(favBtn.style, {
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      padding: "0",
+      font: "inherit",
+      fontWeight: "600",
+      color: "#b45309",
+    });
+    const updateFavBtn = () => {
+      const active = favorite.isFavorite(id);
+      favBtn.textContent = active ? "★ Favorit" : "☆ Zu Favoriten hinzufügen";
+      favBtn.setAttribute("aria-label", active ? "Von Favoriten entfernen" : "Als Favorit merken");
+    };
+    updateFavBtn();
+    favBtn.addEventListener("click", () => {
+      favorite.onToggle(id);
+      updateFavBtn();
+    });
+    actionsRow.appendChild(favBtn);
+  }
+
+  if (actionsRow.childElementCount > 0) {
+    popupNode.appendChild(actionsRow);
   }
 
   return popupNode;

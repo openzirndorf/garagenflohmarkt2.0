@@ -5,6 +5,9 @@ import { StandListe } from "./stand-liste";
 
 interface Props {
   kategorienFilter: string[];
+  showFavoritesOnly: boolean;
+  favoriteIds: Set<number>;
+  onToggleFavorite: (id: number) => void;
   stands: Stand[];
   loading: boolean;
 }
@@ -12,7 +15,14 @@ interface Props {
 // Schaltet bei einem Kartenfehler (Style/Kacheln laden nicht) auf die
 // Listenansicht um, statt eine kaputte/leere Karte zu zeigen. Bewusst kein
 // Live-Fallback auf einen Drittanbieter - siehe flohmarkt-map.tsx.
-export function MapOrList({ kategorienFilter, stands, loading }: Props) {
+export function MapOrList({
+  kategorienFilter,
+  showFavoritesOnly,
+  favoriteIds,
+  onToggleFavorite,
+  stands,
+  loading,
+}: Props) {
   const [mapFailed, setMapFailed] = useState(false);
 
   if (mapFailed) {
@@ -21,10 +31,23 @@ export function MapOrList({ kategorienFilter, stands, loading }: Props) {
         <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
           Die Kartenansicht ist gerade nicht verfügbar. Hier ist die Liste aller Stände.
         </p>
-        <StandListe stands={stands} loading={loading} />
+        <StandListe
+          stands={stands}
+          loading={loading}
+          favoriteIds={favoriteIds}
+          onToggleFavorite={onToggleFavorite}
+        />
       </div>
     );
   }
 
-  return <FlohmarktMap kategorienFilter={kategorienFilter} onError={() => setMapFailed(true)} />;
+  return (
+    <FlohmarktMap
+      kategorienFilter={kategorienFilter}
+      showFavoritesOnly={showFavoritesOnly}
+      favoriteIds={favoriteIds}
+      onToggleFavorite={onToggleFavorite}
+      onError={() => setMapFailed(true)}
+    />
+  );
 }

@@ -315,6 +315,9 @@ export function FlohmarktApp() {
           <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
             <MapOrList
               kategorienFilter={kategorienFilter}
+              showFavoritesOnly={showFavoritesOnly}
+              favoriteIds={favoriteIds}
+              onToggleFavorite={toggleFavorite}
               stands={filteredStands}
               loading={loading}
             />
@@ -329,14 +332,15 @@ export function FlohmarktApp() {
                 <button
                   type="button"
                   onClick={() => setShowFavoritesOnly((v) => !v)}
-                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
                     showFavoritesOnly
                       ? "border-amber-400 bg-amber-400 text-white"
-                      : "border-gray-300 bg-white text-gray-600 hover:border-amber-400 hover:text-amber-500"
+                      : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
                   }`}
                 >
                   ★ Favoriten
                 </button>
+                <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
                 {KATEGORIEN.map((k) => {
                   const active = kategorienFilter.includes(k);
                   return (
@@ -413,14 +417,15 @@ export function FlohmarktApp() {
                   <button
                     type="button"
                     onClick={() => setShowFavoritesOnly((v) => !v)}
-                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                    className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-semibold transition-colors ${
                       showFavoritesOnly
                         ? "border-amber-400 bg-amber-400 text-white"
-                        : "border-gray-200 bg-white text-gray-500 hover:border-amber-400 hover:text-amber-500"
+                        : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
                     }`}
                   >
                     ★ Favoriten
                   </button>
+                  <div className="mx-0.5 h-4 w-px self-center bg-gray-200" />
                   {KATEGORIEN.map((k) => {
                     const active = kategorienFilter.includes(k);
                     return (

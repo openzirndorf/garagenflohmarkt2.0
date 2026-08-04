@@ -2,7 +2,6 @@ import maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchGeoJSON } from "../api";
-import { isFavorite, toggleFavoriteId } from "../lib/favorites";
 import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
 
 // Zirndorf Zentrum
@@ -11,18 +10,32 @@ const ZOOM = 13;
 
 interface Props {
   kategorienFilter?: string[];
+  showFavoritesOnly?: boolean;
+  favoriteIds: Set<number>;
+  onToggleFavorite: (id: number) => void;
   onError?: () => void;
 }
 
-export function FlohmarktMap({ kategorienFilter = [], onError }: Props) {
+export function FlohmarktMap({
+  kategorienFilter = [],
+  showFavoritesOnly = false,
+  favoriteIds,
+  onToggleFavorite,
+  onError,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const allGeoJSONRef = useRef<GeoJSON.FeatureCollection | null>(null);
-  // "Latest ref"-Muster: der Mount-once-Effekt unten soll onError nicht neu
-  // registrieren müssen, wenn die Elternkomponente eine neue Funktionsreferenz
-  // übergibt (z.B. eine Inline-Arrow-Function bei jedem Render).
+  // "Latest ref"-Muster: der Mount-once-Effekt unten registriert den
+  // Klick-Handler nur einmal (siehe map.on("load", ...)), soll aber trotzdem
+  // immer den aktuellen Favoriten-Stand sehen, statt den bei Mount
+  // eingefrorenen (z.B. onError bei einer neuen Inline-Arrow-Function).
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
+  const favoriteIdsRef = useRef(favoriteIds);
+  favoriteIdsRef.current = favoriteIds;
+  const onToggleFavoriteRef = useRef(onToggleFavorite);
+  onToggleFavoriteRef.current = onToggleFavorite;
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -77,7 +90,10 @@ export function FlohmarktMap({ kategorienFilter = [], onError }: Props) {
           const popupNode = buildStandPopupContent(
             feature.properties as StandPopupProperties,
             coords,
-            { isFavorite, onToggle: toggleFavoriteId },
+            {
+              isFavorite: (fid) => favoriteIdsRef.current.has(fid),
+              onToggle: (fid) => onToggleFavoriteRef.current(fid),
+            },
           );
           new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(popupNode).addTo(map);
         });
@@ -98,26 +114,27 @@ export function FlohmarktMap({ kategorienFilter = [], onError }: Props) {
     };
   }, []);
 
-  // Re-filter when kategorienFilter changes
+  // Re-filter when kategorienFilter, showFavoritesOnly or favoriteIds changes
+  // (letzteres auch nach einem Favoriten-Toggle direkt im Kartenpopup).
   useEffect(() => {
     const map = mapRef.current;
     const all = allGeoJSONRef.current;
     if (!map || !all) return;
 
-    const filtered: GeoJSON.FeatureCollection =
-      kategorienFilter.length === 0
-        ? all
-        : {
-            type: "FeatureCollection",
-            features: all.features.filter((f) => {
-              const cats = (f.properties?.kategorien ?? []) as string[];
-              return cats.some((k) => kategorienFilter.includes(k));
-            }),
-          };
+    const filtered: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: all.features.filter((f) => {
+        const cats = (f.properties?.kategorien ?? []) as string[];
+        const categoryMatch =
+          kategorienFilter.length === 0 || cats.some((k) => kategorienFilter.includes(k));
+        const favoriteMatch = !showFavoritesOnly || favoriteIds.has(f.properties?.id as number);
+        return categoryMatch && favoriteMatch;
+      }),
+    };
 
     const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
     source?.setData(filtered);
-  }, [kategorienFilter]);
+  }, [kategorienFilter, showFavoritesOnly, favoriteIds]);
 
   return (
     <div
