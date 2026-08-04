@@ -195,5 +195,5 @@ export async function cancelStand(sessionToken: string): Promise<void> {
   const res = await fetch(`${API}/stands/by-session/${sessionToken}`, {
     method: "DELETE",
   });
-  if (!res.ok) throw new Error("Stand konnte nicht zurückgezogen werden");
+  if (!res.ok) throw new Error("Stand konnte nicht gelöscht werden");
 }

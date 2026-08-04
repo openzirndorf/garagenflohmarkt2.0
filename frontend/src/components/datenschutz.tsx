@@ -46,7 +46,7 @@ export function Datenschutz() {
             Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien,
             eine optionale Uhrzeit sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein
             Namensfeld - ein echter Name kann technisch gar nicht erst ins System gelangen.
-            Stattdessen vergeben wir automatisch eine Kennung (z.&nbsp;B. „Gscheide Bratwurst"),
+            Stattdessen vergeben wir automatisch eine Kennung (z.&nbsp;B. „Gscheide Kellerkönig"),
             unter der du auf der Karte erscheinst.
           </p>
         </section>
@@ -70,10 +70,10 @@ export function Datenschutz() {
           <p>
             Statt eines Kontos mit Passwort bekommst du einen Anmeldelink per E-Mail („Magic Link").
             Der Link ist einmalig verwendbar und befristet gültig; nach dem Anklicken erhältst du
-            eine zeitlich begrenzte Sitzung, mit der du deinen Stand bearbeiten oder zurückziehen
-            kannst. Wir speichern nur einen kryptografischen Hash dieser Links, nie den Link selbst
-            im Klartext. Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags zur Standanmeldung
-            (Art. 6 Abs. 1 lit. b DSGVO).
+            eine zeitlich begrenzte Sitzung, mit der du deinen Stand bearbeiten oder vollständig
+            löschen kannst. Wir speichern nur einen kryptografischen Hash dieser Links, nie den Link
+            selbst im Klartext. Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags zur
+            Standanmeldung (Art. 6 Abs. 1 lit. b DSGVO).
           </p>
         </section>
 
@@ -83,7 +83,7 @@ export function Datenschutz() {
             Die Karte geht am 7. Oktober 2026 offline; sämtliche Anmeldedaten (Datenbank, generierte
             Kartendaten, Backups) werden automatisiert zu diesem Termin gelöscht - durch einen
             geplanten Job, nicht durch eine manuelle Erinnerung. Du kannst deinen Stand jederzeit
-            selbst vorher über deinen Bearbeitungslink zurückziehen; das löscht deine Daten sofort.
+            selbst vorher über deinen Bearbeitungslink vollständig löschen.
           </p>
         </section>
 

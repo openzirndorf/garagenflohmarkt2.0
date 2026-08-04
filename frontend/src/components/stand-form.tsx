@@ -102,8 +102,8 @@ export function StandForm({ onSuccess }: Props) {
           )}
           <p className="mt-1 text-sm text-gray-600">
             Über denselben Link kannst du deinen Stand danach auch jederzeit bearbeiten oder
-            zurückziehen. Solltest du die Mail verlieren, kannst du dir über "Mein Stand" jederzeit
-            einen neuen Link schicken lassen.
+            vollständig löschen. Solltest du die Mail verlieren, kannst du dir über "Mein Stand"
+            jederzeit einen neuen Link schicken lassen.
           </p>
         </CardContent>
       </Card>

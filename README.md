@@ -8,7 +8,7 @@ Der **Garagenflohmarkt Zirndorf** ist ein jährliches Stadtteilfest, bei dem Anw
 
 Diese App macht es einfach, mitzumachen und den Überblick zu behalten:
 
-- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte, unter einer automatisch vergebenen Kennung (z.B. „Gscheide Bratwurst") statt des echten Namens.
+- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte, unter einer automatisch vergebenen Kennung (z.B. „Gscheide Kellerkönig") statt des echten Namens.
 - **Karte** — Alle freigegebenen Stände auf einer interaktiven Karte, filterbar nach Kategorien (Kleidung, Spielzeug, Bücher …)
 - **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit zurückziehen, ohne Konto/Passwort: ein Magic Link aus der Mail loggt für eine Sitzung ein; verloren gegangen ist er nicht schlimm, ein neuer lässt sich jederzeit anfordern.
 

@@ -12,21 +12,40 @@ import secrets
 from collections.abc import Awaitable, Callable
 
 # Durchgehend fränkischer Dialekteinschlag statt generischer Standard-
-# adjektive - alle mit schwacher Femininum-Endung "-e" (siehe NOMEN unten).
+# adjektive - alle in der schwachen Deklinationsendung "-e" (siehe NOMEN
+# unten, Nominativ Singular nach implizitem Artikel).
 ADJEKTIVE = [
-    "Gscheide", "Schaffige", "Guade", "Herzensguade", "Liawe", "Gmiadliche",
-    "Herzige", "Gwitzde", "Zwetschgasüße", "Allmächdige", "Kernige",
-    "Quirlige", "Fleißige", "Rassige", "Allerbeste", "Kerwafeste",
+    "Gscheide",
+    "Ehrliche",
+    "Feilschende",
+    "Flinke",
+    "Handelsfreudige",
+    "Marktfrische",
+    "Kernige",
+    "Schlaue",
+    "Sparsame",
+    "Gewitzde",
+    "Lohnende",
+    "Goldige",
+    "Gwiefde",
+    "Bassende",
+    "Tüchtiche",
 ]
 
-# Fränkische Spezialitäten/Kerwa-Kultur statt generischer Tiere - alle Nomen
-# bewusst feminin ("die X"), damit die schwache Adjektivendung "-e"
-# grammatisch stimmt (z.B. "Gscheide Bratwurst", nicht "Gscheider Bratwurst").
+# Flohmarkt-Rollen statt generischer Tiere - schwache Adjektivendung "-e"
+# stimmt in der Nominativ-Kombination unabhängig vom Genus des Nomens
+# (z.B. "Gscheide Kellerkönig", nicht "Gscheider Kellerkönig").
 NOMEN = [
-    "Bratwurst", "Rostbratwurst", "Zwetschge", "Kerwa", "Kerwazeit",
-    "Brotzeit", "Kirchweih", "Fasenacht", "Blaskapelle", "Zwiebel",
-    "Wurstsemmel", "Bierbank", "Kerwamusik", "Gred", "Schoppenrunde",
-    "Lebkuchenzeit",
+    "Kellerkönig",
+    "Dachbodenheld",
+    "Schnäppchenjäger",
+    "Garagenräumer",
+    "Krempelretter",
+    "Schatzfinder",
+    "Flohmarktfuchs",
+    "Nachbarschatz",
+    "Kruschtlkönig",
+    "Wühlmeister",
 ]
 
 
@@ -35,7 +54,7 @@ def generate_nickname() -> str:
 
 
 # Erlaubt zusätzlich das Zahlensuffix aus dem max_attempts-Fallback unten
-# (z.B. "Gscheide Bratwurst-4213"). Serverseitig gegen Direktaufrufe der
+# (z.B. "Gscheide Kellerkönig-4213"). Serverseitig gegen Direktaufrufe der
 # API geprüft, nicht nur im Frontend - ein Klarname kann so selbst bei
 # einer manuellen PATCH-Anfrage nicht ins System gelangen.
 _NICKNAME_PATTERN = re.compile(

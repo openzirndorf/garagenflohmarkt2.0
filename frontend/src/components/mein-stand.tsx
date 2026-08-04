@@ -179,7 +179,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
             </div>
             <p className="text-xs text-gray-500">
               Wir schicken dir einen Anmeldelink, mit dem du deinen Stand bearbeiten oder
-              zurückziehen kannst.
+              vollständig löschen kannst.
             </p>
           </div>
         )}
@@ -246,7 +246,13 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
 
   const handleCancel = async () => {
     if (!sessionToken) return;
-    if (!confirm("Stand wirklich zurückziehen? Das kann nicht rückgängig gemacht werden.")) return;
+    if (
+      !confirm(
+        "Stand und alle Daten wirklich vollständig löschen? Das kann nicht rückgängig gemacht werden.",
+      )
+    ) {
+      return;
+    }
     setCancelling(true);
     setError(null);
     try {
@@ -256,7 +262,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
       setStand(null);
       onCancelled();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fehler beim Zurückziehen");
+      setError(err instanceof Error ? err.message : "Fehler beim Löschen");
     } finally {
       setCancelling(false);
     }
@@ -448,7 +454,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
               disabled={cancelling}
               className="text-sm text-red-500 transition-colors hover:text-red-700 disabled:opacity-50"
             >
-              {cancelling ? "…" : "Zurückziehen"}
+              {cancelling ? "…" : "Stand und Daten löschen"}
             </button>
             <button
               type="button"
