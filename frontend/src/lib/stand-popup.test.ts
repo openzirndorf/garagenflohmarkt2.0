@@ -4,6 +4,7 @@ import { buildStandPopupContent } from "./stand-popup";
 describe("buildStandPopupContent", () => {
   it("renders user-submitted fields as escaped text, not executable markup", () => {
     const node = buildStandPopupContent({
+      id: 1,
       nickname: "Fröhlicher Dachs",
       adresse: "Musterstraße 1",
       beschreibung: "<img src=x onerror=alert(1)>",
@@ -18,6 +19,7 @@ describe("buildStandPopupContent", () => {
 
   it("does not interpret HTML in the nickname either", () => {
     const node = buildStandPopupContent({
+      id: 1,
       nickname: "<script>alert(1)</script>",
       adresse: "Musterstraße 1",
       beschreibung: null,
@@ -30,6 +32,7 @@ describe("buildStandPopupContent", () => {
 
   it("includes uhrzeit only when present", () => {
     const withTime = buildStandPopupContent({
+      id: 1,
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
@@ -38,6 +41,7 @@ describe("buildStandPopupContent", () => {
     expect(withTime.textContent).toContain("9-14 Uhr");
 
     const withoutTime = buildStandPopupContent({
+      id: 1,
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
@@ -48,7 +52,13 @@ describe("buildStandPopupContent", () => {
 
   it("includes a navigation link only when coordinates are given", () => {
     const withCoords = buildStandPopupContent(
-      { nickname: "Flotte Eule", adresse: "Teststraße 2", beschreibung: null, uhrzeit: null },
+      {
+        id: 1,
+        nickname: "Flotte Eule",
+        adresse: "Teststraße 2",
+        beschreibung: null,
+        uhrzeit: null,
+      },
       { lat: 49.4, lng: 10.9 },
     );
     const link = withCoords.querySelector("a");
@@ -56,11 +66,48 @@ describe("buildStandPopupContent", () => {
     expect(link?.href).toContain("49.4");
 
     const withoutCoords = buildStandPopupContent({
+      id: 1,
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
       uhrzeit: null,
     });
     expect(withoutCoords.querySelector("a")).toBeNull();
+  });
+
+  it("includes a favorite toggle only when favorite controls are given", () => {
+    let favorited = false;
+    const withFavorite = buildStandPopupContent(
+      {
+        id: 42,
+        nickname: "Flotte Eule",
+        adresse: "Teststraße 2",
+        beschreibung: null,
+        uhrzeit: null,
+      },
+      null,
+      {
+        isFavorite: (id) => id === 42 && favorited,
+        onToggle: () => {
+          favorited = true;
+        },
+      },
+    );
+    const star = withFavorite.querySelector("button");
+    expect(star).not.toBeNull();
+    expect(star?.textContent).toBe("☆");
+
+    star?.click();
+    expect(favorited).toBe(true);
+    expect(star?.textContent).toBe("★");
+
+    const withoutFavorite = buildStandPopupContent({
+      id: 1,
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      uhrzeit: null,
+    });
+    expect(withoutFavorite.querySelector("button")).toBeNull();
   });
 });

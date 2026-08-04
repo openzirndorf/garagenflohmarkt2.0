@@ -120,6 +120,15 @@ export function Faq() {
         </h2>
         <div className="flex flex-col gap-4">
           <div className="border-l-4 border-[#009a00] pl-4">
+            <p className="font-semibold text-gray-800">Kann ich die Seite als App installieren?</p>
+            <p className="text-gray-600 text-sm mt-1">
+              Ja - auf Android/Chrome zeigt ein Banner oben eine „Installieren"-Schaltfläche. Auf
+              dem iPhone/iPad geht es über Safari: Teilen-Symbol antippen, dann „Zum
+              Home-Bildschirm". Danach startet die App wie eine normale App vom Homescreen,
+              schneller und ohne Adressleiste.
+            </p>
+          </div>
+          <div className="border-l-4 border-[#009a00] pl-4">
             <p className="font-semibold text-gray-800">Bis wann kann ich meinen Stand anmelden?</p>
             <p className="text-gray-600 text-sm mt-1">
               Anmeldungen sind bis zum Veranstaltungstag möglich, solange die Seite aktiv ist.

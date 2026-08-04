@@ -2,6 +2,7 @@ import maplibregl from "maplibre-gl";
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchGeoJSON } from "../api";
+import { isFavorite, toggleFavoriteId } from "../lib/favorites";
 import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
 
 // Zirndorf Zentrum
@@ -76,6 +77,7 @@ export function FlohmarktMap({ kategorienFilter = [], onError }: Props) {
           const popupNode = buildStandPopupContent(
             feature.properties as StandPopupProperties,
             coords,
+            { isFavorite, onToggle: toggleFavoriteId },
           );
           new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(popupNode).addTo(map);
         });

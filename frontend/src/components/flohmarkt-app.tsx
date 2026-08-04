@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type OwnStand, fetchStands } from "../api";
+import { useFavorites } from "../lib/favorites";
 import type { Stand } from "../types";
 import { Datenschutz } from "./datenschutz";
 import { Faq } from "./faq";
 import { Footer, PORTAL_URL } from "./footer";
 import { Impressum } from "./impressum";
+import { InstallPrompt } from "./install-prompt";
 import { MapOrList } from "./map-or-list";
 import { MeinStand } from "./mein-stand";
 import { KATEGORIEN } from "./stand-form";
@@ -218,6 +220,10 @@ function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
             <a href="#datenschutz" className={menuLinkClass(page === "datenschutz")}>
               Datenschutz
             </a>
+            <div className="my-1 border-t border-gray-100" />
+            <a href="#admin" className="block px-4 py-2 text-xs text-gray-400 hover:text-gray-600">
+              Admin
+            </a>
           </div>
         )}
       </div>
@@ -230,7 +236,9 @@ export function FlohmarktApp() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<Page>(pageFromHash);
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [hasOwnStand, setHasOwnStand] = useState(false);
+  const { favoriteIds, toggleFavorite } = useFavorites();
 
   const handleStandChange = useCallback((stand: OwnStand | null) => {
     setHasOwnStand(stand !== null);
@@ -261,10 +269,12 @@ export function FlohmarktApp() {
     setKategorienFilter((prev) => (prev.includes(k) ? prev.filter((c) => c !== k) : [...prev, k]));
   };
 
-  const filteredStands =
-    kategorienFilter.length === 0
-      ? stands
-      : stands.filter((s) => s.kategorien.some((k) => kategorienFilter.includes(k)));
+  const filteredStands = stands
+    .filter(
+      (s) =>
+        kategorienFilter.length === 0 || s.kategorien.some((k) => kategorienFilter.includes(k)),
+    )
+    .filter((s) => !showFavoritesOnly || favoriteIds.has(s.id));
 
   const initialLoading = loading && stands.length === 0;
 
@@ -272,6 +282,7 @@ export function FlohmarktApp() {
     <div className="flex min-h-screen flex-col">
       {initialLoading && <MascotLoading />}
       <Header page={page} hasOwnStand={hasOwnStand} />
+      <InstallPrompt />
 
       {page === "faq" ? (
         <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
@@ -315,6 +326,17 @@ export function FlohmarktApp() {
                 style={{ scrollbarWidth: "none" }}
                 className="flex gap-1.5 overflow-x-auto rounded-2xl bg-white/90 px-3 py-2 shadow-md backdrop-blur-sm [&::-webkit-scrollbar]:hidden"
               >
+                <button
+                  type="button"
+                  onClick={() => setShowFavoritesOnly((v) => !v)}
+                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    showFavoritesOnly
+                      ? "border-amber-400 bg-amber-400 text-white"
+                      : "border-gray-300 bg-white text-gray-600 hover:border-amber-400 hover:text-amber-500"
+                  }`}
+                >
+                  ★ Favoriten
+                </button>
                 {KATEGORIEN.map((k) => {
                   const active = kategorienFilter.includes(k);
                   return (
@@ -332,10 +354,13 @@ export function FlohmarktApp() {
                     </button>
                   );
                 })}
-                {kategorienFilter.length > 0 && (
+                {(kategorienFilter.length > 0 || showFavoritesOnly) && (
                   <button
                     type="button"
-                    onClick={() => setKategorienFilter([])}
+                    onClick={() => {
+                      setKategorienFilter([]);
+                      setShowFavoritesOnly(false);
+                    }}
                     className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
                   >
                     ✕ Alle
@@ -377,11 +402,25 @@ export function FlohmarktApp() {
                   {!loading && stands.length > 0 && (
                     <span className="text-sm font-normal text-gray-400">
                       ({filteredStands.length}
-                      {kategorienFilter.length > 0 ? ` von ${stands.length}` : ""})
+                      {kategorienFilter.length > 0 || showFavoritesOnly
+                        ? ` von ${stands.length}`
+                        : ""}
+                      )
                     </span>
                   )}
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowFavoritesOnly((v) => !v)}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      showFavoritesOnly
+                        ? "border-amber-400 bg-amber-400 text-white"
+                        : "border-gray-200 bg-white text-gray-500 hover:border-amber-400 hover:text-amber-500"
+                    }`}
+                  >
+                    ★ Favoriten
+                  </button>
                   {KATEGORIEN.map((k) => {
                     const active = kategorienFilter.includes(k);
                     return (
@@ -399,10 +438,13 @@ export function FlohmarktApp() {
                       </button>
                     );
                   })}
-                  {kategorienFilter.length > 0 && (
+                  {(kategorienFilter.length > 0 || showFavoritesOnly) && (
                     <button
                       type="button"
-                      onClick={() => setKategorienFilter([])}
+                      onClick={() => {
+                        setKategorienFilter([]);
+                        setShowFavoritesOnly(false);
+                      }}
                       className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600"
                     >
                       ✕
@@ -410,7 +452,12 @@ export function FlohmarktApp() {
                   )}
                 </div>
               </div>
-              <StandListe stands={filteredStands} loading={loading} />
+              <StandListe
+                stands={filteredStands}
+                loading={loading}
+                favoriteIds={favoriteIds}
+                onToggleFavorite={toggleFavorite}
+              />
             </section>
           </div>
         </main>

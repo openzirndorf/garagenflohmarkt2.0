@@ -1,10 +1,16 @@
 import { navigationUrl } from "./navigation-url";
 
 export interface StandPopupProperties {
+  id: number;
   nickname: string;
   adresse: string;
   beschreibung: string | null;
   uhrzeit: string | null;
+}
+
+export interface FavoriteControls {
+  isFavorite: (id: number) => boolean;
+  onToggle: (id: number) => void;
 }
 
 // Baut den Popup-Inhalt als DOM statt als HTML-String: Nutzer-Eingaben
@@ -22,13 +28,41 @@ export interface StandPopupProperties {
 export function buildStandPopupContent(
   properties: StandPopupProperties,
   coords: { lat: number; lng: number } | null = null,
+  favorite: FavoriteControls | null = null,
 ): HTMLElement {
-  const { nickname, adresse, beschreibung, uhrzeit } = properties;
+  const { id, nickname, adresse, beschreibung, uhrzeit } = properties;
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
   title.textContent = nickname;
   popupNode.appendChild(title);
+
+  if (favorite) {
+    const starBtn = document.createElement("button");
+    starBtn.type = "button";
+    starBtn.setAttribute(
+      "aria-label",
+      favorite.isFavorite(id) ? "Von Favoriten entfernen" : "Als Favorit merken",
+    );
+    Object.assign(starBtn.style, {
+      marginLeft: "6px",
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      color: "#fbbf24",
+      fontSize: "1rem",
+      verticalAlign: "middle",
+    });
+    const updateStar = () => {
+      starBtn.textContent = favorite.isFavorite(id) ? "★" : "☆";
+    };
+    updateStar();
+    starBtn.addEventListener("click", () => {
+      favorite.onToggle(id);
+      updateStar();
+    });
+    popupNode.appendChild(starBtn);
+  }
 
   const addLine = (text: string) => {
     popupNode.appendChild(document.createElement("br"));

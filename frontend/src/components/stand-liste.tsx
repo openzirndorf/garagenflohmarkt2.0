@@ -4,9 +4,11 @@ import type { Stand } from "../types";
 interface Props {
   stands: Stand[];
   loading: boolean;
+  favoriteIds?: Set<number>;
+  onToggleFavorite?: (id: number) => void;
 }
 
-export function StandListe({ stands, loading }: Props) {
+export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: Props) {
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -39,6 +41,18 @@ export function StandListe({ stands, loading }: Props) {
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className="font-semibold leading-tight text-gray-900">{s.nickname}</p>
               {s.uhrzeit && <span className="text-xs text-gray-500">🕐 {s.uhrzeit}</span>}
+              {onToggleFavorite && (
+                <button
+                  type="button"
+                  onClick={() => onToggleFavorite(s.id)}
+                  aria-label={
+                    favoriteIds?.has(s.id) ? "Von Favoriten entfernen" : "Als Favorit merken"
+                  }
+                  className="text-base leading-none text-amber-400 hover:text-amber-500"
+                >
+                  {favoriteIds?.has(s.id) ? "★" : "☆"}
+                </button>
+              )}
             </div>
             <p className="mt-0.5 text-sm text-gray-500">{s.adresse}</p>
             {s.kategorien.length > 0 && (

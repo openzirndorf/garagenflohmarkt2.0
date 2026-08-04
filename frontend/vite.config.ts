@@ -22,6 +22,16 @@ export default defineConfig({
         display: "standalone",
         start_url: ".",
         icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }],
+        // Long-Press auf das App-Icon (Android) - Admin ist sonst innerhalb
+        // der installierten App nicht per URL-Zeile erreichbar. iOS kennt
+        // Manifest-Shortcuts nicht, dort bleibt der Menüpunkt "Admin" der Weg.
+        shortcuts: [
+          {
+            name: "Admin",
+            url: "./#admin",
+            icons: [{ src: "icon.svg", sizes: "any", type: "image/svg+xml" }],
+          },
+        ],
       },
       workbox: {
         runtimeCaching: [
