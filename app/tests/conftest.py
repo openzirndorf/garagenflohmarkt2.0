@@ -91,16 +91,16 @@ async def client():
 def captured_emails(monkeypatch):
     """Fängt ausgehende Mails ab, statt sie über smtplib zu verschicken -
     SMTP ist in Tests nicht konfiguriert, send_login_email würde sonst
-    still no-open. Tests brauchen den Klartext-login_token trotzdem, um
+    still no-open. Tests brauchen den Klartext-login_code trotzdem, um
     den Login-Flow zu Ende zu testen (genau wie eine echte Person ihn nur
     per Mail bekommt, nie über eine API-Antwort)."""
     sent: list[dict] = []
 
-    async def _fake_send_login_email(email, nickname, login_token, *, first_time):
+    async def _fake_send_login_email(email, nickname, login_code, *, first_time):
         sent.append({
             "email": email,
             "nickname": nickname,
-            "login_token": login_token,
+            "login_code": login_code,
             "first_time": first_time,
         })
 

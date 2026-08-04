@@ -10,7 +10,7 @@ Diese App macht es einfach, mitzumachen und den Überblick zu behalten:
 
 - **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte, unter einer automatisch vergebenen Kennung (z.B. „Gscheide Kellerkönig") statt des echten Namens.
 - **Karte** — Alle freigegebenen Stände auf einer interaktiven Karte, filterbar nach Kategorien (Kleidung, Spielzeug, Bücher …)
-- **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit zurückziehen, ohne Konto/Passwort: ein Magic Link aus der Mail loggt für eine Sitzung ein; verloren gegangen ist er nicht schlimm, ein neuer lässt sich jederzeit anfordern.
+- **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit vollständig löschen, ohne Konto/Passwort: ein eintippbarer Code aus der Mail loggt für eine Sitzung ein (bewusst kein Link, siehe unten); verloren gegangen ist er nicht schlimm, ein neuer lässt sich jederzeit anfordern.
 
 Die App ist kostenlos, ohne Account und ohne Tracking nutzbar.
 
@@ -54,7 +54,7 @@ garagenflohmarkt2.0/
 │           ├── map-or-list.tsx     Fällt bei Kartenfehler auf Listenansicht zurück
 │           ├── stand-form.tsx      Anmeldeformular
 │           ├── stand-liste.tsx     Standliste
-│           ├── mein-stand.tsx      Eigener Stand (Magic Link → Session-Token)
+│           ├── mein-stand.tsx      Eigener Stand (Login-Code → Session-Token)
 │           ├── admin-panel.tsx     Admin-UI (#admin)
 │           ├── footer.tsx          Veranstalter/Unterstützer-Zeile
 │           ├── impressum.tsx       #impressum
@@ -370,19 +370,21 @@ GitHub → Actions → Workflow → **Run workflow**
 ## API-Referenz
 
 Kein Namensfeld, keine permanenten Tokens: Zugriff auf den eigenen Stand
-läuft über einen Magic Link (`login_token`, einmalig, befristet), der gegen
-ein `session_token` (mehrfach nutzbar, befristet) eingetauscht wird. Beide
-werden nur gehasht gespeichert.
+läuft über einen eintippbaren Login-Code (8 Zeichen, einmalig, befristet),
+der gegen ein `session_token` (mehrfach nutzbar, befristet) eingetauscht
+wird. Bewusst kein klickbarer Magic Link mehr - die App ist als PWA
+installierbar, und ein Mail-Link öffnet dabei typischerweise nicht das
+installierte PWA-Fenster (v.a. iOS Safari). Beide Geheimnisse werden nur
+gehasht gespeichert.
 
 | Methode | Pfad | Auth | Beschreibung |
 |---------|------|------|--------------|
 | `GET` | `/health` | – | Statuscheck |
 | `GET` | `/stands` | – | Freigegebene Stände (Live-DB; primäre Quelle ist Object Storage, siehe `api.ts`) |
 | `GET` | `/stands/geojson` | – | GeoJSON für die Karte (Live-DB, gleiches Prinzip) |
-| `POST` | `/stands/` | Basic Auth | Stand einreichen, löst Login-Mail aus |
-| `POST` | `/stands/request-login` | Basic Auth | Neuen Magic Link anfordern (E-Mail im Body) |
-| `GET` | `/stands/session/{login_token}` | – | Bestätigungsseite ("Bist du das?"), verbraucht den Token nicht |
-| `POST` | `/stands/session/{login_token}` | – | Login einlösen (einmalig), gibt `session_token` zurück |
+| `POST` | `/stands/` | Basic Auth | Stand einreichen, löst Code-Mail aus |
+| `POST` | `/stands/request-login` | Basic Auth | Neuen Login-Code anfordern (E-Mail im Body) |
+| `POST` | `/stands/redeem-code` | – | Code einlösen (einmalig), gibt `session_token` zurück |
 | `GET` | `/stands/by-session/{session_token}` | – | Eigenen Stand abrufen |
 | `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
 | `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (inkl. Standname wechseln) |

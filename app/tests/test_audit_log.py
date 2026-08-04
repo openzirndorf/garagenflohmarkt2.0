@@ -8,13 +8,10 @@ async def _register(client, api_auth, email="audit@example.com"):
     return resp.json()
 
 
-async def _login(client, login_token) -> str:
-    login_resp = await client.post(f"/stands/session/{login_token}")
-    assert login_resp.status_code == 200
-    marker = "#mein-stand/session/"
-    start = login_resp.text.index(marker) + len(marker)
-    end = login_resp.text.index('"', start)
-    return login_resp.text[start:end]
+async def _login(client, login_code) -> str:
+    resp = await client.post("/stands/redeem-code", json={"code": login_code})
+    assert resp.status_code == 200
+    return resp.json()["session_token"]
 
 
 async def _log_entries(pool, stand_id):
@@ -28,7 +25,7 @@ async def test_registration_and_first_login_log_created_and_approved(
     client, api_auth, captured_emails, pool
 ):
     stand = await _register(client, api_auth)
-    await _login(client, captured_emails[0]["login_token"])
+    await _login(client, captured_emails[0]["login_code"])
 
     assert await _log_entries(pool, stand["id"]) == [
         ("CREATED", "owner"),
@@ -38,11 +35,11 @@ async def test_registration_and_first_login_log_created_and_approved(
 
 async def test_second_login_does_not_log_another_approval(client, api_auth, captured_emails, pool):
     stand = await _register(client, api_auth)
-    first_session = await _login(client, captured_emails[0]["login_token"])
+    first_session = await _login(client, captured_emails[0]["login_code"])
     captured_emails.clear()
 
     await client.post("/stands/request-login", json={"email": "audit@example.com"}, auth=api_auth)
-    await _login(client, captured_emails[0]["login_token"])
+    await _login(client, captured_emails[0]["login_code"])
 
     entries = await _log_entries(pool, stand["id"])
     assert entries.count(("APPROVED", "owner")) == 1
@@ -51,7 +48,7 @@ async def test_second_login_does_not_log_another_approval(client, api_auth, capt
 
 async def test_owner_edit_and_delete_are_logged(client, api_auth, captured_emails, pool):
     stand = await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-15 Uhr"})
     await client.delete(f"/stands/by-session/{session_token}")
@@ -86,7 +83,7 @@ async def test_audit_log_endpoint_never_contains_nickname_or_email(
     client, api_auth, admin_headers, captured_emails
 ):
     await _register(client, api_auth, email="darf-nicht-im-log@example.com")
-    await _login(client, captured_emails[0]["login_token"])
+    await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.get("/stands/admin/audit-log", headers=admin_headers)
     assert resp.status_code == 200

@@ -34,7 +34,7 @@ export function Datenschutz() {
             </a>
             ) und der Veranstalter <strong>{VERANSTALTER}</strong> sind gemeinsam Verantwortliche im
             Sinne von Art. 26 DSGVO. OpenZirndorf betreibt die technische Infrastruktur (Server,
-            Datenbank, Versand der Anmeldelinks); der Veranstalter organisiert den Garagenflohmarkt
+            Datenbank, Versand der Zugangscodes); der Veranstalter organisiert den Garagenflohmarkt
             und entscheidet über die Freigabe eingereichter Stände. Bei Fragen zum Datenschutz
             erreicht ihr uns über die oben genannte E-Mail-Adresse.
           </p>
@@ -65,15 +65,16 @@ export function Datenschutz() {
 
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">
-            4. Anmeldelink statt Konto/Passwort
+            4. Zugangscode statt Konto/Passwort
           </h2>
           <p>
-            Statt eines Kontos mit Passwort bekommst du einen Anmeldelink per E-Mail („Magic Link").
-            Der Link ist einmalig verwendbar und befristet gültig; nach dem Anklicken erhältst du
-            eine zeitlich begrenzte Sitzung, mit der du deinen Stand bearbeiten oder vollständig
-            löschen kannst. Wir speichern nur einen kryptografischen Hash dieser Links, nie den Link
-            selbst im Klartext. Rechtsgrundlage ist die Erfüllung des Nutzungsvertrags zur
-            Standanmeldung (Art. 6 Abs. 1 lit. b DSGVO).
+            Statt eines Kontos mit Passwort bekommst du einen Zugangscode per E-Mail, den du unter
+            „Mein Stand" eingibst (bewusst kein anklickbarer Link - als installierte App öffnet ein
+            Mail-Link diese nicht zuverlässig). Der Code ist einmalig verwendbar und befristet
+            gültig; nach der Eingabe erhältst du eine zeitlich begrenzte Sitzung, mit der du deinen
+            Stand bearbeiten oder vollständig löschen kannst. Wir speichern nur einen
+            kryptografischen Hash dieses Codes, nie den Code selbst im Klartext. Rechtsgrundlage ist
+            die Erfüllung des Nutzungsvertrags zur Standanmeldung (Art. 6 Abs. 1 lit. b DSGVO).
           </p>
         </section>
 
@@ -83,7 +84,7 @@ export function Datenschutz() {
             Die Karte geht am 7. Oktober 2026 offline; sämtliche Anmeldedaten (Datenbank, generierte
             Kartendaten, Backups) werden automatisiert zu diesem Termin gelöscht - durch einen
             geplanten Job, nicht durch eine manuelle Erinnerung. Du kannst deinen Stand jederzeit
-            selbst vorher über deinen Bearbeitungslink vollständig löschen.
+            selbst vorher über deinen Zugangscode vollständig löschen.
           </p>
         </section>
 
@@ -101,8 +102,8 @@ export function Datenschutz() {
           <h2 className="mb-1 text-base font-bold text-gray-900">7. Hosting und Logs</h2>
           <p>
             Die App läuft auf Servern von Scaleway innerhalb der EU. Unsere Anwendung protokolliert
-            bewusst keine personenbezogenen Daten oder Bearbeitungslinks in ihren Logs. Es werden
-            keine Cookies gesetzt und keine Analyse- oder Trackingdienste eingebunden.
+            bewusst keine personenbezogenen Daten oder Zugangscodes in ihren Logs. Es werden keine
+            Cookies gesetzt und keine Analyse- oder Trackingdienste eingebunden.
           </p>
         </section>
 

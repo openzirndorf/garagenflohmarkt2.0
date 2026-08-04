@@ -103,8 +103,8 @@ export function StandForm({ onSuccess }: Props) {
             Dein Stand wurde eingereicht!
           </p>
           <p className="text-sm text-gray-700">
-            Wir haben dir eine E-Mail mit einem Bestätigungslink geschickt. Erst nach dem Klick
-            erscheint dein Stand auf der Karte.
+            Wir haben dir eine E-Mail mit einem Bestätigungscode geschickt. Gib ihn unter "Mein
+            Stand" ein - erst danach erscheint dein Stand auf der Karte.
           </p>
           {nickname && (
             <p className="text-sm text-gray-700">
@@ -113,9 +113,9 @@ export function StandForm({ onSuccess }: Props) {
             </p>
           )}
           <p className="mt-1 text-sm text-gray-600">
-            Über denselben Link kannst du deinen Stand danach auch jederzeit bearbeiten oder
+            Mit demselben Code kannst du deinen Stand danach auch jederzeit bearbeiten oder
             vollständig löschen. Solltest du die Mail verlieren, kannst du dir über "Mein Stand"
-            jederzeit einen neuen Link schicken lassen.
+            jederzeit einen neuen Code schicken lassen.
           </p>
         </CardContent>
       </Card>
@@ -214,9 +214,9 @@ export function StandForm({ onSuccess }: Props) {
               disabled={status === "loading"}
             />
             <p className="text-xs text-gray-500">
-              Du erhältst einen Bestätigungslink per Mail – erst danach wird dein Stand sichtbar.
+              Du erhältst einen Bestätigungscode per Mail – erst danach wird dein Stand sichtbar.
               Auf der Karte erscheinst du nur unter einer automatisch vergebenen Kennung (z.B.
-              „Fröhlicher Dachs“), nie mit deinem echten Namen.
+              „Gscheide Kellerkönig“), nie mit deinem echten Namen.
             </p>
           </div>
 

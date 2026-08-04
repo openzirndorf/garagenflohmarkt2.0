@@ -150,9 +150,9 @@ export function Faq() {
               Was passiert, wenn mein Stand nicht auf der Karte erscheint?
             </p>
             <p className="text-gray-600 text-sm mt-1">
-              Prüfe, ob du den Bestätigungslink in der Mail angeklickt hast. Ohne Bestätigung bleibt
-              dein Stand unsichtbar. Auch muss die eingetragene Adresse in Zirndorf liegen, damit
-              sie auf der Karte angezeigt werden kann.
+              Prüfe, ob du den Bestätigungscode in der Mail unter „Mein Stand" eingegeben hast. Ohne
+              Bestätigung bleibt dein Stand unsichtbar. Auch muss die eingetragene Adresse in
+              Zirndorf liegen, damit sie auf der Karte angezeigt werden kann.
             </p>
           </div>
         </div>

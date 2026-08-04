@@ -23,13 +23,10 @@ async def test_no_pii_in_application_logs_across_full_cycle(
         auth=api_auth,
     )
     assert created.status_code == 201
-    login_token = captured_emails[0]["login_token"]
+    login_code = captured_emails[0]["login_code"]
 
-    await client.get(f"/stands/session/{login_token}")
-    login_resp = await client.post(f"/stands/session/{login_token}")
-    marker = "#mein-stand/session/"
-    start = login_resp.text.index(marker) + len(marker)
-    session_token = login_resp.text[start : login_resp.text.index('"', start)]
+    login_resp = await client.post("/stands/redeem-code", json={"code": login_code})
+    session_token = login_resp.json()["session_token"]
 
     await client.get(f"/stands/by-session/{session_token}")
     await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-12 Uhr"})
@@ -43,7 +40,7 @@ async def test_no_pii_in_application_logs_across_full_cycle(
     app_records = [r for r in caplog.records if r.name.startswith("app.")]
     log_text = "\n".join(record.getMessage() for record in app_records)
     assert email not in log_text
-    assert login_token not in log_text
+    assert login_code not in log_text
     assert session_token not in log_text
 
 

@@ -77,32 +77,34 @@ def _send_sync(to: str, subject: str, body_text: str, body_html: str) -> None:
             smtp.sendmail(sender, [to], msg.as_string())
 
 
-async def send_login_email(email: str, nickname: str, login_token: str, *, first_time: bool) -> None:
-    """Schickt einen Magic-Link. Tut nichts wenn SMTP nicht konfiguriert.
+async def send_login_email(email: str, nickname: str, login_code: str, *, first_time: bool) -> None:
+    """Schickt einen eintippbaren Login-Code. Tut nichts wenn SMTP nicht
+    konfiguriert.
 
-    Ein Klick führt zu GET /stands/session/{login_token} - einer
-    Bestätigungsseite (siehe app/routes/stands.py), die den Token erst bei
-    einem echten Klick auf "Einloggen" einlöst. Das verhindert, dass
-    automatische Link-Scanner in E-Mail-Gateways den einmalig gültigen
-    Token verbrauchen, bevor die Person selbst geklickt hat. Beim ersten
-    Login wird der Stand automatisch freigeschaltet.
+    Bewusst kein klickbarer Link mehr: die App ist als PWA installierbar,
+    und ein Mail-Link öffnet dabei typischerweise nicht das installierte
+    PWA-Fenster (v.a. iOS Safari kennt das grundsätzlich nicht) - der Code
+    wird stattdessen manuell unter "Mein Stand" eingetippt. Beim ersten
+    Einlösen wird der Stand automatisch freigeschaltet.
     """
     if not smtp_configured():
         return
 
-    backend_url = os.getenv("BACKEND_URL", BACKEND_URL).rstrip("/")
-    login_url = f"{backend_url}/stands/session/{login_token}"
+    frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
+    mein_stand_url = f"{frontend_url}#mein-stand"
 
     if first_time:
-        subject = "Garagenflohmarkt Zirndorf – Bitte bestätige dein Inserat"
+        subject = "Garagenflohmarkt Zirndorf – Dein Bestätigungscode"
         intro = "vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf!"
-        action_text = "Bitte bestätige deine E-Mail-Adresse, damit dein Stand auf der Karte erscheint:"
-        button_label = "E-Mail bestätigen & Stand verwalten"
+        action_text = (
+            "Gib diesen Code unter „Mein Stand\" ein, damit dein Stand auf der Karte erscheint:"
+        )
     else:
-        subject = "Garagenflohmarkt Zirndorf – Dein Anmeldelink"
-        intro = "du hast einen Zugangslink für deinen Stand angefordert."
-        action_text = "Über diesen Link kannst du deinen Stand verwalten oder zurückziehen:"
-        button_label = "Stand verwalten"
+        subject = "Garagenflohmarkt Zirndorf – Dein Zugangscode"
+        intro = "du hast einen Zugangscode für deinen Stand angefordert."
+        action_text = 'Gib diesen Code unter „Mein Stand" ein, um deinen Stand zu verwalten:'
+
+    validity = "24 Stunden" if first_time else "30 Minuten"
 
     body_text = f"""\
 Hallo {nickname},
@@ -111,11 +113,13 @@ Hallo {nickname},
 
 {action_text}
 
-  {login_url}
+  {login_code}
 
-Der Link ist {"24 Stunden" if first_time else "30 Minuten"} lang gültig und nur einmal verwendbar.
-Falls du ihn verlierst oder er abläuft, kannst du dir jederzeit einen neuen
-über "Zugang anfordern" schicken lassen.
+Öffne dazu {mein_stand_url} und tippe den Code dort ein.
+
+Der Code ist {validity} lang gültig und nur einmal verwendbar. Falls du ihn
+verlierst oder er abläuft, kannst du dir jederzeit einen neuen über
+"Zugang anfordern" schicken lassen.
 
 Viele Grüße
 Das Garagenflohmarkt-Team
@@ -126,22 +130,22 @@ Das Garagenflohmarkt-Team
 <html lang="de">
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
-  <h2 style="color:#2563eb">Garagenflohmarkt Zirndorf</h2>
+  <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
   <p>Hallo <strong>{nickname}</strong>,</p>
   <p>{intro}</p>
   <p>{action_text}</p>
-  <p style="margin:24px 0">
-    <a href="{login_url}"
-       style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">
-      {button_label}
-    </a>
+  <p style="margin:24px 0;text-align:center">
+    <span style="display:inline-block;background:#f3f4f6;color:#111;padding:16px 28px;
+                 border-radius:8px;font-weight:bold;font-size:1.5rem;letter-spacing:0.15em;
+                 font-family:monospace">
+      {login_code}
+    </span>
   </p>
-  <p style="font-size:0.85em;color:#666">
-    Oder kopiere diesen Link in deinen Browser:<br>
-    <a href="{login_url}">{login_url}</a>
+  <p style="font-size:0.9em;color:#444">
+    Öffne dazu <a href="{mein_stand_url}">{mein_stand_url}</a> und tippe den Code dort ein.
   </p>
   <p style="font-size:0.8em;color:#999">
-    Gültig für {"24 Stunden" if first_time else "30 Minuten"}, nur einmal verwendbar.
+    Gültig für {validity}, nur einmal verwendbar.
   </p>
 </body>
 </html>

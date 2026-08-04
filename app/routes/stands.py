@@ -2,13 +2,12 @@ import logging
 
 import asyncpg
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, EmailStr
 
 from app.audit import log_action
 from app.auth import require_admin_auth, require_api_auth
 from app.database import get_pool
-from app.email import FRONTEND_URL, send_login_email, smtp_configured, smtp_debug_info
+from app.email import send_login_email, smtp_configured, smtp_debug_info
 from app.geocode import geocode
 from app.jobs.stands_artifact import regenerate_stands_artifact
 from app.nicknames import generate_unique_nickname, is_valid_nickname
@@ -17,10 +16,11 @@ from app.rate_limit import check_rate_limit
 from app.tokens import (
     LOGIN_REQUEST_TTL,
     REGISTRATION_LOGIN_TTL,
-    generate_token,
+    generate_code,
     hash_token,
-    new_login_token,
+    new_login_code,
     new_session_token,
+    normalize_code,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ router = APIRouter()
 _RATE_WINDOW_SECONDS = 3600  # 1 Stunde
 _RATE_MAX = 3  # max. Einreichungen pro IP pro Zeitfenster
 _LOGIN_REQUEST_RATE_MAX = 5  # max. "Zugang anfordern"-Versuche pro IP pro Zeitfenster
+_REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
 
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
@@ -113,7 +114,7 @@ async def create_stand(body: StandIn, request: Request):
     lat, lng = (coords[0], coords[1]) if coords else (None, None)
 
     nickname = await generate_unique_nickname(lambda c: _nickname_exists(pool, c))
-    login_token, login_token_hash, login_token_expires_at = new_login_token(REGISTRATION_LOGIN_TTL)
+    login_code, login_token_hash, login_token_expires_at = new_login_code(REGISTRATION_LOGIN_TTL)
 
     try:
         row = await pool.fetchrow(
@@ -138,7 +139,7 @@ async def create_stand(body: StandIn, request: Request):
 
     # Login-Mail versenden (Fehler hier dürfen die Anmeldung nicht blockieren)
     try:
-        await send_login_email(body.email, nickname, login_token, first_time=True)
+        await send_login_email(body.email, nickname, login_code, first_time=True)
     except Exception as exc:  # noqa: BLE001 - Mailversand darf Anmeldung nie blockieren
         # Nur Exception-Typ loggen, nie die Nachricht - SMTP-Exceptions
         # betten häufig die Empfängeradresse in ihre Fehlermeldung ein.
@@ -148,7 +149,7 @@ async def create_stand(body: StandIn, request: Request):
     return result
 
 
-# POST /stands/request-login - Basic Auth, fordert einen neuen Magic-Link an
+# POST /stands/request-login - Basic Auth, fordert einen neuen Login-Code an
 @router.post("/request-login", dependencies=[Depends(require_api_auth)])
 async def request_login(body: LoginRequestIn, request: Request):
     pool = await get_pool()
@@ -162,13 +163,13 @@ async def request_login(body: LoginRequestIn, request: Request):
 
     row = await pool.fetchrow("SELECT id, nickname FROM stands WHERE email = $1", body.email)
     if row:
-        login_token, login_token_hash, login_token_expires_at = new_login_token(LOGIN_REQUEST_TTL)
+        login_code, login_token_hash, login_token_expires_at = new_login_code(LOGIN_REQUEST_TTL)
         await pool.execute(
             "UPDATE stands SET login_token_hash = $1, login_token_expires_at = $2 WHERE id = $3",
             login_token_hash, login_token_expires_at, row["id"],
         )
         try:
-            await send_login_email(body.email, row["nickname"], login_token, first_time=False)
+            await send_login_email(body.email, row["nickname"], login_code, first_time=False)
         except Exception as exc:  # noqa: BLE001 - Mailversand darf die Anfrage nie fehlschlagen lassen
             logger.error("Login-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
 
@@ -177,25 +178,30 @@ async def request_login(body: LoginRequestIn, request: Request):
     # E-Mail-Adressen registriert sind).
     return {
         "message": "Falls diese E-Mail-Adresse bei einem Stand hinterlegt ist, "
-        "wurde gerade ein Anmeldelink verschickt."
+        "wurde gerade ein Zugangscode verschickt."
     }
 
 
-# GET /stands/session/{login_token} - Bestätigungsseite aus der Mail.
-# Löst den Token bewusst NICHT ein (siehe POST unten) - automatische
-# Link-Scanner in E-Mail-Gateways würden sonst den einmalig gültigen Token
-# verbrauchen, bevor die Person selbst klickt.
-@router.get("/session/{login_token}", response_class=HTMLResponse)
-async def session_confirm_page(login_token: str):
-    return HTMLResponse(_login_confirm_html(login_token))
+class RedeemCodeIn(BaseModel):
+    code: str
 
 
-# POST /stands/session/{login_token} - löst den Login-Link tatsächlich ein
-@router.post("/session/{login_token}", response_class=HTMLResponse)
-async def session_login(login_token: str, background_tasks: BackgroundTasks):
+# POST /stands/redeem-code - tauscht den per Mail verschickten Code gegen ein
+# session_token ein. Bewusst reines JSON statt HTML-Seiten: ohne Klick auf
+# einen Link (siehe app/tokens.py) entfällt auch die Link-Scanner-Problematik,
+# die zuvor den zweistufigen GET/POST-Bestätigungsflow nötig gemacht hat.
+@router.post("/redeem-code")
+async def redeem_code(body: RedeemCodeIn, request: Request, background_tasks: BackgroundTasks):
     pool = await get_pool()
-    token_hash = hash_token(login_token)
 
+    client_ip = request.client.host if request.client else "unknown"
+    allowed = await check_rate_limit(
+        pool, f"redeem-code:{client_ip}", _RATE_WINDOW_SECONDS, _REDEEM_CODE_RATE_MAX
+    )
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Zu viele Versuche. Bitte später erneut versuchen.")
+
+    token_hash = hash_token(normalize_code(body.code))
     session_token, session_token_hash, session_token_expires_at = new_session_token()
 
     # `old.status` erfasst den Stand VOR dem Update - nur so lässt sich
@@ -219,108 +225,27 @@ async def session_login(login_token: str, background_tasks: BackgroundTasks):
     )
 
     if not row:
-        # Einmalig verwendbar: nach erfolgreichem Login wird der Hash
-        # gelöscht. Ein zweiter Aufruf desselben Links kann daher nicht
-        # mehr zwischen "schon benutzt", "abgelaufen" und "ungültig"
+        # Einmalig verwendbar: nach erfolgreichem Einlösen wird der Hash
+        # gelöscht. Ein zweiter Versuch mit demselben Code kann daher nicht
+        # mehr zwischen "schon benutzt", "abgelaufen" und "falsch"
         # unterscheiden - das ist beabsichtigt.
-        return HTMLResponse(_confirmation_html(
-            title="Link ungültig",
-            heading="Dieser Link ist nicht mehr gültig.",
-            message="Er wurde entweder bereits verwendet, ist abgelaufen, oder der Stand wurde zurückgezogen. "
-            "Du kannst dir jederzeit einen neuen Anmeldelink schicken lassen.",
-            link=f"{FRONTEND_URL}#mein-stand",
-            link_label="Neuen Link anfordern",
-            success=False,
-        ), status_code=404)
+        raise HTTPException(
+            status_code=404,
+            detail="Code ungültig, abgelaufen oder bereits verwendet. "
+            "Du kannst dir jederzeit einen neuen über 'Zugang anfordern' schicken lassen.",
+        )
 
-    manage_url = f"{FRONTEND_URL}#mein-stand/session/{session_token}"
     was_pending = row["previous_status"] == "PENDING"
     if was_pending:
         # Stand ist gerade erst öffentlich geworden (PENDING→APPROVED).
         background_tasks.add_task(regenerate_stands_artifact)
         await log_action(pool, row["id"], "APPROVED", "owner")
-    return HTMLResponse(_confirmation_html(
-        title="Eingeloggt",
-        heading=(
-            f"Dein Stand ist jetzt online, {row['nickname']}!"
-            if was_pending
-            else f"Willkommen zurück, {row['nickname']}!"
-        ),
-        message="Du kannst deinen Stand jetzt für diese Sitzung bearbeiten oder zurückziehen.",
-        link=manage_url,
-        link_label="Zu meinem Stand",
-        success=True,
-    ))
 
-
-def _login_confirm_html(login_token: str) -> str:
-    return f"""\
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Anmeldung bestätigen – Garagenflohmarkt Zirndorf</title>
-  <style>
-    body {{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
-          min-height:100vh;margin:0;background:#f9fafb}}
-    .card {{background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);
-            padding:40px 48px;max-width:480px;text-align:center}}
-    h1 {{font-size:1.5rem;margin:.5rem 0 1rem;color:#111827}}
-    p {{color:#374151;line-height:1.6}}
-    button {{margin-top:24px;background:#2563eb;color:#fff;border:none;cursor:pointer;
-             padding:12px 28px;border-radius:8px;font-weight:bold;font-size:1rem}}
-    button:hover {{opacity:.9}}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>Bist du das?</h1>
-    <p>Klicke den Knopf, um dich für deinen Garagenflohmarkt-Stand einzuloggen.</p>
-    <form method="post" action="/stands/session/{login_token}">
-      <button type="submit">Ja, einloggen</button>
-    </form>
-  </div>
-</body>
-</html>
-"""
-
-
-def _confirmation_html(
-    title: str, heading: str, message: str, link: str, link_label: str, success: bool
-) -> str:
-    color = "#16a34a" if success else "#dc2626"
-    icon = "✓" if success else "✗"
-    return f"""\
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>{title} – Garagenflohmarkt Zirndorf</title>
-  <style>
-    body {{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
-          min-height:100vh;margin:0;background:#f9fafb}}
-    .card {{background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(0,0,0,.1);
-            padding:40px 48px;max-width:480px;text-align:center}}
-    .icon {{font-size:3rem;color:{color}}}
-    h1 {{color:{color};font-size:1.5rem;margin:.5rem 0 1rem}}
-    p {{color:#374151;line-height:1.6}}
-    a.btn {{display:inline-block;margin-top:24px;background:{color};color:#fff;
-            padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:bold}}
-    a.btn:hover {{opacity:.9}}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon">{icon}</div>
-    <h1>{heading}</h1>
-    <p>{message}</p>
-    <a class="btn" href="{link}">{link_label}</a>
-  </div>
-</body>
-</html>
-"""
+    return {
+        "session_token": session_token,
+        "nickname": row["nickname"],
+        "was_pending": was_pending,
+    }
 
 
 # GET /stands/by-session/{session_token} - eigenen Stand abrufen
@@ -439,7 +364,7 @@ async def test_email(to: str):
     if not info["configured"]:
         return {"ok": False, "config": info, "error": "SMTP nicht vollständig konfiguriert"}
     try:
-        await send_login_email(to, "Testnutzer", generate_token(), first_time=True)
+        await send_login_email(to, "Testnutzer", generate_code(), first_time=True)
         return {"ok": True, "config": info}
     except Exception as exc:  # noqa: BLE001 - Admin-Diagnose-Endpunkt, soll jeden SMTP-Fehler anzeigen
         return {"ok": False, "config": info, "error": str(exc)}

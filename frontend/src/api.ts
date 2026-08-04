@@ -116,7 +116,7 @@ export async function createStand(data: StandFormData): Promise<OwnStand> {
   return res.json();
 }
 
-// Fordert einen frischen Magic-Link an - Antwort ist immer gleich,
+// Fordert einen frischen Login-Code an - Antwort ist immer gleich,
 // unabhängig davon, ob die E-Mail-Adresse existiert (verhindert
 // E-Mail-Enumeration).
 export async function requestLogin(email: string): Promise<{ message: string }> {
@@ -129,6 +129,27 @@ export async function requestLogin(email: string): Promise<{ message: string }> 
     body: JSON.stringify({ email }),
   });
   if (!res.ok) throw new Error("Anfrage fehlgeschlagen");
+  return res.json();
+}
+
+export interface RedeemCodeResult {
+  session_token: string;
+  nickname: string;
+  was_pending: boolean;
+}
+
+// Löst den per Mail verschickten Code gegen ein session_token ein - kein
+// Link-Klick, kein Basic Auth nötig (der Code selbst ist das Geheimnis).
+export async function redeemCode(code: string): Promise<RedeemCodeResult> {
+  const res = await fetch(`${API}/stands/redeem-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail ?? "Code konnte nicht eingelöst werden");
+  }
   return res.json();
 }
 

@@ -4,6 +4,7 @@ import {
   cancelStand,
   exportMyStandData,
   fetchMyStand,
+  redeemCode,
   requestLogin,
   suggestNicknames,
   updateStand,
@@ -21,17 +22,6 @@ const STATUS_LABEL: Record<string, string> = {
   PENDING: "Warte auf Bestätigung",
   APPROVED: "Freigeschaltet ✓",
 };
-
-// Liest ein Session-Token aus der URL (#mein-stand/session/{token}), wie es
-// aus dem Magic-Link in der E-Mail ankommt, und säubert danach die URL -
-// das Token soll nicht dauerhaft sichtbar/bookmarkbar in der Adresszeile
-// stehenbleiben.
-function consumeSessionTokenFromHash(): string | null {
-  const match = window.location.hash.match(/^#mein-stand\/session\/(.+)$/);
-  if (!match) return null;
-  window.location.hash = "mein-stand";
-  return match[1];
-}
 
 export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -54,6 +44,12 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [requestStatus, setRequestStatus] = useState<"idle" | "loading" | "sent">("idle");
   const [requestMessage, setRequestMessage] = useState<string | null>(null);
 
+  // Code eintippen statt Magic-Link-Klick - als installierte PWA öffnet ein
+  // Mail-Link nicht zuverlässig das App-Fenster (v.a. iOS Safari).
+  const [codeInput, setCodeInput] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
+
   // Standname wählen/wechseln - immer eine Auswahl aus serverseitig
   // gewürfelten Namen, nie Freitext (siehe app/nicknames.py is_valid_nickname).
   const [showNicknamePicker, setShowNicknamePicker] = useState(false);
@@ -64,13 +60,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [nicknameError, setNicknameError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fromHash = consumeSessionTokenFromHash();
-    if (fromHash) {
-      sessionStorage.setItem(SESSION_TOKEN_KEY, fromHash);
-      setSessionToken(fromHash);
-    } else {
-      setSessionToken(sessionStorage.getItem(SESSION_TOKEN_KEY));
-    }
+    setSessionToken(sessionStorage.getItem(SESSION_TOKEN_KEY));
     setCheckedStorage(true);
   }, []);
 
@@ -102,6 +92,22 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     } catch (err) {
       setRequestMessage(err instanceof Error ? err.message : "Fehler");
       setRequestStatus("idle");
+    }
+  };
+
+  const handleRedeemCode = async () => {
+    if (!codeInput.trim()) return;
+    setRedeemLoading(true);
+    setRedeemError(null);
+    try {
+      const result = await redeemCode(codeInput);
+      sessionStorage.setItem(SESSION_TOKEN_KEY, result.session_token);
+      setSessionToken(result.session_token);
+      setCodeInput("");
+    } catch (err) {
+      setRedeemError(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setRedeemLoading(false);
     }
   };
 
@@ -147,42 +153,75 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     // erreicht (eigene Seite, kein Scroll-Ziel mehr) - kein zusätzlicher
     // Zwischenklick nötig, das Formular steht direkt da.
     return (
-      <section>
-        <h1 style={{ fontFamily: "var(--oz-font-heading)" }} className="mb-4 text-xl font-bold">
+      <section className="flex flex-col gap-6">
+        <h1 style={{ fontFamily: "var(--oz-font-heading)" }} className="text-xl font-bold">
           Mein Stand
         </h1>
-        {requestStatus === "sent" ? (
-          <p className="text-sm text-gray-700">{requestMessage}</p>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <label htmlFor="request-login-email" className="text-sm font-medium text-gray-700">
-              Zugang zu deinem Stand anfordern
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="request-login-email"
-                type="email"
-                className="flex-1 rounded-md border border-input px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="deine@email.de"
-                value={requestEmail}
-                onChange={(e) => setRequestEmail(e.target.value)}
-                disabled={requestStatus === "loading"}
-              />
-              <button
-                type="button"
-                onClick={handleRequestLogin}
-                disabled={requestStatus === "loading" || !requestEmail}
-                className="rounded-md bg-[#009a00] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#008400] disabled:opacity-50"
-              >
-                {requestStatus === "loading" ? "…" : "Link senden"}
-              </button>
-            </div>
-            <p className="text-xs text-gray-500">
-              Wir schicken dir einen Anmeldelink, mit dem du deinen Stand bearbeiten oder
-              vollständig löschen kannst.
-            </p>
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="login-code" className="text-sm font-medium text-gray-700">
+            Zugangscode eingeben
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="login-code"
+              className="flex-1 rounded-md border border-input px-3 py-1.5 font-mono text-sm uppercase tracking-widest outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="z.B. AB3D9F2K"
+              maxLength={8}
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+              disabled={redeemLoading}
+            />
+            <button
+              type="button"
+              onClick={handleRedeemCode}
+              disabled={redeemLoading || !codeInput.trim()}
+              className="rounded-md bg-[#009a00] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#008400] disabled:opacity-50"
+            >
+              {redeemLoading ? "…" : "Einloggen"}
+            </button>
           </div>
-        )}
+          <p className="text-xs text-gray-500">
+            Den Code findest du in der Mail, die du bei der Anmeldung oder unter "Zugang anfordern"
+            bekommen hast.
+          </p>
+          {redeemError && <p className="text-xs text-red-600">{redeemError}</p>}
+        </div>
+
+        <div className="border-t border-gray-100 pt-4">
+          {requestStatus === "sent" ? (
+            <p className="text-sm text-gray-700">{requestMessage}</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <label htmlFor="request-login-email" className="text-sm font-medium text-gray-700">
+                Noch keinen Code? Zugang anfordern
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="request-login-email"
+                  type="email"
+                  className="flex-1 rounded-md border border-input px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="deine@email.de"
+                  value={requestEmail}
+                  onChange={(e) => setRequestEmail(e.target.value)}
+                  disabled={requestStatus === "loading"}
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestLogin}
+                  disabled={requestStatus === "loading" || !requestEmail}
+                  className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {requestStatus === "loading" ? "…" : "Code anfordern"}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                Wir schicken dir einen Code, mit dem du deinen Stand bearbeiten oder vollständig
+                löschen kannst.
+              </p>
+            </div>
+          )}
+        </div>
       </section>
     );
   }

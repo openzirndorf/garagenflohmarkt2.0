@@ -12,21 +12,12 @@ async def _register(client, api_auth, email="test@example.com"):
     return resp.json()
 
 
-async def _login(client, login_token) -> str:
-    """Simuliert den echten Login-Flow: GET zeigt nur die Bestätigungsseite
-    (verbraucht den Token nicht), POST löst ihn ein und liefert eine
-    HTML-Seite mit dem session_token im Link-Text zurück."""
-    confirm_page = await client.get(f"/stands/session/{login_token}")
-    assert confirm_page.status_code == 200
-    assert f'action="/stands/session/{login_token}"' in confirm_page.text
-
-    login_resp = await client.post(f"/stands/session/{login_token}")
-    assert login_resp.status_code == 200
-    # session_token steckt im Link-href der Erfolgsseite
-    marker = "#mein-stand/session/"
-    start = login_resp.text.index(marker) + len(marker)
-    end = login_resp.text.index('"', start)
-    return login_resp.text[start:end]
+async def _login(client, login_code) -> str:
+    """Simuliert den echten Login-Flow: der Code wird eingetippt (POST
+    /stands/redeem-code), kein Link-Klick mehr nötig."""
+    resp = await client.post("/stands/redeem-code", json={"code": login_code})
+    assert resp.status_code == 200
+    return resp.json()["session_token"]
 
 
 async def test_registration_returns_no_token_at_all(client, api_auth):
@@ -43,51 +34,49 @@ async def test_login_token_is_stored_only_as_hash(client, api_auth, pool):
     assert len(row["login_token_hash"]) == 64  # SHA-256 Hexdigest
 
 
-async def test_get_session_page_does_not_consume_the_login_token(client, api_auth, captured_emails, pool):
-    """Simuliert einen automatischen Link-Scanner: ein reines GET darf den
-    einmalig gültigen Token nicht verbrauchen, sonst würde der echte Login
-    danach fehlschlagen."""
+async def test_login_code_is_single_use(client, api_auth, captured_emails):
     await _register(client, api_auth)
-    login_token = captured_emails[0]["login_token"]
+    login_code = captured_emails[0]["login_code"]
 
-    await client.get(f"/stands/session/{login_token}")
-    await client.get(f"/stands/session/{login_token}")  # mehrfach, wie ein Scanner es tun könnte
-
-    row = await pool.fetchrow("SELECT login_token_hash FROM stands")
-    assert row["login_token_hash"] is not None  # weiterhin vorhanden - noch nicht verbraucht
-
-    # Der eigentliche Login (POST) funktioniert danach trotzdem noch:
-    session_token = await _login(client, login_token)
-    assert session_token
-
-
-async def test_login_token_is_single_use(client, api_auth, captured_emails):
-    await _register(client, api_auth)
-    login_token = captured_emails[0]["login_token"]
-
-    first = await client.post(f"/stands/session/{login_token}")
+    first = await client.post("/stands/redeem-code", json={"code": login_code})
     assert first.status_code == 200
 
-    second = await client.post(f"/stands/session/{login_token}")
+    second = await client.post("/stands/redeem-code", json={"code": login_code})
     assert second.status_code == 404
+
+
+async def test_wrong_code_is_rejected(client, api_auth):
+    await _register(client, api_auth)
+    resp = await client.post("/stands/redeem-code", json={"code": "FALSCH12"})
+    assert resp.status_code == 404
+
+
+async def test_code_redemption_is_case_and_whitespace_insensitive(client, api_auth, captured_emails):
+    await _register(client, api_auth)
+    login_code = captured_emails[0]["login_code"]
+
+    resp = await client.post(
+        "/stands/redeem-code", json={"code": f" {login_code.lower()} "}
+    )
+    assert resp.status_code == 200
 
 
 async def test_first_login_approves_the_stand(client, api_auth, captured_emails):
     stand = await _register(client, api_auth)
-    login_token = captured_emails[0]["login_token"]
-    await _login(client, login_token)
+    login_code = captured_emails[0]["login_code"]
+    await _login(client, login_code)
 
     listed = await client.get("/stands")
     assert any(s["id"] == stand["id"] for s in listed.json())
 
 
-async def test_expired_login_token_is_rejected(client, api_auth, captured_emails, pool):
+async def test_expired_login_code_is_rejected(client, api_auth, captured_emails, pool):
     await _register(client, api_auth)
-    login_token = captured_emails[0]["login_token"]
+    login_code = captured_emails[0]["login_code"]
 
     await pool.execute("UPDATE stands SET login_token_expires_at = now() - interval '1 hour'")
 
-    resp = await client.post(f"/stands/session/{login_token}")
+    resp = await client.post("/stands/redeem-code", json={"code": login_code})
     assert resp.status_code == 404
 
 
@@ -98,11 +87,11 @@ async def test_wrong_session_token_is_rejected(client, api_auth):
 
 
 async def test_session_token_survives_multiple_requests(client, api_auth, captured_emails):
-    """Anders als der Login-Token ist das Session-Token innerhalb seiner
+    """Anders als der Login-Code ist das Session-Token innerhalb seiner
     Gültigkeit mehrfach verwendbar (eine Bearbeitungssitzung besteht meist
     aus mehreren Requests: laden, ändern, evtl. exportieren)."""
     await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     first = await client.get(f"/stands/by-session/{session_token}")
     second = await client.get(f"/stands/by-session/{session_token}")
@@ -112,7 +101,7 @@ async def test_session_token_survives_multiple_requests(client, api_auth, captur
 
 async def test_expired_session_token_is_rejected(client, api_auth, captured_emails, pool):
     await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     await pool.execute("UPDATE stands SET session_token_expires_at = now() - interval '1 hour'")
 
@@ -122,7 +111,7 @@ async def test_expired_session_token_is_rejected(client, api_auth, captured_emai
 
 async def test_owner_can_update_and_delete_own_stand(client, api_auth, captured_emails):
     await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-15 Uhr"})
     assert patched.status_code == 200
@@ -137,7 +126,7 @@ async def test_owner_can_update_and_delete_own_stand(client, api_auth, captured_
 
 async def test_gdpr_export_includes_email_but_owner_view_does_not(client, api_auth, captured_emails):
     await _register(client, api_auth, email="auskunft@example.com")
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     owner_view = await client.get(f"/stands/by-session/{session_token}")
     assert "email" not in owner_view.json()
@@ -167,7 +156,7 @@ async def test_one_email_one_stand(client, api_auth):
     assert second.status_code == 409
 
 
-async def test_request_login_sends_link_for_existing_email(client, api_auth, captured_emails):
+async def test_request_login_sends_code_for_existing_email(client, api_auth, captured_emails):
     await _register(client, api_auth, email="wiederkehrer@example.com")
     captured_emails.clear()
 
@@ -178,7 +167,7 @@ async def test_request_login_sends_link_for_existing_email(client, api_auth, cap
     assert len(captured_emails) == 1
     assert captured_emails[0]["first_time"] is False
 
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
     resp2 = await client.get(f"/stands/by-session/{session_token}")
     assert resp2.status_code == 200
 
@@ -204,7 +193,7 @@ async def test_nickname_suggestions_returns_three_distinct_valid_names(client, a
     from app.nicknames import is_valid_nickname
 
     await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.post(f"/stands/by-session/{session_token}/nickname-suggestions")
     assert resp.status_code == 200
@@ -216,7 +205,7 @@ async def test_nickname_suggestions_returns_three_distinct_valid_names(client, a
 
 async def test_owner_can_change_nickname_to_a_valid_suggestion(client, api_auth, captured_emails):
     await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     suggestions = (
         await client.post(f"/stands/by-session/{session_token}/nickname-suggestions")
@@ -230,7 +219,7 @@ async def test_owner_can_change_nickname_to_a_valid_suggestion(client, api_auth,
 
 async def test_nickname_change_rejects_freetext(client, api_auth, captured_emails):
     await _register(client, api_auth)
-    session_token = await _login(client, captured_emails[0]["login_token"])
+    session_token = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
         f"/stands/by-session/{session_token}", json={"nickname": "Max Mustermann"}
@@ -240,12 +229,12 @@ async def test_nickname_change_rejects_freetext(client, api_auth, captured_email
 
 async def test_nickname_change_rejects_collision_with_other_stand(client, api_auth, captured_emails):
     await _register(client, api_auth, email="erster@example.com")
-    first_session = await _login(client, captured_emails[0]["login_token"])
+    first_session = await _login(client, captured_emails[0]["login_code"])
     first_nickname = (await client.get(f"/stands/by-session/{first_session}")).json()["nickname"]
     captured_emails.clear()
 
     await _register(client, api_auth, email="zweiter@example.com")
-    second_session = await _login(client, captured_emails[0]["login_token"])
+    second_session = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
         f"/stands/by-session/{second_session}", json={"nickname": first_nickname}
@@ -262,3 +251,12 @@ async def test_request_login_is_rate_limited(client, api_auth):
 
     sixth = await client.post("/stands/request-login", json={"email": "spam@example.com"}, auth=api_auth)
     assert sixth.status_code == 429
+
+
+async def test_redeem_code_is_rate_limited(client, api_auth):
+    for _ in range(10):
+        resp = await client.post("/stands/redeem-code", json={"code": "WRONGCOD"})
+        assert resp.status_code == 404
+
+    eleventh = await client.post("/stands/redeem-code", json={"code": "WRONGCOD"})
+    assert eleventh.status_code == 429

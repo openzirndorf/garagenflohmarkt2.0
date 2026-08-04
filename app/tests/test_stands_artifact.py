@@ -84,12 +84,10 @@ async def test_owner_delete_triggers_artifact_regeneration(client, api_auth, cap
         json={"adresse": "Musterstraße 1, Zirndorf", "email": "trigger2@example.com", "kategorien": []},
         auth=api_auth,
     )
-    login_token = captured_emails[0]["login_token"]
+    login_code = captured_emails[0]["login_code"]
 
-    login_resp = await client.post(f"/stands/session/{login_token}")
-    marker = "#mein-stand/session/"
-    start = login_resp.text.index(marker) + len(marker)
-    session_token = login_resp.text[start : login_resp.text.index('"', start)]
+    login_resp = await client.post("/stands/redeem-code", json={"code": login_code})
+    session_token = login_resp.json()["session_token"]
     calls.clear()  # der Login selbst hat schon einmal ausgelöst (PENDING→APPROVED)
 
     await client.delete(f"/stands/by-session/{session_token}")
