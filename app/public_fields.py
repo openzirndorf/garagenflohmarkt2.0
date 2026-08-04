@@ -6,8 +6,8 @@ dieselben Spalten verwenden - nur diese Felder dürfen die öffentliche
 Karte/Liste je erreichen. Kein Klarname, keine E-Mail, kein Token.
 """
 
-PUBLIC_LIST_COLUMNS = "id, nickname, adresse, lat, lng, beschreibung, kategorien, uhrzeit, created_at"
-PUBLIC_GEOJSON_COLUMNS = "id, nickname, adresse, lat, lng, beschreibung, kategorien, uhrzeit"
+PUBLIC_LIST_COLUMNS = "id, nickname, adresse, lat, lng, beschreibung, kategorien, created_at"
+PUBLIC_GEOJSON_COLUMNS = "id, nickname, adresse, lat, lng, beschreibung, kategorien"
 
 
 def rows_to_geojson(rows) -> dict:
@@ -26,7 +26,6 @@ def rows_to_geojson(rows) -> dict:
                     "adresse": r["adresse"],
                     "beschreibung": r["beschreibung"],
                     "kategorien": list(r["kategorien"] or []),
-                    "uhrzeit": r["uhrzeit"],
                 },
             }
             for r in rows

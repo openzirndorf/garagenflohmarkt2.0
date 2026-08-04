@@ -15,6 +15,7 @@ const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   APPROVED: "Freigegeben",
   EDITED: "Bearbeitet",
   DELETED: "Gelöscht",
+  REPLIED: "Antwort auf Sperre",
 };
 
 const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
@@ -22,6 +23,7 @@ const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
   APPROVED: "bg-green-100 text-green-700",
   EDITED: "bg-blue-100 text-blue-700",
   DELETED: "bg-red-100 text-red-700",
+  REPLIED: "bg-amber-100 text-amber-700",
 };
 
 export function AdminPanel() {
@@ -38,7 +40,6 @@ export function AdminPanel() {
     adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
-    uhrzeit: "",
     content_locked: false,
     content_lock_message: "",
   });
@@ -96,7 +97,6 @@ export function AdminPanel() {
       adresse: s.adresse,
       beschreibung: s.beschreibung ?? "",
       kategorien: s.kategorien ?? [],
-      uhrzeit: s.uhrzeit ?? "",
       content_locked: s.content_locked,
       content_lock_message: s.content_lock_message ?? "",
     });
@@ -358,7 +358,6 @@ export function AdminPanel() {
                             )}
                           </p>
                           <p className="text-sm text-gray-600">{s.adresse}</p>
-                          {s.uhrzeit && <p className="text-xs text-gray-500">🕐 {s.uhrzeit}</p>}
                           {s.kategorien && s.kategorien.length > 0 && (
                             <div className="mt-1 flex flex-wrap gap-1">
                               {s.kategorien.map((k) => (
@@ -449,9 +448,6 @@ export function AdminPanel() {
                             </span>
                           )}
                           <span className="ml-2 text-gray-500">{s.adresse}</span>
-                          {s.uhrzeit && (
-                            <span className="ml-2 text-xs text-gray-400">🕐 {s.uhrzeit}</span>
-                          )}
                           {s.kategorien && s.kategorien.length > 0 && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
                               {s.kategorien.map((k) => (
@@ -499,7 +495,6 @@ interface EditFormState {
   adresse: string;
   beschreibung: string;
   kategorien: string[];
-  uhrzeit: string;
   content_locked: boolean;
   content_lock_message: string;
 }
@@ -516,18 +511,6 @@ interface EditFormProps {
 function EditForm({ form, setForm, onToggleKat, onSave, onCancel, saving }: EditFormProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="edit-admin-uhrzeit" className="text-xs font-medium text-gray-600">
-          Uhrzeit
-        </label>
-        <input
-          id="edit-admin-uhrzeit"
-          className="rounded border px-2 py-1.5 text-sm"
-          placeholder="z.B. 9:00 – 14:00 Uhr"
-          value={form.uhrzeit}
-          onChange={(e) => setForm((f) => ({ ...f, uhrzeit: e.target.value }))}
-        />
-      </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="edit-admin-adresse" className="text-xs font-medium text-gray-600">
           Adresse

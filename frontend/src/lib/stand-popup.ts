@@ -5,7 +5,6 @@ export interface StandPopupProperties {
   nickname: string;
   adresse: string;
   beschreibung: string | null;
-  uhrzeit: string | null;
 }
 
 export interface FavoriteControls {
@@ -30,7 +29,7 @@ export function buildStandPopupContent(
   coords: { lat: number; lng: number } | null = null,
   favorite: FavoriteControls | null = null,
 ): HTMLElement {
-  const { id, nickname, adresse, beschreibung, uhrzeit } = properties;
+  const { id, nickname, adresse, beschreibung } = properties;
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
@@ -49,9 +48,11 @@ export function buildStandPopupContent(
       border: "none",
       background: "transparent",
       cursor: "pointer",
-      color: "#fbbf24",
-      fontSize: "1rem",
+      color: "#f59e0b",
+      fontSize: "1.3rem",
+      lineHeight: "1",
       verticalAlign: "middle",
+      padding: "0",
     });
     const updateStar = () => {
       starBtn.textContent = favorite.isFavorite(id) ? "★" : "☆";
@@ -69,7 +70,6 @@ export function buildStandPopupContent(
     popupNode.appendChild(document.createTextNode(text));
   };
   addLine(adresse);
-  if (uhrzeit) addLine(`🕐 ${uhrzeit}`);
   if (beschreibung) addLine(beschreibung);
 
   if (coords) {

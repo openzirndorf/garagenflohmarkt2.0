@@ -8,7 +8,6 @@ describe("buildStandPopupContent", () => {
       nickname: "Fröhlicher Dachs",
       adresse: "Musterstraße 1",
       beschreibung: "<img src=x onerror=alert(1)>",
-      uhrzeit: null,
     });
 
     // Kein <img>-Element darf im DOM landen - der Payload muss als reiner
@@ -23,31 +22,28 @@ describe("buildStandPopupContent", () => {
       nickname: "<script>alert(1)</script>",
       adresse: "Musterstraße 1",
       beschreibung: null,
-      uhrzeit: null,
     });
 
     expect(node.querySelector("script")).toBeNull();
     expect(node.textContent).toContain("<script>alert(1)</script>");
   });
 
-  it("includes uhrzeit only when present", () => {
-    const withTime = buildStandPopupContent({
+  it("includes beschreibung only when present", () => {
+    const withDescription = buildStandPopupContent({
       id: 1,
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
-      beschreibung: null,
-      uhrzeit: "9-14 Uhr",
+      beschreibung: "Alte Bücher und Spielzeug",
     });
-    expect(withTime.textContent).toContain("9-14 Uhr");
+    expect(withDescription.textContent).toContain("Alte Bücher und Spielzeug");
 
-    const withoutTime = buildStandPopupContent({
+    const withoutDescription = buildStandPopupContent({
       id: 1,
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
-      uhrzeit: null,
     });
-    expect(withoutTime.textContent).not.toContain("Uhr");
+    expect(withoutDescription.textContent).not.toContain("Alte Bücher");
   });
 
   it("includes a navigation link only when coordinates are given", () => {
@@ -57,7 +53,6 @@ describe("buildStandPopupContent", () => {
         nickname: "Flotte Eule",
         adresse: "Teststraße 2",
         beschreibung: null,
-        uhrzeit: null,
       },
       { lat: 49.4, lng: 10.9 },
     );
@@ -70,7 +65,6 @@ describe("buildStandPopupContent", () => {
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
-      uhrzeit: null,
     });
     expect(withoutCoords.querySelector("a")).toBeNull();
   });
@@ -83,7 +77,6 @@ describe("buildStandPopupContent", () => {
         nickname: "Flotte Eule",
         adresse: "Teststraße 2",
         beschreibung: null,
-        uhrzeit: null,
       },
       null,
       {
@@ -106,7 +99,6 @@ describe("buildStandPopupContent", () => {
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
-      uhrzeit: null,
     });
     expect(withoutFavorite.querySelector("button")).toBeNull();
   });

@@ -6,6 +6,7 @@ import {
   fetchMyStand,
   redeemCode,
   requestLogin,
+  sendLockReply,
   suggestNicknames,
   updateStand,
 } from "../api";
@@ -32,7 +33,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
-    uhrzeit: "",
   });
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -58,6 +58,12 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [nicknameLoading, setNicknameLoading] = useState(false);
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
+
+  // Antwort auf eine Inhalts-Sperre - einzige Möglichkeit, den Admin von
+  // hier aus zu erreichen (siehe app/routes/stands.py POST .../lock-reply).
+  const [lockReplyInput, setLockReplyInput] = useState("");
+  const [lockReplyStatus, setLockReplyStatus] = useState<"idle" | "loading" | "sent">("idle");
+  const [lockReplyMessage, setLockReplyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setSessionToken(sessionStorage.getItem(SESSION_TOKEN_KEY));
@@ -143,6 +149,19 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
       setNicknameError(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
     } finally {
       setNicknameSaving(false);
+    }
+  };
+
+  const handleLockReply = async () => {
+    if (!sessionToken || !lockReplyInput.trim()) return;
+    setLockReplyStatus("loading");
+    try {
+      const res = await sendLockReply(sessionToken, lockReplyInput.trim());
+      setLockReplyMessage(res.message);
+      setLockReplyStatus("sent");
+    } catch (err) {
+      setLockReplyMessage(err instanceof Error ? err.message : "Fehler");
+      setLockReplyStatus("idle");
     }
   };
 
@@ -242,7 +261,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
       adresse: stand.adresse,
       beschreibung: stand.beschreibung ?? "",
       kategorien: stand.kategorien ?? [],
-      uhrzeit: stand.uhrzeit ?? "",
     });
     setEditing(true);
     setError(null);
@@ -274,11 +292,9 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     setError(null);
     try {
       // Bei Sperre adresse/beschreibung gar nicht erst mitschicken - sonst
-      // würde selbst eine reine Uhrzeit-Änderung am Server abgelehnt, weil
-      // die (unveränderten) gesperrten Felder im Patch-Body stehen.
-      const payload = stand.content_locked
-        ? { kategorien: editForm.kategorien, uhrzeit: editForm.uhrzeit }
-        : editForm;
+      // würde selbst eine reine Kategorien-Änderung am Server abgelehnt,
+      // weil die (unveränderten) gesperrten Felder im Patch-Body stehen.
+      const payload = stand.content_locked ? { kategorien: editForm.kategorien } : editForm;
       const updated = await updateStand(sessionToken, payload);
       setStand(updated);
       setEditing(false);
@@ -322,14 +338,42 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
         Dein angemeldeter Stand
       </p>
 
+      {stand.content_locked && (
+        <div className="mb-3 flex flex-col gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <p>
+            Adresse und Beschreibung wurden von einem Admin gesperrt
+            {stand.content_lock_message ? `: ${stand.content_lock_message}` : "."}
+          </p>
+          {lockReplyStatus === "sent" ? (
+            <p className="text-green-700">{lockReplyMessage}</p>
+          ) : (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="lock-reply" className="font-medium">
+                Antwort an das Team schicken
+              </label>
+              <textarea
+                id="lock-reply"
+                className="min-h-[50px] resize-y rounded-md border border-amber-300 bg-white px-2 py-1 text-xs text-gray-800 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="z.B. wenn du die Sperre für ein Missverständnis hältst…"
+                value={lockReplyInput}
+                onChange={(e) => setLockReplyInput(e.target.value)}
+                disabled={lockReplyStatus === "loading"}
+              />
+              <button
+                type="button"
+                onClick={handleLockReply}
+                disabled={lockReplyStatus === "loading" || !lockReplyInput.trim()}
+                className="self-start rounded-md bg-amber-600 px-3 py-1 font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+              >
+                {lockReplyStatus === "loading" ? "…" : "Nachricht senden"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {editing ? (
         <div className="flex flex-col gap-3">
-          {stand.content_locked && (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Adresse und Beschreibung wurden von einem Admin gesperrt
-              {stand.content_lock_message ? `: ${stand.content_lock_message}` : "."}
-            </p>
-          )}
           <div className="flex flex-col gap-1">
             <label htmlFor="edit-adresse" className="text-xs font-medium text-gray-600">
               Adresse
@@ -340,18 +384,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
               className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
               value={editForm.adresse}
               onChange={(e) => setEditForm((f) => ({ ...f, adresse: e.target.value }))}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="edit-uhrzeit" className="text-xs font-medium text-gray-600">
-              Uhrzeit
-            </label>
-            <input
-              id="edit-uhrzeit"
-              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="z.B. 9:00 – 14:00 Uhr"
-              value={editForm.uhrzeit}
-              onChange={(e) => setEditForm((f) => ({ ...f, uhrzeit: e.target.value }))}
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -474,7 +506,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
               </div>
             )}
             <p className="text-sm text-gray-500">{stand.adresse}</p>
-            {stand.uhrzeit && <p className="mt-0.5 text-xs text-gray-500">🕐 {stand.uhrzeit}</p>}
             {stand.kategorien && stand.kategorien.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
                 {stand.kategorien.map((k) => (

@@ -113,9 +113,11 @@ async def test_owner_can_update_and_delete_own_stand(client, api_auth, captured_
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    patched = await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-15 Uhr"})
+    patched = await client.patch(
+        f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]}
+    )
     assert patched.status_code == 200
-    assert patched.json()["uhrzeit"] == "10-15 Uhr"
+    assert patched.json()["kategorien"] == ["Bücher"]
 
     deleted = await client.delete(f"/stands/by-session/{session_token}")
     assert deleted.status_code == 204

@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr
 from app.audit import log_action
 from app.auth import require_admin_auth, require_api_auth
 from app.database import get_pool
-from app.email import send_login_email, smtp_configured, smtp_debug_info
+from app.email import send_lock_reply_email, send_login_email, smtp_configured, smtp_debug_info
 from app.geocode import geocode
 from app.jobs.stands_artifact import regenerate_stands_artifact
 from app.moderation import contains_blocked_content
@@ -32,18 +32,19 @@ _RATE_WINDOW_SECONDS = 3600  # 1 Stunde
 _RATE_MAX = 3  # max. Einreichungen pro IP pro Zeitfenster
 _LOGIN_REQUEST_RATE_MAX = 5  # max. "Zugang anfordern"-Versuche pro IP pro Zeitfenster
 _REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
+_LOCK_REPLY_RATE_MAX = 5  # max. Sperr-Antworten pro IP pro Zeitfenster
 
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
-    "id, nickname, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, created_at, "
+    "id, nickname, adresse, lat, lng, beschreibung, kategorien, status, created_at, "
     "content_locked, content_lock_message"
 )
 
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
 # Login-Links, aber nie Token-Hashes oder Klartext-Tokens.
 _ADMIN_COLUMNS = (
-    "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, uhrzeit, "
+    "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, "
     "status, created_at, login_token_expires_at, session_token_expires_at, "
     "content_locked, content_lock_message"
 )
@@ -65,7 +66,6 @@ class StandIn(BaseModel):
     beschreibung: str | None = None
     email: EmailStr  # Pflichtfeld - einziges Login-Merkmal, ein Stand pro E-Mail
     kategorien: list[str] = []
-    uhrzeit: str | None = None
     # Honeypot: muss leer bleiben; Bots füllen versteckte Felder aus
     website: str | None = None
 
@@ -74,7 +74,6 @@ class StandPatch(BaseModel):
     adresse: str | None = None
     beschreibung: str | None = None
     kategorien: list[str] | None = None
-    uhrzeit: str | None = None
     # Nur einer der vom Server vorgeschlagenen Namen (siehe
     # POST .../nickname-suggestions), nie Freitext - is_valid_nickname()
     # unten erzwingt das serverseitig, unabhängig vom Frontend.
@@ -141,12 +140,12 @@ async def create_stand(body: StandIn, request: Request):
 
     try:
         row = await pool.fetchrow(
-            "INSERT INTO stands (nickname, adresse, lat, lng, beschreibung, email, kategorien, uhrzeit, "
+            "INSERT INTO stands (nickname, adresse, lat, lng, beschreibung, email, kategorien, "
             "login_token_hash, login_token_expires_at) "
-            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) "
+            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) "
             f"RETURNING {_OWNER_COLUMNS}",
             nickname, body.adresse, lat, lng, body.beschreibung, body.email,
-            body.kategorien, body.uhrzeit, login_token_hash, login_token_expires_at,
+            body.kategorien, login_token_hash, login_token_expires_at,
         )
     except asyncpg.UniqueViolationError as exc:
         if "email" in str(exc):
@@ -314,8 +313,8 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     if "adresse" in updates or "beschreibung" in updates:
         _reject_if_blocked_content(updates.get("adresse"), updates.get("beschreibung"))
         # Separate Prüfung statt Teil der UPDATE-Klausel, weil eine Sperre
-        # überhaupt nur diese beiden Felder betrifft - Standname/Kategorien/
-        # Uhrzeit bleiben trotz Sperre änderbar.
+        # überhaupt nur diese beiden Felder betrifft - Standname/Kategorien
+        # bleiben trotz Sperre änderbar.
         lock_row = await pool.fetchrow(
             "SELECT content_locked, content_lock_message FROM stands "
             "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
@@ -357,6 +356,48 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     if row["status"] == "APPROVED":
         background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)
+
+
+class LockReplyIn(BaseModel):
+    message: str
+
+
+# POST /stands/by-session/{session_token}/lock-reply - einzige Möglichkeit
+# für einen gesperrten Inhaber, den Admin zu erreichen (z.B. um die Sperre
+# zu erklären oder ihre Aufhebung zu bitten). Wird bewusst nicht in der DB
+# gespeichert (auch nicht im Audit-Log, das ohnehin nie Inhalte speichert -
+# siehe app/audit.py), nur per Mail an den Admin weitergeleitet.
+@router.post("/by-session/{session_token}/lock-reply")
+async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request):
+    if not body.message.strip():
+        raise HTTPException(status_code=400, detail="Nachricht darf nicht leer sein")
+
+    pool = await get_pool()
+
+    client_ip = request.client.host if request.client else "unknown"
+    allowed = await check_rate_limit(
+        pool, f"lock-reply:{client_ip}", _RATE_WINDOW_SECONDS, _LOCK_REPLY_RATE_MAX
+    )
+    if not allowed:
+        raise HTTPException(status_code=429, detail="Zu viele Nachrichten. Bitte später erneut versuchen.")
+
+    row = await pool.fetchrow(
+        "SELECT id, nickname, content_locked FROM stands "
+        "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
+        hash_token(session_token),
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
+    if not row["content_locked"]:
+        raise HTTPException(status_code=400, detail="Dein Stand ist nicht gesperrt")
+
+    try:
+        await send_lock_reply_email(row["id"], row["nickname"], body.message.strip())
+    except Exception as exc:  # noqa: BLE001 - Mailversand darf die Anfrage nie fehlschlagen lassen
+        logger.error("Sperr-Antwort-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
+
+    await log_action(pool, row["id"], "REPLIED", "owner")
+    return {"message": "Deine Nachricht wurde an das Team geschickt."}
 
 
 # POST /stands/by-session/{session_token}/nickname-suggestions - würfelt

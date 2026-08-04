@@ -7,7 +7,7 @@
 CREATE TABLE admin_audit_log (
   id         BIGSERIAL PRIMARY KEY,
   stand_id   INT NOT NULL,
-  action     TEXT NOT NULL,  -- CREATED | APPROVED | EDITED | DELETED
+  action     TEXT NOT NULL,  -- CREATED | APPROVED | EDITED | DELETED | REPLIED
   actor      TEXT NOT NULL,  -- owner | admin
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

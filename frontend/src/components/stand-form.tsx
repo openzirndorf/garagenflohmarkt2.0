@@ -35,7 +35,6 @@ const EMPTY: StandFormData = {
   beschreibung: "",
   email: "",
   kategorien: [],
-  uhrzeit: "",
   website: "", // Honeypot
 };
 
@@ -145,20 +144,6 @@ export function StandForm({ onSuccess }: Props) {
               placeholder="z.B. Musterstraße 1, Zirndorf"
               value={form.adresse}
               onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
-              disabled={status === "loading"}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="uhrzeit" className="text-sm font-medium">
-              Uhrzeit (optional)
-            </label>
-            <input
-              id="uhrzeit"
-              className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              placeholder="z.B. 9:00 – 14:00 Uhr"
-              value={form.uhrzeit}
-              onChange={(e) => setForm((f) => ({ ...f, uhrzeit: e.target.value }))}
               disabled={status === "loading"}
             />
           </div>

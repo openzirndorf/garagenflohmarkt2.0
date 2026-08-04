@@ -6,10 +6,10 @@ diesen Test fehlschlagen, auch wenn niemand explizit an "email" oder
 """
 
 PUBLIC_LIST_FIELDS = {
-    "id", "nickname", "adresse", "lat", "lng", "beschreibung", "kategorien", "uhrzeit", "created_at",
+    "id", "nickname", "adresse", "lat", "lng", "beschreibung", "kategorien", "created_at",
 }
 PUBLIC_GEOJSON_PROPERTY_FIELDS = {
-    "id", "nickname", "adresse", "beschreibung", "kategorien", "uhrzeit",
+    "id", "nickname", "adresse", "beschreibung", "kategorien",
 }
 
 
@@ -21,7 +21,6 @@ async def _create_and_approve(client, admin_headers, api_auth, email="besucher@e
             "beschreibung": "Alte Bücher und Spielzeug",
             "email": email,
             "kategorien": ["Bücher"],
-            "uhrzeit": "9-14 Uhr",
         },
         auth=api_auth,
     )

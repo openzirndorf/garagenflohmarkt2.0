@@ -29,7 +29,7 @@ async def test_no_pii_in_application_logs_across_full_cycle(
     session_token = login_resp.json()["session_token"]
 
     await client.get(f"/stands/by-session/{session_token}")
-    await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-12 Uhr"})
+    await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]})
     await client.get("/stands/admin", headers=admin_headers)
     await client.delete(f"/stands/by-session/{session_token}")
 

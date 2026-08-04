@@ -40,7 +40,7 @@ async def test_owner_edit_of_other_fields_unaffected_by_blocklist(client, api_au
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    resp = await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "9-13 Uhr"})
+    resp = await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]})
     assert resp.status_code == 200
 
 
@@ -79,7 +79,7 @@ async def test_content_lock_does_not_block_unrelated_field_edits(
         f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
     )
 
-    resp = await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-14 Uhr"})
+    resp = await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Möbel"]})
     assert resp.status_code == 200
 
 
@@ -105,3 +105,70 @@ async def test_owner_view_includes_lock_state(client, api_auth, admin_headers, c
     owner_view = await client.get(f"/stands/by-session/{session_token}")
     assert owner_view.json()["content_locked"] is True
     assert owner_view.json()["content_lock_message"] == "Testnachricht"
+
+
+async def test_lock_reply_requires_the_stand_to_be_locked(client, api_auth, captured_emails):
+    await _register(client, api_auth)
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    resp = await client.post(
+        f"/stands/by-session/{session_token}/lock-reply", json={"message": "Warum gesperrt?"}
+    )
+    assert resp.status_code == 400
+
+
+async def test_lock_reply_succeeds_when_locked_and_is_audit_logged(
+    client, api_auth, admin_headers, captured_emails, pool
+):
+    stand = (await _register(client, api_auth)).json()
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    await client.patch(
+        f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
+    )
+
+    resp = await client.post(
+        f"/stands/by-session/{session_token}/lock-reply",
+        json={"message": "Bitte um Überprüfung, das war ein Missverständnis."},
+    )
+    assert resp.status_code == 200
+
+    entries = await pool.fetch(
+        "SELECT action, actor FROM admin_audit_log WHERE stand_id = $1", stand["id"]
+    )
+    assert any(r["action"] == "REPLIED" and r["actor"] == "owner" for r in entries)
+
+
+async def test_lock_reply_rejects_empty_message(client, api_auth, admin_headers, captured_emails):
+    stand = (await _register(client, api_auth)).json()
+    session_token = await _login(client, captured_emails[0]["login_code"])
+    await client.patch(
+        f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
+    )
+
+    resp = await client.post(
+        f"/stands/by-session/{session_token}/lock-reply", json={"message": "   "}
+    )
+    assert resp.status_code == 400
+
+
+async def test_lock_reply_never_stores_message_content(
+    client, api_auth, admin_headers, captured_emails, pool
+):
+    stand = (await _register(client, api_auth)).json()
+    session_token = await _login(client, captured_emails[0]["login_code"])
+    await client.patch(
+        f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
+    )
+
+    secret_message = "darf-nirgendwo-gespeichert-werden"
+    await client.post(
+        f"/stands/by-session/{session_token}/lock-reply", json={"message": secret_message}
+    )
+
+    row = await pool.fetchrow(
+        "SELECT action, actor, stand_id FROM admin_audit_log WHERE stand_id = $1 "
+        "AND action = 'REPLIED'",
+        stand["id"],
+    )
+    assert secret_message not in str(dict(row))

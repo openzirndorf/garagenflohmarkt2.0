@@ -50,7 +50,7 @@ async def test_owner_edit_and_delete_are_logged(client, api_auth, captured_email
     stand = await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    await client.patch(f"/stands/by-session/{session_token}", json={"uhrzeit": "10-15 Uhr"})
+    await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]})
     await client.delete(f"/stands/by-session/{session_token}")
 
     entries = await _log_entries(pool, stand["id"])
@@ -63,7 +63,7 @@ async def test_admin_actions_are_logged_with_admin_actor(client, api_auth, admin
 
     await client.post(f"/stands/{stand['id']}/approve", headers=admin_headers)
     await client.patch(
-        f"/stands/{stand['id']}", json={"uhrzeit": "9-14 Uhr"}, headers=admin_headers
+        f"/stands/{stand['id']}", json={"kategorien": ["Bücher"]}, headers=admin_headers
     )
     await client.delete(f"/stands/{stand['id']}", headers=admin_headers)
 

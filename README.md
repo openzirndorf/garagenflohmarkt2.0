@@ -389,6 +389,7 @@ gehasht gespeichert.
 | `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
 | `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (inkl. Standname wechseln) |
 | `POST` | `/stands/by-session/{session_token}/nickname-suggestions` | – | 3 alternative Standnamen würfeln |
+| `POST` | `/stands/by-session/{session_token}/lock-reply` | – | Antwort auf eine Inhalts-Sperre an den Admin schicken (nur bei `content_locked`) |
 | `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand vollständig löschen |
 | `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
 | `GET` | `/stands/admin/audit-log` | Bearer | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel, kein Personenbezug) |

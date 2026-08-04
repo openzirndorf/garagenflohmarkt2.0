@@ -43,11 +43,11 @@ export function Datenschutz() {
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">2. Welche Daten wir erheben</h2>
           <p>
-            Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien,
-            eine optionale Uhrzeit sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein
-            Namensfeld - ein echter Name kann technisch gar nicht erst ins System gelangen.
-            Stattdessen vergeben wir automatisch eine Kennung (z.&nbsp;B. „Gscheide Kellerkönig"),
-            unter der du auf der Karte erscheinst.
+            Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien
+            sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein Namensfeld - ein echter
+            Name kann technisch gar nicht erst ins System gelangen. Stattdessen vergeben wir
+            automatisch eine Kennung (z.&nbsp;B. „Gscheide Kellerkönig"), unter der du auf der Karte
+            erscheinst.
           </p>
         </section>
 
@@ -57,9 +57,9 @@ export function Datenschutz() {
           </h2>
           <p>
             Nur folgende Angaben sind öffentlich auf der Karte und in der Liste sichtbar: deine
-            automatisch vergebene Kennung, Straße und Hausnummer, die angegebene Öffnungszeit und
-            die Beschreibung. Deine E-Mail-Adresse und dein echter Name (den wir ohnehin nicht
-            erfassen) erreichen die öffentliche Ausgabe unter keinen Umständen.
+            automatisch vergebene Kennung, Straße und Hausnummer sowie die Beschreibung. Deine
+            E-Mail-Adresse und dein echter Name (den wir ohnehin nicht erfassen) erreichen die
+            öffentliche Ausgabe unter keinen Umständen.
           </p>
         </section>
 
@@ -83,8 +83,12 @@ export function Datenschutz() {
           <p>
             Die Karte geht am 7. Oktober 2026 offline; sämtliche Anmeldedaten (Datenbank, generierte
             Kartendaten, Backups) werden automatisiert zu diesem Termin gelöscht - durch einen
-            geplanten Job, nicht durch eine manuelle Erinnerung. Du kannst deinen Stand jederzeit
-            selbst vorher über deinen Zugangscode vollständig löschen.
+            geplanten Job, nicht durch eine manuelle Erinnerung. Du kannst deinen Stand auch selbst
+            jederzeit vorher vollständig löschen: unter{" "}
+            <a href="#mein-stand" className="underline">
+              „Mein Stand"
+            </a>{" "}
+            mit deinem Zugangscode einloggen und „Stand und Daten löschen" wählen.
           </p>
         </section>
 

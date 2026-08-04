@@ -84,7 +84,7 @@ export async function approveStand(id: number, token: string): Promise<void> {
 export interface AuditLogEntry {
   id: number;
   stand_id: number;
-  action: "CREATED" | "APPROVED" | "EDITED" | "DELETED";
+  action: "CREATED" | "APPROVED" | "EDITED" | "DELETED" | "REPLIED";
   actor: "owner" | "admin";
   created_at: string;
 }
@@ -179,7 +179,6 @@ interface StandPatchData {
   adresse?: string;
   beschreibung?: string;
   kategorien?: string[];
-  uhrzeit?: string;
   nickname?: string;
 }
 
@@ -197,6 +196,24 @@ export async function suggestNicknames(sessionToken: string): Promise<string[]> 
   if (!res.ok) throw new Error("Vorschläge konnten nicht geladen werden");
   const data = await res.json();
   return data.suggestions;
+}
+
+// Einzige Möglichkeit für einen gesperrten Standinhaber, den Admin zu
+// erreichen - wird nur per Mail weitergeleitet, nie gespeichert.
+export async function sendLockReply(
+  sessionToken: string,
+  message: string,
+): Promise<{ message: string }> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}/lock-reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail ?? "Nachricht konnte nicht gesendet werden");
+  }
+  return res.json();
 }
 
 export async function updateStandAdmin(

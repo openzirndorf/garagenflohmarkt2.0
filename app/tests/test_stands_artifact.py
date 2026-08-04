@@ -44,7 +44,7 @@ async def test_artifact_contains_only_approved_stands_and_public_fields(
     assert len(captured["list"]) == 1
     assert captured["list"][0]["nickname"] == stand["nickname"]
     assert set(captured["list"][0].keys()) == {
-        "id", "nickname", "adresse", "lat", "lng", "beschreibung", "kategorien", "uhrzeit", "created_at",
+        "id", "nickname", "adresse", "lat", "lng", "beschreibung", "kategorien", "created_at",
     }
 
     assert len(captured["geojson"]["features"]) == 1

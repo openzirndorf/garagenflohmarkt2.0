@@ -1,16 +1,19 @@
 """E-Mail-Versand für Bestätigungsmails via Scaleway Transactional Email (SMTP).
 
 Umgebungsvariablen (werden per Terraform gesetzt):
-  SMTP_HOST     – smtp.tem.scaleway.com
-  SMTP_PORT     – 465
-  SMTP_USER     – Scaleway Project ID
-  SMTP_PASSWORD – Scaleway Secret Key
-  SMTP_FROM     – noreply@automail.openzirndorf.de
-  BACKEND_URL   – öffentliche Backend-URL
-  FRONTEND_URL  – öffentliche Frontend-URL
+  SMTP_HOST          – smtp.tem.scaleway.com
+  SMTP_PORT          – 465
+  SMTP_USER          – Scaleway Project ID
+  SMTP_PASSWORD      – Scaleway Secret Key
+  SMTP_FROM          – noreply@automail.openzirndorf.de
+  BACKEND_URL        – öffentliche Backend-URL
+  FRONTEND_URL       – öffentliche Frontend-URL
+  ADMIN_CONTACT_EMAIL – Ziel für Antworten auf eine Inhalts-Sperre (Default:
+                         derselbe Kontakt wie in Datenschutz/Impressum)
 """
 
 import asyncio
+import html
 import os
 import smtplib
 from email.mime.multipart import MIMEMultipart
@@ -21,6 +24,7 @@ FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
     "https://openzirndorf.github.io/garagenflohmarkt2.0",
 ).rstrip("/")
+ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "fabian@openzirndorf.de")
 
 
 def smtp_configured() -> bool:
@@ -152,3 +156,37 @@ Das Garagenflohmarkt-Team
 """
 
     await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
+
+
+async def send_lock_reply_email(stand_id: int, nickname: str, message: str) -> None:
+    """Leitet die Antwort eines gesperrten Standinhabers an den Admin-Kontakt
+    weiter. Bewusst ohne die E-Mail-Adresse des Inhabers im Mailtext - der
+    Admin kann sie bei Bedarf über das Admin-Panel (Stand-ID) nachschlagen,
+    statt sie hier unnötig ein zweites Mal zu verteilen."""
+    if not smtp_configured():
+        return
+
+    subject = f"Garagenflohmarkt Zirndorf – Antwort zu gesperrtem Stand #{stand_id}"
+    body_text = f"""\
+Der Inhaber von Stand #{stand_id} ({nickname}) hat auf eine
+Inhalts-Sperre geantwortet:
+
+  {message}
+
+Zum Bearbeiten: {FRONTEND_URL}#admin
+"""
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
+  <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
+  <p>Der Inhaber von Stand <strong>#{stand_id}</strong> ({nickname}) hat auf eine
+  Inhalts-Sperre geantwortet:</p>
+  <blockquote style="border-left:3px solid #f59e0b;margin:16px 0;padding:8px 16px;
+              background:#fffbeb;white-space:pre-wrap">{html.escape(message)}</blockquote>
+  <p><a href="{FRONTEND_URL}#admin">Zum Admin-Panel</a></p>
+</body>
+</html>
+"""
+    await asyncio.to_thread(_send_sync, ADMIN_CONTACT_EMAIL, subject, body_text, body_html)

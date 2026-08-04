@@ -40,7 +40,6 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className="font-semibold leading-tight text-gray-900">{s.nickname}</p>
-              {s.uhrzeit && <span className="text-xs text-gray-500">🕐 {s.uhrzeit}</span>}
               {onToggleFavorite && (
                 <button
                   type="button"
