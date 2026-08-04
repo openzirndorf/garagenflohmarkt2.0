@@ -10,6 +10,7 @@ from app.database import get_pool
 from app.email import send_login_email, smtp_configured, smtp_debug_info
 from app.geocode import geocode
 from app.jobs.stands_artifact import regenerate_stands_artifact
+from app.moderation import contains_blocked_content
 from app.nicknames import generate_unique_nickname, is_valid_nickname
 from app.public_fields import PUBLIC_GEOJSON_COLUMNS, PUBLIC_LIST_COLUMNS, rows_to_geojson
 from app.rate_limit import check_rate_limit
@@ -35,15 +36,28 @@ _REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
-    "id, nickname, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, created_at"
+    "id, nickname, adresse, lat, lng, beschreibung, kategorien, uhrzeit, status, created_at, "
+    "content_locked, content_lock_message"
 )
 
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
 # Login-Links, aber nie Token-Hashes oder Klartext-Tokens.
 _ADMIN_COLUMNS = (
     "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, uhrzeit, "
-    "status, created_at, login_token_expires_at, session_token_expires_at"
+    "status, created_at, login_token_expires_at, session_token_expires_at, "
+    "content_locked, content_lock_message"
 )
+
+
+def _reject_if_blocked_content(adresse: str | None, beschreibung: str | None) -> None:
+    if contains_blocked_content(adresse) or contains_blocked_content(
+        beschreibung, check_numeric_codes=True
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Adresse oder Beschreibung enthält nicht erlaubte Inhalte. "
+            "Bitte überarbeite den Text.",
+        )
 
 
 class StandIn(BaseModel):
@@ -65,6 +79,13 @@ class StandPatch(BaseModel):
     # POST .../nickname-suggestions), nie Freitext - is_valid_nickname()
     # unten erzwingt das serverseitig, unabhängig vom Frontend.
     nickname: str | None = None
+
+
+class AdminStandPatch(StandPatch):
+    # Nur über den Admin-Endpunkt setzbar (siehe update_stand_admin) - der
+    # Inhaber kann sich damit nicht selbst sperren oder entsperren.
+    content_locked: bool | None = None
+    content_lock_message: str | None = None
 
 
 class LoginRequestIn(BaseModel):
@@ -102,6 +123,8 @@ async def create_stand(body: StandIn, request: Request):
     # Honeypot: wenn ausgefüllt → Bot
     if body.website:
         raise HTTPException(status_code=400, detail="Ungültige Einreichung")
+
+    _reject_if_blocked_content(body.adresse, body.beschreibung)
 
     pool = await get_pool()
 
@@ -286,6 +309,27 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     if "nickname" in updates and not is_valid_nickname(updates["nickname"]):
         raise HTTPException(status_code=400, detail="Ungültiger Standname")
 
+    pool = await get_pool()
+
+    if "adresse" in updates or "beschreibung" in updates:
+        _reject_if_blocked_content(updates.get("adresse"), updates.get("beschreibung"))
+        # Separate Prüfung statt Teil der UPDATE-Klausel, weil eine Sperre
+        # überhaupt nur diese beiden Felder betrifft - Standname/Kategorien/
+        # Uhrzeit bleiben trotz Sperre änderbar.
+        lock_row = await pool.fetchrow(
+            "SELECT content_locked, content_lock_message FROM stands "
+            "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
+            hash_token(session_token),
+        )
+        if not lock_row:
+            raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
+        if lock_row["content_locked"]:
+            raise HTTPException(
+                status_code=403,
+                detail=lock_row["content_lock_message"]
+                or "Adresse und Beschreibung wurden von einem Admin gesperrt.",
+            )
+
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])
         updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
@@ -293,7 +337,6 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
     values = list(updates.values())
 
-    pool = await get_pool()
     try:
         row = await pool.fetchrow(
             f"UPDATE stands SET {set_clause} "
@@ -389,9 +432,15 @@ async def admin_audit_log():
     return [dict(r) for r in rows]
 
 
-# PATCH /stands/{id} - Bearer Token (Admin bearbeitet Stand)
+# PATCH /stands/{id} - Bearer Token (Admin bearbeitet Stand). Nutzt
+# AdminStandPatch statt StandPatch: nur der Admin darf content_locked
+# setzen, und ist selbst von der Blockliste ausgenommen (muss z.B. einen
+# problematischen Text sehen/korrigieren können, statt selbst geblockt zu
+# werden).
 @router.patch("/{stand_id}", dependencies=[Depends(require_admin_auth)])
-async def update_stand_admin(stand_id: int, body: StandPatch, background_tasks: BackgroundTasks):
+async def update_stand_admin(
+    stand_id: int, body: AdminStandPatch, background_tasks: BackgroundTasks
+):
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")

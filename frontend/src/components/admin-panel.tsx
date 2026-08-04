@@ -39,6 +39,8 @@ export function AdminPanel() {
     beschreibung: "",
     kategorien: [] as string[],
     uhrzeit: "",
+    content_locked: false,
+    content_lock_message: "",
   });
 
   const load = useCallback(async (t: string) => {
@@ -95,6 +97,8 @@ export function AdminPanel() {
       beschreibung: s.beschreibung ?? "",
       kategorien: s.kategorien ?? [],
       uhrzeit: s.uhrzeit ?? "",
+      content_locked: s.content_locked,
+      content_lock_message: s.content_lock_message ?? "",
     });
     setEditingId(s.id);
     setError(null);
@@ -342,7 +346,17 @@ export function AdminPanel() {
                     ) : (
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-semibold">{s.nickname}</p>
+                          <p className="flex items-center gap-1.5 font-semibold">
+                            {s.nickname}
+                            {s.content_locked && (
+                              <span
+                                title="Adresse/Beschreibung gesperrt"
+                                className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700"
+                              >
+                                🔒
+                              </span>
+                            )}
+                          </p>
                           <p className="text-sm text-gray-600">{s.adresse}</p>
                           {s.uhrzeit && <p className="text-xs text-gray-500">🕐 {s.uhrzeit}</p>}
                           {s.kategorien && s.kategorien.length > 0 && (
@@ -426,6 +440,14 @@ export function AdminPanel() {
                         <span className="text-green-600">✓</span>
                         <div className="flex-1 min-w-0">
                           <span className="font-medium">{s.nickname}</span>
+                          {s.content_locked && (
+                            <span
+                              title="Adresse/Beschreibung gesperrt"
+                              className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700"
+                            >
+                              🔒
+                            </span>
+                          )}
                           <span className="ml-2 text-gray-500">{s.adresse}</span>
                           {s.uhrzeit && (
                             <span className="ml-2 text-xs text-gray-400">🕐 {s.uhrzeit}</span>
@@ -473,21 +495,18 @@ export function AdminPanel() {
   );
 }
 
+interface EditFormState {
+  adresse: string;
+  beschreibung: string;
+  kategorien: string[];
+  uhrzeit: string;
+  content_locked: boolean;
+  content_lock_message: string;
+}
+
 interface EditFormProps {
-  form: {
-    adresse: string;
-    beschreibung: string;
-    kategorien: string[];
-    uhrzeit: string;
-  };
-  setForm: React.Dispatch<
-    React.SetStateAction<{
-      adresse: string;
-      beschreibung: string;
-      kategorien: string[];
-      uhrzeit: string;
-    }>
-  >;
+  form: EditFormState;
+  setForm: React.Dispatch<React.SetStateAction<EditFormState>>;
   onToggleKat: (k: string) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -552,6 +571,24 @@ function EditForm({ form, setForm, onToggleKat, onSave, onCancel, saving }: Edit
             );
           })}
         </div>
+      </div>
+      <div className="flex flex-col gap-1.5 rounded-md border border-amber-200 bg-amber-50 p-2.5">
+        <label className="flex items-center gap-2 text-xs font-medium text-amber-800">
+          <input
+            type="checkbox"
+            checked={form.content_locked}
+            onChange={(e) => setForm((f) => ({ ...f, content_locked: e.target.checked }))}
+          />
+          Adresse & Beschreibung für den Inhaber sperren
+        </label>
+        {form.content_locked && (
+          <textarea
+            className="min-h-[40px] resize-y rounded border border-amber-300 bg-white px-2 py-1 text-xs"
+            placeholder="Nachricht an den Inhaber (z.B. Grund der Sperre)…"
+            value={form.content_lock_message}
+            onChange={(e) => setForm((f) => ({ ...f, content_lock_message: e.target.value }))}
+          />
+        )}
       </div>
       <div className="flex gap-2">
         <button

@@ -273,7 +273,13 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     setSaving(true);
     setError(null);
     try {
-      const updated = await updateStand(sessionToken, editForm);
+      // Bei Sperre adresse/beschreibung gar nicht erst mitschicken - sonst
+      // würde selbst eine reine Uhrzeit-Änderung am Server abgelehnt, weil
+      // die (unveränderten) gesperrten Felder im Patch-Body stehen.
+      const payload = stand.content_locked
+        ? { kategorien: editForm.kategorien, uhrzeit: editForm.uhrzeit }
+        : editForm;
+      const updated = await updateStand(sessionToken, payload);
       setStand(updated);
       setEditing(false);
     } catch (err) {
@@ -318,13 +324,20 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
 
       {editing ? (
         <div className="flex flex-col gap-3">
+          {stand.content_locked && (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Adresse und Beschreibung wurden von einem Admin gesperrt
+              {stand.content_lock_message ? `: ${stand.content_lock_message}` : "."}
+            </p>
+          )}
           <div className="flex flex-col gap-1">
             <label htmlFor="edit-adresse" className="text-xs font-medium text-gray-600">
               Adresse
             </label>
             <input
               id="edit-adresse"
-              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              disabled={stand.content_locked}
+              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
               value={editForm.adresse}
               onChange={(e) => setEditForm((f) => ({ ...f, adresse: e.target.value }))}
             />
@@ -369,7 +382,8 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
             </label>
             <textarea
               id="edit-beschreibung"
-              className="min-h-[60px] resize-y rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              disabled={stand.content_locked}
+              className="min-h-[60px] resize-y rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
               value={editForm.beschreibung}
               onChange={(e) => setEditForm((f) => ({ ...f, beschreibung: e.target.value }))}
             />

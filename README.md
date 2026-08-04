@@ -393,7 +393,7 @@ gehasht gespeichert.
 | `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
 | `GET` | `/stands/admin/audit-log` | Bearer | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel, kein Personenbezug) |
 | `POST` | `/stands/{id}/approve` | Bearer | Stand manuell freigeben |
-| `PATCH` | `/stands/{id}` | Bearer | Stand bearbeiten (Admin) |
+| `PATCH` | `/stands/{id}` | Bearer | Stand bearbeiten (Admin), inkl. `content_locked`/`content_lock_message` |
 | `DELETE` | `/stands/{id}` | Bearer | Stand löschen (Admin) |
 | `POST` | `/stands/test-email` | Bearer | SMTP-Konfiguration prüfen (Query-Param `to`) |
 

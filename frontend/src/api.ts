@@ -61,6 +61,8 @@ export interface AdminStand extends Stand {
   status: string;
   login_token_expires_at: string | null;
   session_token_expires_at: string | null;
+  content_locked: boolean;
+  content_lock_message: string | null;
 }
 
 export async function fetchAdminStands(token: string): Promise<AdminStand[]> {
@@ -98,6 +100,8 @@ export async function fetchAuditLog(token: string): Promise<AuditLogEntry[]> {
 // Eigene Sicht (per session_token) - nie mit E-Mail oder einem Token.
 export interface OwnStand extends Stand {
   status: string;
+  content_locked: boolean;
+  content_lock_message: string | null;
 }
 
 export async function createStand(data: StandFormData): Promise<OwnStand> {
@@ -179,6 +183,11 @@ interface StandPatchData {
   nickname?: string;
 }
 
+interface AdminStandPatchData extends StandPatchData {
+  content_locked?: boolean;
+  content_lock_message?: string;
+}
+
 // Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst
 // updateStand() mit dem gewählten Namen schreibt in die DB.
 export async function suggestNicknames(sessionToken: string): Promise<string[]> {
@@ -193,7 +202,7 @@ export async function suggestNicknames(sessionToken: string): Promise<string[]> 
 export async function updateStandAdmin(
   id: number,
   token: string,
-  data: StandPatchData,
+  data: AdminStandPatchData,
 ): Promise<AdminStand> {
   const res = await fetch(`${API}/stands/${id}`, {
     method: "PATCH",
