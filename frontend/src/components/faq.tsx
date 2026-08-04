@@ -31,8 +31,8 @@ export function Faq() {
           <li className="flex gap-2">
             <span className="text-[#009a00] font-bold shrink-0">✓</span>
             <span>
-              <strong>Nur gebrauchte Waren</strong> – neue Produkte oder gewerbliche Artikel sind
-              verboten.
+              <strong>Nur gebrauchte oder selbstgemachte Dinge</strong> – neue Produkte,
+              gewerblicher Handel oder gewerbliche Artikel sind verboten.
             </span>
           </li>
         </ul>
@@ -44,10 +44,11 @@ export function Faq() {
         </h2>
         <ul className="flex flex-col gap-2 text-gray-700">
           {[
-            "Neue Produkte und gewerbliche Artikel",
-            "Lebensmittel und Kosmetik",
-            "Fahrzeuge (außer Spielzeug)",
+            "Gewerblicher Handel, neue Produkte und gewerbliche Artikel",
+            "Lebensmittel und Getränke, inkl. Alkohol",
             "Waffen jeglicher Art",
+            "Gefährliche Stoffe und offene Flammen",
+            "Fahrzeuge (außer Spielzeug)",
             "Politisches Material",
           ].map((item) => (
             <li key={item} className="flex gap-2">
@@ -60,14 +61,35 @@ export function Faq() {
 
       <section className="flex flex-col gap-3">
         <h2 style={{ fontFamily: "var(--oz-font-heading)" }} className="text-xl font-bold">
-          Aufstellung & Markierung
+          Aufstellung, Erlaubnis & Sicherheit
         </h2>
         <ul className="flex flex-col gap-2 text-gray-700">
           <li className="flex gap-2">
             <span className="text-[#009a00] font-bold shrink-0">✓</span>
             <span>
-              Dein Stand muss sich <strong>ausschließlich auf deinem Privatgrundstück</strong>{" "}
-              befinden – nicht auf Gehwegen oder öffentlichen Flächen.
+              Dein Stand muss sich <strong>ausschließlich auf deinem eigenen Privatgrund</strong>{" "}
+              befinden – Garten, Stellplatz oder Garage, nicht auf Gehwegen oder öffentlichen
+              Flächen.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-[#009a00] font-bold shrink-0">✓</span>
+            <span>
+              Bist du <strong>nicht Eigentümer</strong> des Grundstücks? Hol dir vorher die
+              Erlaubnis von Hausverwaltung oder Eigentümer.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-[#009a00] font-bold shrink-0">✓</span>
+            <span>
+              <strong>Wege freihalten</strong> – Gehwege und Zufahrten dürfen nicht blockiert
+              werden.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-[#009a00] font-bold shrink-0">✓</span>
+            <span>
+              <strong>Stand gut sichern</strong>, damit z.B. bei Wind nichts umkippt oder wegfliegt.
             </span>
           </li>
           <li className="flex gap-2">
@@ -85,9 +107,10 @@ export function Faq() {
           Haftung
         </h2>
         <p className="text-gray-700">
-          Jeder Teilnehmer trägt <strong>selbst die volle Verantwortung</strong> für Versicherung,
-          Sicherheit und etwaige Schäden an seinem Stand. Der Betreiber dieser Seite übernimmt keine
-          Haftung für Vorfälle oder Streitigkeiten.
+          Jeder Teilnehmer trägt <strong>selbst die volle Verantwortung</strong> für seinen Stand.
+          Der Betreiber dieser Seite übernimmt keine Haftung für Schäden, Vorfälle oder
+          Streitigkeiten. Versicherungstechnische Fragen kläre bitte direkt mit dem Eigentümer oder
+          der Hausverwaltung des Grundstücks.
         </p>
       </section>
 
@@ -118,8 +141,8 @@ export function Faq() {
               Kann ich meinen Stand nach der Anmeldung noch ändern?
             </p>
             <p className="text-gray-600 text-sm mt-1">
-              Ja – über den Link in deiner Bestätigungsmail oder im Browser gespeicherten Link
-              kannst du Name, Adresse und Beschreibung jederzeit bearbeiten.
+              Ja – über den Link in deiner Bestätigungsmail (oder jederzeit über „Mein Stand" neu
+              anfordern) kannst du Standname, Adresse und Beschreibung jederzeit bearbeiten.
             </p>
           </div>
           <div className="border-l-4 border-[#009a00] pl-4">
