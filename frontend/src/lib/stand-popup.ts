@@ -5,6 +5,7 @@ export interface StandPopupProperties {
   nickname: string;
   adresse: string;
   beschreibung: string | null;
+  zahlungsarten?: string[];
 }
 
 export interface FavoriteControls {
@@ -29,7 +30,7 @@ export function buildStandPopupContent(
   coords: { lat: number; lng: number } | null = null,
   favorite: FavoriteControls | null = null,
 ): HTMLElement {
-  const { id, nickname, adresse, beschreibung } = properties;
+  const { id, nickname, adresse, beschreibung, zahlungsarten } = properties;
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
@@ -42,6 +43,7 @@ export function buildStandPopupContent(
   };
   addLine(adresse);
   if (beschreibung) addLine(beschreibung);
+  if (zahlungsarten && zahlungsarten.length > 0) addLine(`💳 ${zahlungsarten.join(", ")}`);
 
   // "Navigieren" und Favorit-Umschalter als gleichwertige Aktions-Buttons
   // in einer Zeile - der Stern allein (nur neben dem Namen) war zu

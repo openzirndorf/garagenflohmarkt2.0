@@ -8,7 +8,7 @@ import {
   fetchAuditLog,
   updateStandAdmin,
 } from "../api";
-import { KATEGORIEN } from "./stand-form";
+import { KATEGORIEN, ZAHLUNGSARTEN } from "./stand-form";
 
 const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   CREATED: "Angemeldet",
@@ -40,6 +40,7 @@ export function AdminPanel() {
     adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
+    zahlungsarten: [] as string[],
     content_locked: false,
     content_lock_message: "",
   });
@@ -97,6 +98,7 @@ export function AdminPanel() {
       adresse: s.adresse,
       beschreibung: s.beschreibung ?? "",
       kategorien: s.kategorien ?? [],
+      zahlungsarten: s.zahlungsarten ?? [],
       content_locked: s.content_locked,
       content_lock_message: s.content_lock_message ?? "",
     });
@@ -124,6 +126,15 @@ export function AdminPanel() {
       kategorien: f.kategorien.includes(k)
         ? f.kategorien.filter((c) => c !== k)
         : [...f.kategorien, k],
+    }));
+  };
+
+  const toggleEditZahlungsart = (z: string) => {
+    setEditForm((f) => ({
+      ...f,
+      zahlungsarten: f.zahlungsarten.includes(z)
+        ? f.zahlungsarten.filter((c) => c !== z)
+        : [...f.zahlungsarten, z],
     }));
   };
 
@@ -339,6 +350,7 @@ export function AdminPanel() {
                         form={editForm}
                         setForm={setEditForm}
                         onToggleKat={toggleEditKat}
+                        onToggleZahlungsart={toggleEditZahlungsart}
                         onSave={() => handleSave(s.id)}
                         onCancel={() => setEditingId(null)}
                         saving={savingId === s.id}
@@ -366,6 +378,18 @@ export function AdminPanel() {
                                   className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
                                 >
                                   {k}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {s.zahlungsarten && s.zahlungsarten.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {s.zahlungsarten.map((z) => (
+                                <span
+                                  key={z}
+                                  className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
+                                >
+                                  💳 {z}
                                 </span>
                               ))}
                             </div>
@@ -437,6 +461,7 @@ export function AdminPanel() {
                           form={editForm}
                           setForm={setEditForm}
                           onToggleKat={toggleEditKat}
+                          onToggleZahlungsart={toggleEditZahlungsart}
                           onSave={() => handleSave(s.id)}
                           onCancel={() => setEditingId(null)}
                           saving={savingId === s.id}
@@ -464,6 +489,18 @@ export function AdminPanel() {
                                   className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
                                 >
                                   {k}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {s.zahlungsarten && s.zahlungsarten.length > 0 && (
+                            <div className="mt-0.5 flex flex-wrap gap-1">
+                              {s.zahlungsarten.map((z) => (
+                                <span
+                                  key={z}
+                                  className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
+                                >
+                                  💳 {z}
                                 </span>
                               ))}
                             </div>
@@ -511,6 +548,7 @@ interface EditFormState {
   adresse: string;
   beschreibung: string;
   kategorien: string[];
+  zahlungsarten: string[];
   content_locked: boolean;
   content_lock_message: string;
 }
@@ -519,12 +557,21 @@ interface EditFormProps {
   form: EditFormState;
   setForm: React.Dispatch<React.SetStateAction<EditFormState>>;
   onToggleKat: (k: string) => void;
+  onToggleZahlungsart: (z: string) => void;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
 }
 
-function EditForm({ form, setForm, onToggleKat, onSave, onCancel, saving }: EditFormProps) {
+function EditForm({
+  form,
+  setForm,
+  onToggleKat,
+  onToggleZahlungsart,
+  onSave,
+  onCancel,
+  saving,
+}: EditFormProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -566,6 +613,28 @@ function EditForm({ form, setForm, onToggleKat, onSave, onCancel, saving }: Edit
                 }`}
               >
                 {k}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-gray-600">Zahlungsarten</span>
+        <div className="flex flex-wrap gap-1.5">
+          {ZAHLUNGSARTEN.map((z) => {
+            const active = form.zahlungsarten.includes(z);
+            return (
+              <button
+                key={z}
+                type="button"
+                onClick={() => onToggleZahlungsart(z)}
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                  active
+                    ? "border-blue-600 bg-blue-600 text-white"
+                    : "border-gray-300 bg-white text-gray-600 hover:border-blue-600"
+                }`}
+              >
+                💳 {z}
               </button>
             );
           })}

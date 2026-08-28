@@ -6,10 +6,11 @@ diesen Test fehlschlagen, auch wenn niemand explizit an "email" oder
 """
 
 PUBLIC_LIST_FIELDS = {
-    "id", "nickname", "adresse", "lat", "lng", "beschreibung", "kategorien", "created_at",
+    "id", "nickname", "adresse", "lat", "lng", "beschreibung", "kategorien", "zahlungsarten",
+    "created_at",
 }
 PUBLIC_GEOJSON_PROPERTY_FIELDS = {
-    "id", "nickname", "adresse", "beschreibung", "kategorien",
+    "id", "nickname", "adresse", "beschreibung", "kategorien", "zahlungsarten",
 }
 
 

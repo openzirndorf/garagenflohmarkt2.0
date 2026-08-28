@@ -10,6 +10,7 @@ const ZOOM = 13;
 
 interface Props {
   kategorienFilter?: string[];
+  zahlungsartenFilter?: string[];
   showFavoritesOnly?: boolean;
   favoriteIds: Set<number>;
   onToggleFavorite: (id: number) => void;
@@ -18,6 +19,7 @@ interface Props {
 
 export function FlohmarktMap({
   kategorienFilter = [],
+  zahlungsartenFilter = [],
   showFavoritesOnly = false,
   favoriteIds,
   onToggleFavorite,
@@ -114,8 +116,9 @@ export function FlohmarktMap({
     };
   }, []);
 
-  // Re-filter when kategorienFilter, showFavoritesOnly or favoriteIds changes
-  // (letzteres auch nach einem Favoriten-Toggle direkt im Kartenpopup).
+  // Re-filter when kategorienFilter, zahlungsartenFilter, showFavoritesOnly
+  // or favoriteIds changes (letzteres auch nach einem Favoriten-Toggle
+  // direkt im Kartenpopup).
   useEffect(() => {
     const map = mapRef.current;
     const all = allGeoJSONRef.current;
@@ -125,16 +128,20 @@ export function FlohmarktMap({
       type: "FeatureCollection",
       features: all.features.filter((f) => {
         const cats = (f.properties?.kategorien ?? []) as string[];
+        const zahlungsarten = (f.properties?.zahlungsarten ?? []) as string[];
         const categoryMatch =
           kategorienFilter.length === 0 || cats.some((k) => kategorienFilter.includes(k));
+        const zahlungsartMatch =
+          zahlungsartenFilter.length === 0 ||
+          zahlungsarten.some((z) => zahlungsartenFilter.includes(z));
         const favoriteMatch = !showFavoritesOnly || favoriteIds.has(f.properties?.id as number);
-        return categoryMatch && favoriteMatch;
+        return categoryMatch && zahlungsartMatch && favoriteMatch;
       }),
     };
 
     const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
     source?.setData(filtered);
-  }, [kategorienFilter, showFavoritesOnly, favoriteIds]);
+  }, [kategorienFilter, zahlungsartenFilter, showFavoritesOnly, favoriteIds]);
 
   return (
     <div

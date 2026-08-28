@@ -5,6 +5,7 @@ import { StandListe } from "./stand-liste";
 
 interface Props {
   kategorienFilter: string[];
+  zahlungsartenFilter: string[];
   showFavoritesOnly: boolean;
   favoriteIds: Set<number>;
   onToggleFavorite: (id: number) => void;
@@ -17,6 +18,7 @@ interface Props {
 // Live-Fallback auf einen Drittanbieter - siehe flohmarkt-map.tsx.
 export function MapOrList({
   kategorienFilter,
+  zahlungsartenFilter,
   showFavoritesOnly,
   favoriteIds,
   onToggleFavorite,
@@ -44,6 +46,7 @@ export function MapOrList({
   return (
     <FlohmarktMap
       kategorienFilter={kategorienFilter}
+      zahlungsartenFilter={zahlungsartenFilter}
       showFavoritesOnly={showFavoritesOnly}
       favoriteIds={favoriteIds}
       onToggleFavorite={onToggleFavorite}

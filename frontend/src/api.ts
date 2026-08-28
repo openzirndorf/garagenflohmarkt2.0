@@ -181,6 +181,7 @@ interface StandPatchData {
   adresse?: string;
   beschreibung?: string;
   kategorien?: string[];
+  zahlungsarten?: string[];
   nickname?: string;
 }
 

@@ -30,11 +30,14 @@ export const KATEGORIEN = [
   "Sonstiges",
 ] as const;
 
+export const ZAHLUNGSARTEN = ["PayPal", "Wero"] as const;
+
 const EMPTY: StandFormData = {
   adresse: "",
   beschreibung: "",
   email: "",
   kategorien: [],
+  zahlungsarten: [],
   website: "", // Honeypot
 };
 
@@ -61,6 +64,15 @@ export function StandForm({ onSuccess }: Props) {
       kategorien: f.kategorien.includes(k)
         ? f.kategorien.filter((c) => c !== k)
         : [...f.kategorien, k],
+    }));
+  };
+
+  const toggleZahlungsart = (z: string) => {
+    setForm((f) => ({
+      ...f,
+      zahlungsarten: f.zahlungsarten.includes(z)
+        ? f.zahlungsarten.filter((c) => c !== z)
+        : [...f.zahlungsarten, z],
     }));
   };
 
@@ -166,6 +178,30 @@ export function StandForm({ onSuccess }: Props) {
                     }`}
                   >
                     {k}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Zahlung per PayPal/Wero möglich? (optional)</span>
+            <div className="flex flex-wrap gap-2">
+              {ZAHLUNGSARTEN.map((z) => {
+                const active = form.zahlungsarten.includes(z);
+                return (
+                  <button
+                    key={z}
+                    type="button"
+                    onClick={() => toggleZahlungsart(z)}
+                    disabled={status === "loading"}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-blue-600 hover:text-blue-600"
+                    }`}
+                  >
+                    {z}
                   </button>
                 );
               })}

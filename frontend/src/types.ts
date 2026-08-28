@@ -6,6 +6,7 @@ export interface Stand {
   lng: number | null;
   beschreibung: string | null;
   kategorien: string[];
+  zahlungsarten: string[];
   created_at: string;
 }
 
@@ -14,5 +15,6 @@ export interface StandFormData {
   beschreibung: string;
   email: string;
   kategorien: string[];
+  zahlungsarten: string[];
   website?: string; // Honeypot – muss leer bleiben
 }

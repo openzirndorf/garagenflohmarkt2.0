@@ -66,6 +66,18 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
                 ))}
               </div>
             )}
+            {s.zahlungsarten.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {s.zahlungsarten.map((z) => (
+                  <span
+                    key={z}
+                    className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
+                  >
+                    💳 {z}
+                  </span>
+                ))}
+              </div>
+            )}
             {s.beschreibung && (
               <p className="mt-1 text-sm leading-snug text-gray-600">{s.beschreibung}</p>
             )}

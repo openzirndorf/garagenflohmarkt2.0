@@ -34,17 +34,23 @@ _LOGIN_REQUEST_RATE_MAX = 5  # max. "Zugang anfordern"-Versuche pro IP pro Zeitf
 _REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
 _LOCK_REPLY_RATE_MAX = 5  # max. Sperr-Antworten pro IP pro Zeitfenster
 
+# Feste Werteliste statt Freitext - anders als kategorien (rein deko) hat ein
+# falsch geschriebener Zahlungsart-Wert echte Verwechslungsgefahr auf der
+# öffentlichen Karte, deshalb serverseitig validiert (siehe
+# _reject_if_invalid_zahlungsarten).
+_VALID_ZAHLUNGSARTEN = {"PayPal", "Wero"}
+
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
-    "id, nickname, adresse, lat, lng, beschreibung, kategorien, status, created_at, "
-    "content_locked, content_lock_message"
+    "id, nickname, adresse, lat, lng, beschreibung, kategorien, zahlungsarten, status, "
+    "created_at, content_locked, content_lock_message"
 )
 
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
 # Login-Links, aber nie Token-Hashes oder Klartext-Tokens.
 _ADMIN_COLUMNS = (
-    "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, "
+    "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, zahlungsarten, "
     "status, created_at, login_token_expires_at, session_token_expires_at, "
     "content_locked, content_lock_message, lock_reply_message, lock_reply_created_at"
 )
@@ -61,11 +67,17 @@ def _reject_if_blocked_content(adresse: str | None, beschreibung: str | None) ->
         )
 
 
+def _reject_if_invalid_zahlungsarten(values: list[str] | None) -> None:
+    if values and not set(values) <= _VALID_ZAHLUNGSARTEN:
+        raise HTTPException(status_code=400, detail="Ungültige Zahlungsart")
+
+
 class StandIn(BaseModel):
     adresse: str
     beschreibung: str | None = None
     email: EmailStr  # Pflichtfeld - einziges Login-Merkmal, ein Stand pro E-Mail
     kategorien: list[str] = []
+    zahlungsarten: list[str] = []
     # Honeypot: muss leer bleiben; Bots füllen versteckte Felder aus
     website: str | None = None
 
@@ -74,6 +86,7 @@ class StandPatch(BaseModel):
     adresse: str | None = None
     beschreibung: str | None = None
     kategorien: list[str] | None = None
+    zahlungsarten: list[str] | None = None
     # Nur einer der vom Server vorgeschlagenen Namen (siehe
     # POST .../nickname-suggestions), nie Freitext - is_valid_nickname()
     # unten erzwingt das serverseitig, unabhängig vom Frontend.
@@ -124,6 +137,7 @@ async def create_stand(body: StandIn, request: Request):
         raise HTTPException(status_code=400, detail="Ungültige Einreichung")
 
     _reject_if_blocked_content(body.adresse, body.beschreibung)
+    _reject_if_invalid_zahlungsarten(body.zahlungsarten)
 
     pool = await get_pool()
 
@@ -141,11 +155,11 @@ async def create_stand(body: StandIn, request: Request):
     try:
         row = await pool.fetchrow(
             "INSERT INTO stands (nickname, adresse, lat, lng, beschreibung, email, kategorien, "
-            "login_token_hash, login_token_expires_at) "
-            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) "
+            "zahlungsarten, login_token_hash, login_token_expires_at) "
+            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) "
             f"RETURNING {_OWNER_COLUMNS}",
             nickname, body.adresse, lat, lng, body.beschreibung, body.email,
-            body.kategorien, login_token_hash, login_token_expires_at,
+            body.kategorien, body.zahlungsarten, login_token_hash, login_token_expires_at,
         )
     except asyncpg.UniqueViolationError as exc:
         if "email" in str(exc):
@@ -307,6 +321,8 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
 
     if "nickname" in updates and not is_valid_nickname(updates["nickname"]):
         raise HTTPException(status_code=400, detail="Ungültiger Standname")
+    if "zahlungsarten" in updates:
+        _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
 
     pool = await get_pool()
 
@@ -493,6 +509,8 @@ async def update_stand_admin(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
+    if "zahlungsarten" in updates:
+        _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
 
     # Entsperren gilt als "Antwort gelesen/erledigt" - räumt die
     # gespeicherte Sperr-Antwort mit auf, statt sie unbegrenzt stehen zu

@@ -10,7 +10,7 @@ import {
   suggestNicknames,
   updateStand,
 } from "../api";
-import { KATEGORIEN } from "./stand-form";
+import { KATEGORIEN, ZAHLUNGSARTEN } from "./stand-form";
 
 const SESSION_TOKEN_KEY = "flohmarkt_session_token";
 
@@ -33,6 +33,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
+    zahlungsarten: [] as string[],
   });
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -256,11 +257,21 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     }));
   };
 
+  const toggleZahlungsart = (z: string) => {
+    setEditForm((f) => ({
+      ...f,
+      zahlungsarten: f.zahlungsarten.includes(z)
+        ? f.zahlungsarten.filter((c) => c !== z)
+        : [...f.zahlungsarten, z],
+    }));
+  };
+
   const handleEdit = () => {
     setEditForm({
       adresse: stand.adresse,
       beschreibung: stand.beschreibung ?? "",
       kategorien: stand.kategorien ?? [],
+      zahlungsarten: stand.zahlungsarten ?? [],
     });
     setEditing(true);
     setError(null);
@@ -292,9 +303,12 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     setError(null);
     try {
       // Bei Sperre adresse/beschreibung gar nicht erst mitschicken - sonst
-      // würde selbst eine reine Kategorien-Änderung am Server abgelehnt,
-      // weil die (unveränderten) gesperrten Felder im Patch-Body stehen.
-      const payload = stand.content_locked ? { kategorien: editForm.kategorien } : editForm;
+      // würde selbst eine reine Kategorien-/Zahlungsarten-Änderung am
+      // Server abgelehnt, weil die (unveränderten) gesperrten Felder im
+      // Patch-Body stehen.
+      const payload = stand.content_locked
+        ? { kategorien: editForm.kategorien, zahlungsarten: editForm.zahlungsarten }
+        : editForm;
       const updated = await updateStand(sessionToken, payload);
       setStand(updated);
       setEditing(false);
@@ -409,6 +423,28 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
             </div>
           </div>
           <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-600">Zahlungsarten</span>
+            <div className="flex flex-wrap gap-1.5">
+              {ZAHLUNGSARTEN.map((z) => {
+                const active = editForm.zahlungsarten.includes(z);
+                return (
+                  <button
+                    key={z}
+                    type="button"
+                    onClick={() => toggleZahlungsart(z)}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-blue-600"
+                    }`}
+                  >
+                    💳 {z}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
             <label htmlFor="edit-beschreibung" className="text-xs font-medium text-gray-600">
               Was gibt es zu kaufen?
             </label>
@@ -514,6 +550,18 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                     className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-[#009a00]"
                   >
                     {k}
+                  </span>
+                ))}
+              </div>
+            )}
+            {stand.zahlungsarten && stand.zahlungsarten.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {stand.zahlungsarten.map((z) => (
+                  <span
+                    key={z}
+                    className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
+                  >
+                    💳 {z}
                   </span>
                 ))}
               </div>

@@ -46,6 +46,26 @@ describe("buildStandPopupContent", () => {
     expect(withoutDescription.textContent).not.toContain("Alte Bücher");
   });
 
+  it("includes zahlungsarten only when present", () => {
+    const withZahlungsarten = buildStandPopupContent({
+      id: 1,
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      zahlungsarten: ["PayPal", "Wero"],
+    });
+    expect(withZahlungsarten.textContent).toContain("PayPal, Wero");
+
+    const withoutZahlungsarten = buildStandPopupContent({
+      id: 1,
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      zahlungsarten: [],
+    });
+    expect(withoutZahlungsarten.textContent).not.toContain("PayPal");
+  });
+
   it("includes a navigation link only when coordinates are given", () => {
     const withCoords = buildStandPopupContent(
       {

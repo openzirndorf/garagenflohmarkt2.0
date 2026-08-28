@@ -9,7 +9,7 @@ import { Impressum } from "./impressum";
 import { InstallPrompt } from "./install-prompt";
 import { MapOrList } from "./map-or-list";
 import { MeinStand } from "./mein-stand";
-import { KATEGORIEN } from "./stand-form";
+import { KATEGORIEN, ZAHLUNGSARTEN } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
@@ -236,6 +236,7 @@ export function FlohmarktApp() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<Page>(pageFromHash);
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
+  const [zahlungsartenFilter, setZahlungsartenFilter] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [hasOwnStand, setHasOwnStand] = useState(false);
   const { favoriteIds, toggleFavorite } = useFavorites();
@@ -269,10 +270,24 @@ export function FlohmarktApp() {
     setKategorienFilter((prev) => (prev.includes(k) ? prev.filter((c) => c !== k) : [...prev, k]));
   };
 
+  const toggleZahlungsartFilter = (z: string) => {
+    setZahlungsartenFilter((prev) =>
+      prev.includes(z) ? prev.filter((c) => c !== z) : [...prev, z],
+    );
+  };
+
+  const hasActiveFilter =
+    kategorienFilter.length > 0 || zahlungsartenFilter.length > 0 || showFavoritesOnly;
+
   const filteredStands = stands
     .filter(
       (s) =>
         kategorienFilter.length === 0 || s.kategorien.some((k) => kategorienFilter.includes(k)),
+    )
+    .filter(
+      (s) =>
+        zahlungsartenFilter.length === 0 ||
+        s.zahlungsarten.some((z) => zahlungsartenFilter.includes(z)),
     )
     .filter((s) => !showFavoritesOnly || favoriteIds.has(s.id));
 
@@ -315,6 +330,7 @@ export function FlohmarktApp() {
           <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
             <MapOrList
               kategorienFilter={kategorienFilter}
+              zahlungsartenFilter={zahlungsartenFilter}
               showFavoritesOnly={showFavoritesOnly}
               favoriteIds={favoriteIds}
               onToggleFavorite={toggleFavorite}
@@ -341,6 +357,24 @@ export function FlohmarktApp() {
                   ★ Favoriten
                 </button>
                 <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
+                {ZAHLUNGSARTEN.map((z) => {
+                  const active = zahlungsartenFilter.includes(z);
+                  return (
+                    <button
+                      key={z}
+                      type="button"
+                      onClick={() => toggleZahlungsartFilter(z)}
+                      className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                        active
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
+                      }`}
+                    >
+                      💳 {z}
+                    </button>
+                  );
+                })}
+                <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
                 {KATEGORIEN.map((k) => {
                   const active = kategorienFilter.includes(k);
                   return (
@@ -358,11 +392,12 @@ export function FlohmarktApp() {
                     </button>
                   );
                 })}
-                {(kategorienFilter.length > 0 || showFavoritesOnly) && (
+                {hasActiveFilter && (
                   <button
                     type="button"
                     onClick={() => {
                       setKategorienFilter([]);
+                      setZahlungsartenFilter([]);
                       setShowFavoritesOnly(false);
                     }}
                     className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
@@ -406,10 +441,7 @@ export function FlohmarktApp() {
                   {!loading && stands.length > 0 && (
                     <span className="text-sm font-normal text-gray-400">
                       ({filteredStands.length}
-                      {kategorienFilter.length > 0 || showFavoritesOnly
-                        ? ` von ${stands.length}`
-                        : ""}
-                      )
+                      {hasActiveFilter ? ` von ${stands.length}` : ""})
                     </span>
                   )}
                 </h2>
@@ -425,6 +457,24 @@ export function FlohmarktApp() {
                   >
                     ★ Favoriten
                   </button>
+                  <div className="mx-0.5 h-4 w-px self-center bg-gray-200" />
+                  {ZAHLUNGSARTEN.map((z) => {
+                    const active = zahlungsartenFilter.includes(z);
+                    return (
+                      <button
+                        key={z}
+                        type="button"
+                        onClick={() => toggleZahlungsartFilter(z)}
+                        className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-semibold transition-colors ${
+                          active
+                            ? "border-blue-600 bg-blue-600 text-white"
+                            : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
+                        }`}
+                      >
+                        💳 {z}
+                      </button>
+                    );
+                  })}
                   <div className="mx-0.5 h-4 w-px self-center bg-gray-200" />
                   {KATEGORIEN.map((k) => {
                     const active = kategorienFilter.includes(k);
@@ -443,11 +493,12 @@ export function FlohmarktApp() {
                       </button>
                     );
                   })}
-                  {(kategorienFilter.length > 0 || showFavoritesOnly) && (
+                  {hasActiveFilter && (
                     <button
                       type="button"
                       onClick={() => {
                         setKategorienFilter([]);
+                        setZahlungsartenFilter([]);
                         setShowFavoritesOnly(false);
                       }}
                       className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600"
