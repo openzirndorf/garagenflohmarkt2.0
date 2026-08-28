@@ -38,7 +38,7 @@ _LOCK_REPLY_RATE_MAX = 5  # max. Sperr-Antworten pro IP pro Zeitfenster
 # falsch geschriebener Zahlungsart-Wert echte Verwechslungsgefahr auf der
 # öffentlichen Karte, deshalb serverseitig validiert (siehe
 # _reject_if_invalid_zahlungsarten).
-_VALID_ZAHLUNGSARTEN = {"PayPal", "Wero"}
+_VALID_ZAHLUNGSARTEN = {"PayPal", "Wero", "Barzahlung"}
 
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.

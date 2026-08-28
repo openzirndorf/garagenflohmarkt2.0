@@ -30,7 +30,7 @@ export const KATEGORIEN = [
   "Sonstiges",
 ] as const;
 
-export const ZAHLUNGSARTEN = ["PayPal", "Wero"] as const;
+export const ZAHLUNGSARTEN = ["PayPal", "Wero", "Barzahlung"] as const;
 
 const EMPTY: StandFormData = {
   adresse: "",

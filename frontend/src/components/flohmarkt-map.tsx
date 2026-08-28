@@ -12,6 +12,9 @@ interface Props {
   kategorienFilter?: string[];
   zahlungsartenFilter?: string[];
   showFavoritesOnly?: boolean;
+  // Bereits getrimmt+lowercased vom Aufrufer (siehe flohmarkt-app.tsx) -
+  // hier nur noch ein einfacher includes()-Vergleich nötig.
+  searchQuery?: string;
   favoriteIds: Set<number>;
   onToggleFavorite: (id: number) => void;
   onError?: () => void;
@@ -21,6 +24,7 @@ export function FlohmarktMap({
   kategorienFilter = [],
   zahlungsartenFilter = [],
   showFavoritesOnly = false,
+  searchQuery = "",
   favoriteIds,
   onToggleFavorite,
   onError,
@@ -116,9 +120,9 @@ export function FlohmarktMap({
     };
   }, []);
 
-  // Re-filter when kategorienFilter, zahlungsartenFilter, showFavoritesOnly
-  // or favoriteIds changes (letzteres auch nach einem Favoriten-Toggle
-  // direkt im Kartenpopup).
+  // Re-filter when kategorienFilter, zahlungsartenFilter, showFavoritesOnly,
+  // searchQuery oder favoriteIds sich ändert (letzteres auch nach einem
+  // Favoriten-Toggle direkt im Kartenpopup).
   useEffect(() => {
     const map = mapRef.current;
     const all = allGeoJSONRef.current;
@@ -127,21 +131,29 @@ export function FlohmarktMap({
     const filtered: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
       features: all.features.filter((f) => {
-        const cats = (f.properties?.kategorien ?? []) as string[];
-        const zahlungsarten = (f.properties?.zahlungsarten ?? []) as string[];
+        const props = f.properties ?? {};
+        const cats = (props.kategorien ?? []) as string[];
+        const zahlungsarten = (props.zahlungsarten ?? []) as string[];
         const categoryMatch =
           kategorienFilter.length === 0 || cats.some((k) => kategorienFilter.includes(k));
         const zahlungsartMatch =
           zahlungsartenFilter.length === 0 ||
           zahlungsarten.some((z) => zahlungsartenFilter.includes(z));
-        const favoriteMatch = !showFavoritesOnly || favoriteIds.has(f.properties?.id as number);
-        return categoryMatch && zahlungsartMatch && favoriteMatch;
+        const favoriteMatch = !showFavoritesOnly || favoriteIds.has(props.id as number);
+        const searchMatch =
+          searchQuery === "" ||
+          (props.nickname as string)?.toLowerCase().includes(searchQuery) ||
+          (props.adresse as string)?.toLowerCase().includes(searchQuery) ||
+          (props.beschreibung as string | null)?.toLowerCase().includes(searchQuery) ||
+          cats.some((k) => k.toLowerCase().includes(searchQuery)) ||
+          zahlungsarten.some((z) => z.toLowerCase().includes(searchQuery));
+        return categoryMatch && zahlungsartMatch && favoriteMatch && searchMatch;
       }),
     };
 
     const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
     source?.setData(filtered);
-  }, [kategorienFilter, zahlungsartenFilter, showFavoritesOnly, favoriteIds]);
+  }, [kategorienFilter, zahlungsartenFilter, showFavoritesOnly, searchQuery, favoriteIds]);
 
   return (
     <div

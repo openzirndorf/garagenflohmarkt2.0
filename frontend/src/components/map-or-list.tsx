@@ -7,6 +7,7 @@ interface Props {
   kategorienFilter: string[];
   zahlungsartenFilter: string[];
   showFavoritesOnly: boolean;
+  searchQuery: string;
   favoriteIds: Set<number>;
   onToggleFavorite: (id: number) => void;
   stands: Stand[];
@@ -20,6 +21,7 @@ export function MapOrList({
   kategorienFilter,
   zahlungsartenFilter,
   showFavoritesOnly,
+  searchQuery,
   favoriteIds,
   onToggleFavorite,
   stands,
@@ -48,6 +50,7 @@ export function MapOrList({
       kategorienFilter={kategorienFilter}
       zahlungsartenFilter={zahlungsartenFilter}
       showFavoritesOnly={showFavoritesOnly}
+      searchQuery={searchQuery}
       favoriteIds={favoriteIds}
       onToggleFavorite={onToggleFavorite}
       onError={() => setMapFailed(true)}

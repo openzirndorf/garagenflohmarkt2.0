@@ -1,4 +1,4 @@
-"""Zahlungsarten: fixe Werteliste (PayPal/Wero, siehe
+"""Zahlungsarten: fixe Werteliste (PayPal/Wero/Barzahlung, siehe
 _VALID_ZAHLUNGSARTEN in app/routes/stands.py), öffentlich sichtbar und
 filterbar wie kategorien - anders als kategorien aber serverseitig gegen
 Freitext validiert, da falsche Werte hier echte Verwechslungsgefahr auf
@@ -18,9 +18,9 @@ async def _login(client, login_code) -> str:
 
 
 async def test_registration_accepts_valid_zahlungsarten(client, api_auth):
-    resp = await _register(client, api_auth, zahlungsarten=["PayPal", "Wero"])
+    resp = await _register(client, api_auth, zahlungsarten=["PayPal", "Wero", "Barzahlung"])
     assert resp.status_code == 201
-    assert set(resp.json()["zahlungsarten"]) == {"PayPal", "Wero"}
+    assert set(resp.json()["zahlungsarten"]) == {"PayPal", "Wero", "Barzahlung"}
 
 
 async def test_registration_rejects_unknown_zahlungsart(client, api_auth):

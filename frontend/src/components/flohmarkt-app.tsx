@@ -238,6 +238,7 @@ export function FlohmarktApp() {
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
   const [zahlungsartenFilter, setZahlungsartenFilter] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
   const [hasOwnStand, setHasOwnStand] = useState(false);
   const { favoriteIds, toggleFavorite } = useFavorites();
 
@@ -276,8 +277,24 @@ export function FlohmarktApp() {
     );
   };
 
+  // Freitextsuche statt immer neuer Kategorie-Pillen - findet auch Dinge,
+  // für die es keine eigene Kategorie gibt (z.B. "Kinderwagen" nur in der
+  // Beschreibung), ohne die Filterleiste weiter zu füllen.
+  const searchQuery = searchInput.trim().toLowerCase();
+
   const hasActiveFilter =
-    kategorienFilter.length > 0 || zahlungsartenFilter.length > 0 || showFavoritesOnly;
+    kategorienFilter.length > 0 ||
+    zahlungsartenFilter.length > 0 ||
+    showFavoritesOnly ||
+    searchQuery !== "";
+
+  const matchesSearch = (s: Stand) =>
+    searchQuery === "" ||
+    s.nickname.toLowerCase().includes(searchQuery) ||
+    s.adresse.toLowerCase().includes(searchQuery) ||
+    (s.beschreibung ?? "").toLowerCase().includes(searchQuery) ||
+    s.kategorien.some((k) => k.toLowerCase().includes(searchQuery)) ||
+    s.zahlungsarten.some((z) => z.toLowerCase().includes(searchQuery));
 
   const filteredStands = stands
     .filter(
@@ -289,7 +306,8 @@ export function FlohmarktApp() {
         zahlungsartenFilter.length === 0 ||
         s.zahlungsarten.some((z) => zahlungsartenFilter.includes(z)),
     )
-    .filter((s) => !showFavoritesOnly || favoriteIds.has(s.id));
+    .filter((s) => !showFavoritesOnly || favoriteIds.has(s.id))
+    .filter(matchesSearch);
 
   const initialLoading = loading && stands.length === 0;
 
@@ -326,12 +344,26 @@ export function FlohmarktApp() {
         </main>
       ) : page === "mein-stand" ? null : (
         <main className="flex-1">
+          {/* Freitextsuche - eigener, immer sichtbarer Bereich statt einer
+              weiteren Filter-Pille, damit die Kategorie-/Zahlungsart-Leiste
+              nicht noch voller wird. Findet auch Dinge ohne eigene Kategorie
+              (z.B. "Kinderwagen" nur in der Beschreibung). */}
+          <div className="mx-auto w-full max-w-2xl px-4 pt-3">
+            <input
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Suche, z.B. „Kinderwagen“ oder eine Straße…"
+              className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
           {/* Karte als Startseite – volle Breite, prominent */}
           <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
             <MapOrList
               kategorienFilter={kategorienFilter}
               zahlungsartenFilter={zahlungsartenFilter}
               showFavoritesOnly={showFavoritesOnly}
+              searchQuery={searchQuery}
               favoriteIds={favoriteIds}
               onToggleFavorite={toggleFavorite}
               stands={filteredStands}
@@ -399,6 +431,7 @@ export function FlohmarktApp() {
                       setKategorienFilter([]);
                       setZahlungsartenFilter([]);
                       setShowFavoritesOnly(false);
+                      setSearchInput("");
                     }}
                     className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
                   >
@@ -500,6 +533,7 @@ export function FlohmarktApp() {
                         setKategorienFilter([]);
                         setZahlungsartenFilter([]);
                         setShowFavoritesOnly(false);
+                        setSearchInput("");
                       }}
                       className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600"
                     >
