@@ -105,17 +105,23 @@ export function buildStandPopupContent(
     const favBtn = document.createElement("button");
     favBtn.type = "button";
     Object.assign(favBtn.style, {
-      border: "none",
-      background: "transparent",
       cursor: "pointer",
-      padding: "0",
-      font: "inherit",
+      fontFamily: "inherit",
+      fontSize: "0.75rem",
       fontWeight: "600",
-      color: "#b45309",
+      padding: "3px 10px",
+      borderRadius: "9999px",
+      borderWidth: "1px",
+      borderStyle: "solid",
     });
     const updateFavBtn = () => {
       const active = favorite.isFavorite(id);
-      favBtn.textContent = active ? "★ Favorit" : "☆ Zu Favoriten hinzufügen";
+      favBtn.textContent = active ? "★ Favorit" : "+ Favoriten";
+      Object.assign(favBtn.style, {
+        borderColor: active ? "#fbbf24" : "#fcd34d",
+        background: active ? "#fbbf24" : "#fffbeb",
+        color: active ? "#ffffff" : "#b45309",
+      });
       favBtn.setAttribute("aria-label", active ? "Von Favoriten entfernen" : "Als Favorit merken");
     };
     updateFavBtn();

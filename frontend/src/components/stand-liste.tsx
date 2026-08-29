@@ -85,9 +85,13 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
                 <button
                   type="button"
                   onClick={() => onToggleFavorite(s.id)}
-                  className="whitespace-nowrap text-xs font-semibold text-amber-700 transition-colors hover:text-amber-900"
+                  className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    favoriteIds?.has(s.id)
+                      ? "border-amber-400 bg-amber-400 text-white"
+                      : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
+                  }`}
                 >
-                  {favoriteIds?.has(s.id) ? "★ Favorit" : "☆ Zu Favoriten hinzufügen"}
+                  {favoriteIds?.has(s.id) ? "★ Favorit" : "+ Favoriten"}
                 </button>
               )}
             </div>

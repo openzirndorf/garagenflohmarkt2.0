@@ -147,7 +147,7 @@ describe("buildStandPopupContent", () => {
     );
     const favBtn = withFavorite.querySelector("button");
     expect(favBtn).not.toBeNull();
-    expect(favBtn?.textContent).toBe("☆ Zu Favoriten hinzufügen");
+    expect(favBtn?.textContent).toBe("+ Favoriten");
 
     favBtn?.click();
     expect(favorited).toBe(true);
