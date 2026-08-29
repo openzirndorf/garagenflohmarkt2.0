@@ -220,10 +220,6 @@ function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
             <a href="#datenschutz" className={menuLinkClass(page === "datenschutz")}>
               Datenschutz
             </a>
-            <div className="my-1 border-t border-gray-100" />
-            <a href="#admin" className="block px-4 py-2 text-xs text-gray-400 hover:text-gray-600">
-              Admin
-            </a>
           </div>
         )}
       </div>

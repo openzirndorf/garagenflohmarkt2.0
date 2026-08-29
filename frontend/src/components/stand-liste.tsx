@@ -39,21 +39,7 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
         >
           <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#009a00]" />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <p className="font-semibold leading-tight text-gray-900">{s.nickname}</p>
-              {onToggleFavorite && (
-                <button
-                  type="button"
-                  onClick={() => onToggleFavorite(s.id)}
-                  aria-label={
-                    favoriteIds?.has(s.id) ? "Von Favoriten entfernen" : "Als Favorit merken"
-                  }
-                  className="text-base leading-none text-amber-400 hover:text-amber-500"
-                >
-                  {favoriteIds?.has(s.id) ? "★" : "☆"}
-                </button>
-              )}
-            </div>
+            <p className="font-semibold leading-tight text-gray-900">{s.nickname}</p>
             <p className="mt-0.5 text-sm text-gray-500">{s.adresse}</p>
             {s.kategorien.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
@@ -83,16 +69,29 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
               <p className="mt-1 text-sm leading-snug text-gray-600">{s.beschreibung}</p>
             )}
           </div>
-          {s.lat !== null && s.lng !== null && (
-            <a
-              href={navigationUrl(s.lat, s.lng, s.nickname)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 self-center rounded-full border border-[#009a00] px-3 py-1.5 text-xs font-semibold text-[#009a00] transition-colors hover:bg-green-50"
-            >
-              Navigieren
-            </a>
-          )}
+          {(s.lat !== null && s.lng !== null) || onToggleFavorite ? (
+            <div className="flex shrink-0 flex-col items-end gap-1.5 self-center">
+              {s.lat !== null && s.lng !== null && (
+                <a
+                  href={navigationUrl(s.lat, s.lng, s.nickname)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full border border-[#009a00] px-3 py-1.5 text-xs font-semibold text-[#009a00] transition-colors hover:bg-green-50"
+                >
+                  Navigieren
+                </a>
+              )}
+              {onToggleFavorite && (
+                <button
+                  type="button"
+                  onClick={() => onToggleFavorite(s.id)}
+                  className="whitespace-nowrap text-xs font-semibold text-amber-700 transition-colors hover:text-amber-900"
+                >
+                  {favoriteIds?.has(s.id) ? "★ Favorit" : "☆ Zu Favoriten hinzufügen"}
+                </button>
+              )}
+            </div>
+          ) : null}
         </div>
       ))}
     </div>

@@ -124,6 +124,15 @@ export function Datenschutz() {
       </div>
 
       <p className="mt-2 text-sm text-gray-500">entwickelt mit ❤️ in Zirndorf</p>
+
+      {/* Bewusst hier statt prominent im Hamburger-Menü - innerhalb einer
+          installierten PWA gibt es keine Adresszeile, iOS kennt außerdem
+          keine Manifest-Shortcuts (siehe vite.config.ts), daher bleibt
+          irgendein Weg zu #admin innerhalb der App nötig, nur eben
+          zurückhaltend platziert. */}
+      <a href="#admin" className="text-xs text-gray-300 hover:text-gray-400">
+        Admin
+      </a>
     </div>
   );
 }
