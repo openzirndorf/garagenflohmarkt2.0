@@ -95,8 +95,19 @@ export function buildStandPopupContent(
     navLink.rel = "noopener noreferrer";
     navLink.textContent = "Navigieren";
     Object.assign(navLink.style, {
+      display: "inline-block",
+      cursor: "pointer",
+      fontFamily: "inherit",
+      fontSize: "0.75rem",
       fontWeight: "600",
+      padding: "3px 10px",
+      borderRadius: "9999px",
+      borderWidth: "1px",
+      borderStyle: "solid",
+      borderColor: "#009a00",
+      background: "#eef7e6",
       color: "#009a00",
+      textDecoration: "none",
     });
     actionsRow.appendChild(navLink);
   }

@@ -46,8 +46,8 @@ export function Impressum() {
 
       <p className="text-gray-600">
         E-Mail:{" "}
-        <a href="mailto:fabian@openzirndorf.de" className="text-[#009a00] hover:underline">
-          fabian@openzirndorf.de
+        <a href="mailto:team@openzirndorf.de" className="text-[#009a00] hover:underline">
+          team@openzirndorf.de
         </a>
       </p>
 

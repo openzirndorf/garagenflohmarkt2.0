@@ -24,7 +24,7 @@ FRONTEND_URL = os.getenv(
     "FRONTEND_URL",
     "https://openzirndorf.github.io/garagenflohmarkt2.0",
 ).rstrip("/")
-ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "fabian@openzirndorf.de")
+ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "team@openzirndorf.de")
 
 
 def smtp_configured() -> bool:

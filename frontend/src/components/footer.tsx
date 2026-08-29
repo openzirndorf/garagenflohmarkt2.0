@@ -1,4 +1,7 @@
 export const PORTAL_URL = "https://portal.openzirndorf.de/";
+const SITE_URL = "https://openzirndorf.de/";
+const INSTAGRAM_URL = "https://instagram.com/openzirndorf";
+const FACEBOOK_URL = "https://facebook.com/openzirndorf";
 
 // TODO: sobald der Veranstalter feststeht, hier den echten Vereinsnamen
 // (und optional eine URL) statt des Platzhalters eintragen.
@@ -27,7 +30,7 @@ export function Footer() {
       <p className="mb-3 text-gray-400">Unterstützt von {UNTERSTUETZER.join(", ")}</p>
       <div className="flex flex-wrap justify-center gap-4">
         <a
-          href="mailto:fabian@openzirndorf.de"
+          href="mailto:team@openzirndorf.de"
           className="font-semibold hover:underline"
           style={linkStyle}
         >
@@ -41,6 +44,32 @@ export function Footer() {
         </a>
         <a href="#faq" className="font-semibold hover:underline" style={linkStyle}>
           FAQ
+        </a>
+      </div>
+      <div className="mt-2 flex flex-wrap justify-center gap-3 text-gray-400">
+        <a
+          href={SITE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-gray-600 hover:underline"
+        >
+          openzirndorf.de
+        </a>
+        <a
+          href={INSTAGRAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-gray-600 hover:underline"
+        >
+          Instagram
+        </a>
+        <a
+          href={FACEBOOK_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-gray-600 hover:underline"
+        >
+          Facebook
         </a>
       </div>
     </footer>

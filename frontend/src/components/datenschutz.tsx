@@ -29,8 +29,8 @@ export function Datenschutz() {
           </h2>
           <p>
             OpenZirndorf (Fabian Hartmann, Erich-Kästner-Weg 33, 90513 Zirndorf,{" "}
-            <a href="mailto:fabian@openzirndorf.de" className="underline">
-              fabian@openzirndorf.de
+            <a href="mailto:team@openzirndorf.de" className="underline">
+              team@openzirndorf.de
             </a>
             ) und der Veranstalter <strong>{VERANSTALTER}</strong> sind gemeinsam Verantwortliche im
             Sinne von Art. 26 DSGVO. OpenZirndorf betreibt die technische Infrastruktur (Server,
