@@ -46,6 +46,26 @@ describe("buildStandPopupContent", () => {
     expect(withoutDescription.textContent).not.toContain("Alte Bücher");
   });
 
+  it("includes kategorien only when present", () => {
+    const withKategorien = buildStandPopupContent({
+      id: 1,
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      kategorien: ["Bücher", "Spielzeug"],
+    });
+    expect(withKategorien.textContent).toContain("Bücher, Spielzeug");
+
+    const withoutKategorien = buildStandPopupContent({
+      id: 1,
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      kategorien: [],
+    });
+    expect(withoutKategorien.textContent).not.toContain("Bücher");
+  });
+
   it("includes zahlungsarten only when present", () => {
     const withZahlungsarten = buildStandPopupContent({
       id: 1,

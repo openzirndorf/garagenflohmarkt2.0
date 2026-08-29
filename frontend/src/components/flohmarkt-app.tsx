@@ -344,11 +344,13 @@ export function FlohmarktApp() {
         </main>
       ) : page === "mein-stand" ? null : (
         <main className="flex-1">
-          {/* Freitextsuche - eigener, immer sichtbarer Bereich statt einer
-              weiteren Filter-Pille, damit die Kategorie-/Zahlungsart-Leiste
-              nicht noch voller wird. Findet auch Dinge ohne eigene Kategorie
-              (z.B. "Kinderwagen" nur in der Beschreibung). */}
-          <div className="mx-auto w-full max-w-2xl px-4 pt-3">
+          {/* Suche + Filter - EIN Kontrollbereich über der Karte statt zweier
+              fast identischer Filterleisten (früher: eine schwebend auf der
+              Karte, eine nochmal über der Liste). Karte bleibt dadurch frei
+              von Overlays; die Kategorie-Zeile bleibt horizontal scrollbar
+              statt umzubrechen, da 18 Kategorien sonst mehrzeilig sehr viel
+              Platz brauchen (v.a. mobil). */}
+          <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 pt-3">
             <input
               type="search"
               value={searchInput}
@@ -356,9 +358,76 @@ export function FlohmarktApp() {
               placeholder="Suche, z.B. „Kinderwagen“ oder eine Straße…"
               className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
+            <div
+              style={{ scrollbarWidth: "none" }}
+              className="flex gap-1.5 overflow-x-auto rounded-2xl border border-gray-100 bg-white px-3 py-2 shadow-sm [&::-webkit-scrollbar]:hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setShowFavoritesOnly((v) => !v)}
+                className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                  showFavoritesOnly
+                    ? "border-amber-400 bg-amber-400 text-white"
+                    : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
+                }`}
+              >
+                ★ Favoriten
+              </button>
+              <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
+              {ZAHLUNGSARTEN.map((z) => {
+                const active = zahlungsartenFilter.includes(z);
+                return (
+                  <button
+                    key={z}
+                    type="button"
+                    onClick={() => toggleZahlungsartFilter(z)}
+                    className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                      active
+                        ? "border-blue-600 bg-blue-600 text-white"
+                        : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
+                    }`}
+                  >
+                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
+                  </button>
+                );
+              })}
+              <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
+              {KATEGORIEN.map((k) => {
+                const active = kategorienFilter.includes(k);
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => toggleFilter(k)}
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-[#009a00] bg-[#009a00] text-white"
+                        : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
+                    }`}
+                  >
+                    {k}
+                  </button>
+                );
+              })}
+              {hasActiveFilter && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKategorienFilter([]);
+                    setZahlungsartenFilter([]);
+                    setShowFavoritesOnly(false);
+                    setSearchInput("");
+                  }}
+                  className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
+                >
+                  ✕ Alle
+                </button>
+              )}
+            </div>
           </div>
-          {/* Karte als Startseite – volle Breite, prominent */}
-          <div className="relative w-full" style={{ height: "min(65vh, 520px)" }}>
+
+          {/* Karte als Startseite – volle Breite, prominent, ohne Overlay */}
+          <div className="relative mt-3 w-full" style={{ height: "min(65vh, 520px)" }}>
             <MapOrList
               kategorienFilter={kategorienFilter}
               zahlungsartenFilter={zahlungsartenFilter}
@@ -369,77 +438,6 @@ export function FlohmarktApp() {
               stands={filteredStands}
               loading={loading}
             />
-            {/* Kategorie-Filter-Overlay - horizontal scrollbar statt Umbruch,
-                da 18 Kategorien sonst mehrzeilig die Karte zu stark verdecken
-                (v.a. mobil). */}
-            <div className="absolute bottom-3 left-0 right-0 z-10 px-4">
-              <div
-                style={{ scrollbarWidth: "none" }}
-                className="flex gap-1.5 overflow-x-auto rounded-2xl bg-white/90 px-3 py-2 shadow-md backdrop-blur-sm [&::-webkit-scrollbar]:hidden"
-              >
-                <button
-                  type="button"
-                  onClick={() => setShowFavoritesOnly((v) => !v)}
-                  className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
-                    showFavoritesOnly
-                      ? "border-amber-400 bg-amber-400 text-white"
-                      : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
-                  }`}
-                >
-                  ★ Favoriten
-                </button>
-                <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
-                {ZAHLUNGSARTEN.map((z) => {
-                  const active = zahlungsartenFilter.includes(z);
-                  return (
-                    <button
-                      key={z}
-                      type="button"
-                      onClick={() => toggleZahlungsartFilter(z)}
-                      className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
-                        active
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
-                      }`}
-                    >
-                      {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
-                    </button>
-                  );
-                })}
-                <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
-                {KATEGORIEN.map((k) => {
-                  const active = kategorienFilter.includes(k);
-                  return (
-                    <button
-                      key={k}
-                      type="button"
-                      onClick={() => toggleFilter(k)}
-                      className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                        active
-                          ? "border-[#009a00] bg-[#009a00] text-white"
-                          : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
-                      }`}
-                    >
-                      {k}
-                    </button>
-                  );
-                })}
-                {hasActiveFilter && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setKategorienFilter([]);
-                      setZahlungsartenFilter([]);
-                      setShowFavoritesOnly(false);
-                      setSearchInput("");
-                    }}
-                    className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
-                  >
-                    ✕ Alle
-                  </button>
-                )}
-              </div>
-            </div>
           </div>
 
           {/* Event-Info-Banner */}
@@ -465,83 +463,18 @@ export function FlohmarktApp() {
 
           <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-6">
             <section aria-label="Alle Stände">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <h2
-                  style={{ fontFamily: "var(--oz-font-heading)" }}
-                  className="flex items-center gap-2 text-xl font-bold"
-                >
-                  Angemeldete Stände
-                  {!loading && stands.length > 0 && (
-                    <span className="text-sm font-normal text-gray-400">
-                      ({filteredStands.length}
-                      {hasActiveFilter ? ` von ${stands.length}` : ""})
-                    </span>
-                  )}
-                </h2>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowFavoritesOnly((v) => !v)}
-                    className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                      showFavoritesOnly
-                        ? "border-amber-400 bg-amber-400 text-white"
-                        : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
-                    }`}
-                  >
-                    ★ Favoriten
-                  </button>
-                  <div className="mx-0.5 h-4 w-px self-center bg-gray-200" />
-                  {ZAHLUNGSARTEN.map((z) => {
-                    const active = zahlungsartenFilter.includes(z);
-                    return (
-                      <button
-                        key={z}
-                        type="button"
-                        onClick={() => toggleZahlungsartFilter(z)}
-                        className={`rounded-full border-2 px-2.5 py-0.5 text-xs font-semibold transition-colors ${
-                          active
-                            ? "border-blue-600 bg-blue-600 text-white"
-                            : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
-                        }`}
-                      >
-                        {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
-                      </button>
-                    );
-                  })}
-                  <div className="mx-0.5 h-4 w-px self-center bg-gray-200" />
-                  {KATEGORIEN.map((k) => {
-                    const active = kategorienFilter.includes(k);
-                    return (
-                      <button
-                        key={k}
-                        type="button"
-                        onClick={() => toggleFilter(k)}
-                        className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                          active
-                            ? "border-[#009a00] bg-[#009a00] text-white"
-                            : "border-gray-200 bg-white text-gray-500 hover:border-[#009a00] hover:text-[#009a00]"
-                        }`}
-                      >
-                        {k}
-                      </button>
-                    );
-                  })}
-                  {hasActiveFilter && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setKategorienFilter([]);
-                        setZahlungsartenFilter([]);
-                        setShowFavoritesOnly(false);
-                        setSearchInput("");
-                      }}
-                      className="rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-400 hover:text-gray-600"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              </div>
+              <h2
+                style={{ fontFamily: "var(--oz-font-heading)" }}
+                className="mb-4 flex items-center gap-2 text-xl font-bold"
+              >
+                Angemeldete Stände
+                {!loading && stands.length > 0 && (
+                  <span className="text-sm font-normal text-gray-400">
+                    ({filteredStands.length}
+                    {hasActiveFilter ? ` von ${stands.length}` : ""})
+                  </span>
+                )}
+              </h2>
               <StandListe
                 stands={filteredStands}
                 loading={loading}

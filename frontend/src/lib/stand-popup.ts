@@ -6,6 +6,7 @@ export interface StandPopupProperties {
   nickname: string;
   adresse: string;
   beschreibung: string | null;
+  kategorien?: string[];
   zahlungsarten?: string[];
 }
 
@@ -31,7 +32,7 @@ export function buildStandPopupContent(
   coords: { lat: number; lng: number } | null = null,
   favorite: FavoriteControls | null = null,
 ): HTMLElement {
-  const { id, nickname, adresse, beschreibung, zahlungsarten } = properties;
+  const { id, nickname, adresse, beschreibung, kategorien, zahlungsarten } = properties;
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
@@ -43,6 +44,7 @@ export function buildStandPopupContent(
     popupNode.appendChild(document.createTextNode(text));
   };
   addLine(adresse);
+  if (kategorien && kategorien.length > 0) addLine(kategorien.join(", "));
   if (beschreibung) addLine(beschreibung);
   if (zahlungsarten && zahlungsarten.length > 0) {
     addLine(zahlungsarten.map((z) => `${ZAHLUNGSART_ICON[z] ?? "💳"} ${z}`).join(", "));
