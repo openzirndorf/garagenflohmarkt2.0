@@ -8,7 +8,7 @@ import {
   fetchAuditLog,
   updateStandAdmin,
 } from "../api";
-import { KATEGORIEN, ZAHLUNGSARTEN } from "./stand-form";
+import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 
 const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   CREATED: "Angemeldet",
@@ -389,7 +389,7 @@ export function AdminPanel() {
                                   key={z}
                                   className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
                                 >
-                                  💳 {z}
+                                  {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                                 </span>
                               ))}
                             </div>
@@ -500,7 +500,7 @@ export function AdminPanel() {
                                   key={z}
                                   className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
                                 >
-                                  💳 {z}
+                                  {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                                 </span>
                               ))}
                             </div>
@@ -634,7 +634,7 @@ function EditForm({
                     : "border-gray-300 bg-white text-gray-600 hover:border-blue-600"
                 }`}
               >
-                💳 {z}
+                {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
               </button>
             );
           })}

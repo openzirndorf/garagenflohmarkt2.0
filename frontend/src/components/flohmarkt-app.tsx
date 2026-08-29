@@ -9,7 +9,7 @@ import { Impressum } from "./impressum";
 import { InstallPrompt } from "./install-prompt";
 import { MapOrList } from "./map-or-list";
 import { MeinStand } from "./mein-stand";
-import { KATEGORIEN, ZAHLUNGSARTEN } from "./stand-form";
+import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
 
@@ -402,7 +402,7 @@ export function FlohmarktApp() {
                           : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
                       }`}
                     >
-                      💳 {z}
+                      {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                     </button>
                   );
                 })}
@@ -504,7 +504,7 @@ export function FlohmarktApp() {
                             : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
                         }`}
                       >
-                        💳 {z}
+                        {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                       </button>
                     );
                   })}

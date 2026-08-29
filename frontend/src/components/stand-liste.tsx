@@ -1,5 +1,6 @@
 import { navigationUrl } from "../lib/navigation-url";
 import type { Stand } from "../types";
+import { ZAHLUNGSART_ICON } from "./stand-form";
 
 interface Props {
   stands: Stand[];
@@ -73,7 +74,7 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
                     key={z}
                     className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
                   >
-                    💳 {z}
+                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                   </span>
                 ))}
               </div>

@@ -1,4 +1,5 @@
 import { navigationUrl } from "./navigation-url";
+import { ZAHLUNGSART_ICON } from "./zahlungsarten";
 
 export interface StandPopupProperties {
   id: number;
@@ -43,7 +44,9 @@ export function buildStandPopupContent(
   };
   addLine(adresse);
   if (beschreibung) addLine(beschreibung);
-  if (zahlungsarten && zahlungsarten.length > 0) addLine(`💳 ${zahlungsarten.join(", ")}`);
+  if (zahlungsarten && zahlungsarten.length > 0) {
+    addLine(zahlungsarten.map((z) => `${ZAHLUNGSART_ICON[z] ?? "💳"} ${z}`).join(", "));
+  }
 
   // "Navigieren" und Favorit-Umschalter als gleichwertige Aktions-Buttons
   // in einer Zeile - der Stern allein (nur neben dem Namen) war zu

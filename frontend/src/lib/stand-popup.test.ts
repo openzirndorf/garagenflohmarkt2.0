@@ -52,9 +52,9 @@ describe("buildStandPopupContent", () => {
       nickname: "Flotte Eule",
       adresse: "Teststraße 2",
       beschreibung: null,
-      zahlungsarten: ["PayPal", "Wero"],
+      zahlungsarten: ["PayPal", "Barzahlung"],
     });
-    expect(withZahlungsarten.textContent).toContain("PayPal, Wero");
+    expect(withZahlungsarten.textContent).toContain("💳 PayPal, 💵 Barzahlung");
 
     const withoutZahlungsarten = buildStandPopupContent({
       id: 1,

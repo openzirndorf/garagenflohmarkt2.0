@@ -1,7 +1,10 @@
 import { useRef, useState } from "react";
 import { createStand } from "../api";
+import { ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "../lib/zahlungsarten";
 import type { StandFormData } from "../types";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "../ui";
+
+export { ZAHLUNGSART_ICON, ZAHLUNGSARTEN } from "../lib/zahlungsarten";
 
 const MIN_SUBMIT_MS = 3000;
 
@@ -29,8 +32,6 @@ export const KATEGORIEN = [
   "Handgemachtes",
   "Sonstiges",
 ] as const;
-
-export const ZAHLUNGSARTEN = ["PayPal", "Wero", "Barzahlung"] as const;
 
 const EMPTY: StandFormData = {
   adresse: "",
@@ -185,7 +186,9 @@ export function StandForm({ onSuccess }: Props) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Zahlung per PayPal/Wero möglich? (optional)</span>
+            <span className="text-sm font-medium">
+              Welche Zahlungsarten bietest du an? (optional)
+            </span>
             <div className="flex flex-wrap gap-2">
               {ZAHLUNGSARTEN.map((z) => {
                 const active = form.zahlungsarten.includes(z);
@@ -201,7 +204,7 @@ export function StandForm({ onSuccess }: Props) {
                         : "border-gray-300 bg-white text-gray-600 hover:border-blue-600 hover:text-blue-600"
                     }`}
                   >
-                    {z}
+                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                   </button>
                 );
               })}

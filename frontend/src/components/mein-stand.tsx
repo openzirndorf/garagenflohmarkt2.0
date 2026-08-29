@@ -10,7 +10,7 @@ import {
   suggestNicknames,
   updateStand,
 } from "../api";
-import { KATEGORIEN, ZAHLUNGSARTEN } from "./stand-form";
+import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 
 const SESSION_TOKEN_KEY = "flohmarkt_session_token";
 
@@ -438,7 +438,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                         : "border-gray-300 bg-white text-gray-600 hover:border-blue-600"
                     }`}
                   >
-                    💳 {z}
+                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                   </button>
                 );
               })}
@@ -561,7 +561,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                     key={z}
                     className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700"
                   >
-                    💳 {z}
+                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
                   </span>
                 ))}
               </div>
