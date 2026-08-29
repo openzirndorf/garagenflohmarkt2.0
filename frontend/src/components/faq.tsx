@@ -150,8 +150,9 @@ export function Faq() {
               Kann ich meinen Stand nach der Anmeldung noch ändern?
             </p>
             <p className="text-gray-600 text-sm mt-1">
-              Ja – über den Link in deiner Bestätigungsmail (oder jederzeit über „Mein Stand" neu
-              anfordern) kannst du Standname, Adresse und Beschreibung jederzeit bearbeiten.
+              Ja – gib deinen Zugangscode aus der Bestätigungsmail unter „Mein Stand" ein (oder
+              fordere dir dort jederzeit einen neuen an), dann kannst du Standname, Adresse,
+              Beschreibung und Zahlungsarten jederzeit bearbeiten.
             </p>
           </div>
           <div className="border-l-4 border-[#009a00] pl-4">
@@ -162,6 +163,19 @@ export function Faq() {
               Prüfe, ob du den Bestätigungscode in der Mail unter „Mein Stand" eingegeben hast. Ohne
               Bestätigung bleibt dein Stand unsichtbar. Auch muss die eingetragene Adresse in
               Zirndorf liegen, damit sie auf der Karte angezeigt werden kann.
+            </p>
+          </div>
+          <div className="border-l-4 border-[#009a00] pl-4">
+            <p className="font-semibold text-gray-800">Wie bezahle ich vor Ort? Was ist Wero?</p>
+            <p className="text-gray-600 text-sm mt-1">
+              Standbetreiber können bei der Anmeldung angeben, ob sie neben Barzahlung auch PayPal
+              und/oder Wero akzeptieren - erkennbar am 💳/💵-Symbol auf der Karte und in der Liste,
+              und über die Filterleiste gezielt auswählbar. Wero ist eine neue, europaweite
+              Bezahl-App (von einem Zusammenschluss europäischer Banken), mit der du direkt von
+              deinem Bankkonto aus bezahlst, ähnlich unkompliziert wie PayPal - in den App Stores
+              unter „Wero" zu finden. Die Zahlung selbst läuft in jedem Fall direkt zwischen dir und
+              dem Standbetreiber vor Ort; diese Seite ist daran nicht beteiligt und wickelt keine
+              Zahlungen ab.
             </p>
           </div>
         </div>
