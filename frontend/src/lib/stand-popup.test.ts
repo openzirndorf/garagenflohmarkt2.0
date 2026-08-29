@@ -66,6 +66,25 @@ describe("buildStandPopupContent", () => {
     expect(withoutKategorien.textContent).not.toContain("Bücher");
   });
 
+  // Regression: MapLibre GL liefert Array-Properties eines Klick-Events
+  // (feature.properties) als JSON-String statt als Array zurück, anders
+  // als beim direkten Aufruf hier oder aus dem rohen GeoJSON-Fetch. Ohne
+  // Abfangen warf das einen unbehandelten Fehler ("kategorien.join is
+  // not a function"), der den kompletten Klick-Handler abbrach - Klicks
+  // auf einen Stand wirkten dadurch live komplett wirkungslos.
+  it("handles kategorien/zahlungsarten arriving as JSON-encoded strings (MapLibre click events)", () => {
+    const node = buildStandPopupContent({
+      id: 1,
+      nickname: "Flotte Eule",
+      adresse: "Teststraße 2",
+      beschreibung: null,
+      kategorien: '["Bücher","Spielzeug"]',
+      zahlungsarten: '["PayPal"]',
+    });
+    expect(node.textContent).toContain("Bücher, Spielzeug");
+    expect(node.textContent).toContain("💳 PayPal");
+  });
+
   it("includes zahlungsarten only when present", () => {
     const withZahlungsarten = buildStandPopupContent({
       id: 1,

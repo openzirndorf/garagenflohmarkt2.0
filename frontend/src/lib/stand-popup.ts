@@ -6,13 +6,38 @@ export interface StandPopupProperties {
   nickname: string;
   adresse: string;
   beschreibung: string | null;
-  kategorien?: string[];
-  zahlungsarten?: string[];
+  // string[] beim direkten Aufruf (Tests, roher GeoJSON-Fetch) - als
+  // JSON-kodierter String, wenn die Werte von einem MapLibre-Klick-Event
+  // kommen (siehe toStringArray()).
+  kategorien?: string[] | string;
+  zahlungsarten?: string[] | string;
 }
 
 export interface FavoriteControls {
   isFavorite: (id: number) => boolean;
   onToggle: (id: number) => void;
+}
+
+// MapLibre GL kodiert GeoJSON-Feature-Properties intern wie Vector-Tiles
+// (die kein Array/Objekt als Wert kennen): ein Array-Property wie
+// kategorien/zahlungsarten kommt aus feature.properties eines
+// Klick-Events als JSON-String zurück, nicht als Array - anders als beim
+// direkten Aufruf dieser Funktion in Tests oder aus dem rohen
+// GeoJSON-Fetch. Ohne dieses Abfangen wirft z.B. "kategorien.join" einen
+// Fehler, der den kompletten Klick-Handler abbricht, bevor das Popup
+// überhaupt erzeugt wird - Klicks auf einen Stand wirkten dann komplett
+// wirkungslos.
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value as string[];
+  if (typeof value === "string" && value.length > 0) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parsed as string[];
+    } catch {
+      // kein valides JSON - als leere Liste behandeln statt zu werfen
+    }
+  }
+  return [];
 }
 
 // Baut den Popup-Inhalt als DOM statt als HTML-String: Nutzer-Eingaben
@@ -32,7 +57,9 @@ export function buildStandPopupContent(
   coords: { lat: number; lng: number } | null = null,
   favorite: FavoriteControls | null = null,
 ): HTMLElement {
-  const { id, nickname, adresse, beschreibung, kategorien, zahlungsarten } = properties;
+  const { id, nickname, adresse, beschreibung } = properties;
+  const kategorien = toStringArray(properties.kategorien);
+  const zahlungsarten = toStringArray(properties.zahlungsarten);
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
@@ -44,9 +71,9 @@ export function buildStandPopupContent(
     popupNode.appendChild(document.createTextNode(text));
   };
   addLine(adresse);
-  if (kategorien && kategorien.length > 0) addLine(kategorien.join(", "));
+  if (kategorien.length > 0) addLine(kategorien.join(", "));
   if (beschreibung) addLine(beschreibung);
-  if (zahlungsarten && zahlungsarten.length > 0) {
+  if (zahlungsarten.length > 0) {
     addLine(zahlungsarten.map((z) => `${ZAHLUNGSART_ICON[z] ?? "💳"} ${z}`).join(", "));
   }
 
