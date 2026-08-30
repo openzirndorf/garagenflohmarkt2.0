@@ -252,6 +252,7 @@ export function FlohmarktApp() {
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const filterPanelRef = useRef<HTMLDivElement>(null);
   const [hasOwnStand, setHasOwnStand] = useState(false);
   const { favoriteIds, toggleFavorite } = useFavorites();
 
@@ -279,6 +280,20 @@ export function FlohmarktApp() {
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
+
+  // Schließt das Filter-Panel bei Klick außerhalb - genau wie das
+  // Hamburger-Menü (siehe Header oben). War bisher inkonsistent: das Menü
+  // schließt sich so, das Filter-Panel blieb offen stehen.
+  useEffect(() => {
+    if (!filterPanelOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (filterPanelRef.current && !filterPanelRef.current.contains(e.target as Node)) {
+        setFilterPanelOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [filterPanelOpen]);
 
   // Deep-Link zum Teilen des eigenen Stands (siehe lib/share.ts,
   // standShareOptions()): "#suche=<nickname>" befüllt beim Start einfach die
@@ -378,7 +393,10 @@ export function FlohmarktApp() {
               Gruppierung unübersichtlich. Im geöffneten Panel sind die drei
               Filterarten mit Mini-Label klar getrennt und brechen um
               (flex-wrap), statt in einer versteckten Scroll-Reihe zu liegen. */}
-          <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 pt-3">
+          <div
+            ref={filterPanelRef}
+            className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 pt-3"
+          >
             <div className="flex gap-2">
               <input
                 type="search"
