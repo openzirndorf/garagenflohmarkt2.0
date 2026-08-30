@@ -3,10 +3,6 @@ const SITE_URL = "https://openzirndorf.de/";
 const INSTAGRAM_URL = "https://instagram.com/openzirndorf";
 const FACEBOOK_URL = "https://facebook.com/openzirndorf";
 
-// TODO: sobald der Veranstalter feststeht, hier den echten Vereinsnamen
-// (und optional eine URL) statt des Platzhalters eintragen.
-const VERANSTALTER = "wird ergänzt";
-
 const UNTERSTUETZER = ["CSU", "Die Linke", "Freie Wähler", "Grüne", "SPD", "Volt", "ZBG"];
 
 const linkStyle = { color: "#009a00" } as const;
@@ -14,9 +10,12 @@ const linkStyle = { color: "#009a00" } as const;
 export function Footer() {
   return (
     <footer className="mt-16 border-t border-gray-100 bg-white px-4 py-6 text-center text-xs text-gray-500">
+      {/* Kein Veranstalter: der Flohmarkt ist keine zentral organisierte
+          Veranstaltung, jede*r verkauft eigenverantwortlich auf eigenem
+          Privatgrundstück - OpenZirndorf vermittelt nur (siehe Datenschutz
+          Abschnitt 1). */}
       <p className="mb-1">
-        Veranstalter: <strong>{VERANSTALTER}</strong>
-        {" · "}Technische Umsetzung:{" "}
+        Eine Vermittlungsplattform von{" "}
         <a
           href={PORTAL_URL}
           target="_blank"

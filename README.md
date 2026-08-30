@@ -56,7 +56,7 @@ garagenflohmarkt2.0/
 │           ├── stand-liste.tsx     Standliste
 │           ├── mein-stand.tsx      Eigener Stand (Login-Code → Session-Token)
 │           ├── admin-panel.tsx     Admin-UI (#admin)
-│           ├── footer.tsx          Veranstalter/Unterstützer-Zeile
+│           ├── footer.tsx          Unterstützer-Zeile, Social-Links
 │           ├── impressum.tsx       #impressum
 │           └── datenschutz.tsx     #datenschutz
 ├── app/               FastAPI-Backend

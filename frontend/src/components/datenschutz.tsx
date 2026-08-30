@@ -2,11 +2,6 @@ function goHome() {
   window.location.hash = "";
 }
 
-// TODO: Vereinsname/-adresse ergänzen, sobald der Veranstalter feststeht
-// (siehe auch footer.tsx) - Art. 26 DSGVO verlangt, beide gemeinsam
-// Verantwortlichen und den Kern ihrer Vereinbarung zu nennen.
-const VERANSTALTER = "wird ergänzt";
-
 export function Datenschutz() {
   return (
     <div className="flex flex-col gap-4 py-4">
@@ -25,18 +20,26 @@ export function Datenschutz() {
       <div className="flex flex-col gap-5 text-sm leading-relaxed text-gray-700">
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">
-            1. Gemeinsam Verantwortliche (Art. 26 DSGVO)
+            1. Verantwortlicher (Art. 4 Nr. 7 DSGVO)
           </h2>
           <p>
-            OpenZirndorf (Fabian Hartmann, Erich-Kästner-Weg 33, 90513 Zirndorf,{" "}
+            OpenZirndorf e.V. (i.G.), Erich-Kästner-Weg 33, 90513 Zirndorf,{" "}
             <a href="mailto:team@openzirndorf.de" className="underline">
               team@openzirndorf.de
+            </a>{" "}
+            (siehe{" "}
+            <a href="#impressum" className="underline">
+              Impressum
             </a>
-            ) und der Veranstalter <strong>{VERANSTALTER}</strong> sind gemeinsam Verantwortliche im
-            Sinne von Art. 26 DSGVO. OpenZirndorf betreibt die technische Infrastruktur (Server,
-            Datenbank, Versand der Zugangscodes); der Veranstalter organisiert den Garagenflohmarkt
-            und entscheidet über die Freigabe eingereichter Stände. Bei Fragen zum Datenschutz
-            erreicht ihr uns über die oben genannte E-Mail-Adresse.
+            ) ist alleiniger Verantwortlicher. Einen separaten Veranstalter gibt es nicht:
+            OpenZirndorf betreibt lediglich eine Vermittlungsplattform, über die jede*r Teilnehmende
+            einen eigenen Stand auf dem eigenen Privatgrundstück anmeldet und in eigener
+            Verantwortung durchführt - der Garagenflohmarkt ist keine zentral organisierte
+            Veranstaltung. OpenZirndorf betreibt die technische Infrastruktur (Server, Datenbank,
+            Versand der Zugangscodes) und prüft eingereichte Stände vor der Freigabe. Das Projekt
+            wird von mehreren im Stadtrat vertretenen Parteien unterstützt (siehe Fußzeile) - diese
+            haben keinerlei Zugriff auf gespeicherte Daten. Bei Fragen zum Datenschutz erreicht ihr
+            uns über die oben genannte E-Mail-Adresse.
           </p>
         </section>
 
