@@ -9,6 +9,7 @@ import { Impressum } from "./impressum";
 import { InstallPrompt } from "./install-prompt";
 import { MapOrList } from "./map-or-list";
 import { MeinStand } from "./mein-stand";
+import { ShareButton } from "./share-button";
 import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 import { StandForm } from "./stand-form";
 import { StandListe } from "./stand-liste";
@@ -447,13 +448,16 @@ export function FlohmarktApp() {
                   <span className="text-xs text-green-600">in {daysUntilEvent()} Tagen</span>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={downloadICS}
-                className="text-xs text-green-700 underline-offset-2 hover:underline"
-              >
-                + Kalender
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={downloadICS}
+                  className="text-xs text-green-700 underline-offset-2 hover:underline"
+                >
+                  + Kalender
+                </button>
+                <ShareButton />
+              </div>
             </div>
           </div>
 
