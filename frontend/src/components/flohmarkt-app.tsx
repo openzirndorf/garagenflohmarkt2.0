@@ -10,6 +10,7 @@ import { Impressum } from "./impressum";
 import { InstallPrompt } from "./install-prompt";
 import { MapOrList } from "./map-or-list";
 import { MeinStand } from "./mein-stand";
+import { OnboardingHint } from "./onboarding-hint";
 import { ShareButton } from "./share-button";
 import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 import { StandForm } from "./stand-form";
@@ -384,6 +385,8 @@ export function FlohmarktApp() {
         </main>
       ) : page === "mein-stand" ? null : (
         <main className="flex-1">
+          <OnboardingHint />
+
           {/* Suche + Filter - EIN Kontrollbereich über der Karte statt zweier
               fast identischer Filterleisten (früher: eine schwebend auf der
               Karte, eine nochmal über der Liste). Filter-Pillen stecken
