@@ -21,7 +21,7 @@ async def _create_and_approve(client, admin_headers, api_auth, email="besucher@e
             "adresse": "Musterstraße 1, Zirndorf",
             "beschreibung": "Alte Bücher und Spielzeug",
             "email": email,
-            "kategorien": ["Bücher"],
+            "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"],
         },
         auth=api_auth,
     )
@@ -68,7 +68,7 @@ async def test_pending_stands_are_not_public(client, api_auth):
         json={
             "adresse": "Nichtöffentliche Straße 2, Zirndorf",
             "email": "pending@example.com",
-            "kategorien": [],
+            "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": [],
         },
         auth=api_auth,
     )
@@ -91,7 +91,7 @@ async def test_no_real_name_field_can_be_submitted(client, admin_headers, api_au
             "name": "Erika Musterfrau",
             "adresse": "Testweg 3, Zirndorf",
             "email": "erika@example.com",
-            "kategorien": [],
+            "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": [],
         },
         auth=api_auth,
     )

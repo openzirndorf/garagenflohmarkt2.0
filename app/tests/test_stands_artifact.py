@@ -25,7 +25,7 @@ async def test_artifact_contains_only_approved_stands_and_public_fields(
 
     approved = await client.post(
         "/stands/",
-        json={"adresse": "Musterstraße 1, Zirndorf", "email": "artefakt-a@example.com", "kategorien": []},
+        json={"adresse": "Musterstraße 1, Zirndorf", "email": "artefakt-a@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     stand = approved.json()
@@ -34,7 +34,7 @@ async def test_artifact_contains_only_approved_stands_and_public_fields(
     # Bleibt PENDING - darf nicht im Artefakt landen
     await client.post(
         "/stands/",
-        json={"adresse": "Musterstraße 2, Zirndorf", "email": "artefakt-b@example.com", "kategorien": []},
+        json={"adresse": "Musterstraße 2, Zirndorf", "email": "artefakt-b@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
 
@@ -63,7 +63,7 @@ async def test_approve_triggers_artifact_regeneration(client, api_auth, admin_he
 
     resp = await client.post(
         "/stands/",
-        json={"adresse": "Musterstraße 1, Zirndorf", "email": "trigger@example.com", "kategorien": []},
+        json={"adresse": "Musterstraße 1, Zirndorf", "email": "trigger@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     stand = resp.json()
@@ -82,7 +82,7 @@ async def test_owner_delete_triggers_artifact_regeneration(client, api_auth, cap
 
     await client.post(
         "/stands/",
-        json={"adresse": "Musterstraße 1, Zirndorf", "email": "trigger2@example.com", "kategorien": []},
+        json={"adresse": "Musterstraße 1, Zirndorf", "email": "trigger2@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     login_code = captured_emails[0]["login_code"]

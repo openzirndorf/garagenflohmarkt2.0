@@ -73,3 +73,10 @@ variable "frontend_url" {
   type        = string
   default     = "https://openzirndorf.github.io/garagenflohmarkt2.0"
 }
+
+variable "geocode_api_key" {
+  description = "OpenCage API-Key (kostenloser Tarif von 2.500/Tag reicht) für app/geocode.py - ohne gesetzten Key fällt das Backend auf die öffentliche Nominatim-Instanz zurück, was gegen deren Nutzungsbedingungen für automatisierte/programmatische Nutzung verstößt und nur für lokale Entwicklung gedacht ist. Vor dem Produktivbetrieb unter https://opencagedata.com registrieren und hier setzen."
+  type        = string
+  sensitive   = true
+  default     = ""
+}

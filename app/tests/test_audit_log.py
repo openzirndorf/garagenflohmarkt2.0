@@ -1,7 +1,7 @@
 async def _register(client, api_auth, email="audit@example.com"):
     resp = await client.post(
         "/stands/",
-        json={"adresse": "Musterstraße 1, Zirndorf", "email": email, "kategorien": []},
+        json={"adresse": "Musterstraße 1, Zirndorf", "email": email, "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     assert resp.status_code == 201
@@ -50,7 +50,7 @@ async def test_owner_edit_and_delete_are_logged(client, api_auth, captured_email
     stand = await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]})
+    await client.patch(f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
     await client.delete(f"/stands/by-session/{session_token}")
 
     entries = await _log_entries(pool, stand["id"])
@@ -63,7 +63,7 @@ async def test_admin_actions_are_logged_with_admin_actor(client, api_auth, admin
 
     await client.post(f"/stands/{stand['id']}/approve", headers=admin_headers)
     await client.patch(
-        f"/stands/{stand['id']}", json={"kategorien": ["Bücher"]}, headers=admin_headers
+        f"/stands/{stand['id']}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]}, headers=admin_headers
     )
     await client.delete(f"/stands/{stand['id']}", headers=admin_headers)
 

@@ -23,7 +23,7 @@ export function Datenschutz() {
             1. Verantwortlicher (Art. 4 Nr. 7 DSGVO)
           </h2>
           <p>
-            OpenZirndorf e.V. (i.G.), Erich-Kästner-Weg 33, 90513 Zirndorf,{" "}
+            OpenZirndorf (i.G.), Erich-Kästner-Weg 33, 90513 Zirndorf,{" "}
             <a href="mailto:team@openzirndorf.de" className="underline">
               team@openzirndorf.de
             </a>{" "}
@@ -35,28 +35,46 @@ export function Datenschutz() {
             OpenZirndorf betreibt lediglich eine Vermittlungsplattform, über die jede*r Teilnehmende
             einen eigenen Stand auf dem eigenen Privatgrundstück anmeldet und in eigener
             Verantwortung durchführt - der Garagenflohmarkt ist keine zentral organisierte
-            Veranstaltung. OpenZirndorf betreibt die technische Infrastruktur (Server, Datenbank,
-            Versand der Zugangscodes) und prüft eingereichte Stände vor der Freigabe. Das Projekt
-            wird von mehreren im Stadtrat vertretenen Parteien unterstützt (siehe Fußzeile) - diese
-            haben keinerlei Zugriff auf gespeicherte Daten. Bei Fragen zum Datenschutz erreicht ihr
-            uns über die oben genannte E-Mail-Adresse.
+            Veranstaltung. Das Projekt wird von mehreren im Stadtrat vertretenen Parteien
+            unterstützt (siehe Fußzeile) - diese haben keinerlei Zugriff auf gespeicherte Daten. Bei
+            Fragen zum Datenschutz erreicht ihr uns über die oben genannte E-Mail-Adresse.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">2. Welche Daten wir erheben</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">2. Zwecke und Rechtsgrundlagen</h2>
+          <p>
+            Wir verarbeiten Daten ausschließlich, um Standanmeldungen entgegenzunehmen, sie auf der
+            Karte darzustellen, und um dir die Verwaltung (Bearbeiten, Löschen) deines eigenen
+            Standes zu ermöglichen. Je nach Verarbeitungsschritt gilt eine andere Rechtsgrundlage:
+            die Erfüllung des Nutzungsvertrags zur Standanmeldung (Art. 6 Abs. 1 lit. b DSGVO) für
+            Zugangscode und Kontaktweg, und deine ausdrückliche Einwilligung (Art. 6 Abs. 1 lit. a
+            DSGVO) für die öffentliche Anzeige deiner Adresse - Details dazu in Abschnitt 4. Eine
+            automatische Wortfilter-Prüfung auf unzulässige Inhalte läuft bei jeder Einreichung; das
+            ersetzt keine inhaltliche Vorab-Prüfung durch einen Menschen, wir können Stände aber
+            jederzeit nachträglich bearbeiten, sperren oder löschen (siehe{" "}
+            <a href="#faq" className="underline">
+              Teilnahmebedingungen
+            </a>
+            ).
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-bold text-gray-900">3. Welche Daten wir erheben</h2>
           <p>
             Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien
             sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein Namensfeld - ein echter
             Name kann technisch gar nicht erst ins System gelangen. Stattdessen vergeben wir
             automatisch eine Kennung (z.&nbsp;B. „Gscheide Kellerkönig"), unter der du auf der Karte
-            erscheinst.
+            erscheinst. Zusätzlich bestätigst du bei der Anmeldung aktiv, dass du mindestens 16
+            Jahre alt bist (Art. 8 DSGVO).
           </p>
         </section>
 
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">
-            3. Öffentlich sichtbar auf der Karte
+            4. Öffentlich sichtbar auf der Karte - deine Einwilligung
           </h2>
           <p>
             Nur folgende Angaben sind öffentlich auf der Karte und in der Liste sichtbar: deine
@@ -64,11 +82,24 @@ export function Datenschutz() {
             E-Mail-Adresse und dein echter Name (den wir ohnehin nicht erfassen) erreichen die
             öffentliche Ausgabe unter keinen Umständen.
           </p>
+          <p className="mt-2">
+            Weil dabei eine Privatadresse öffentlich sichtbar wird, stützen wir das bewusst nicht
+            auf ein berechtigtes Interesse, sondern auf deine ausdrückliche Einwilligung (Art. 6
+            Abs. 1 lit. a DSGVO): du bestätigst das aktiv per Checkbox im Anmeldeformular, bevor der
+            Stand eingereicht wird. Den Zeitpunkt dieser Einwilligung speichern wir zusammen mit dem
+            Stand, damit wir sie im Streitfall nachweisen können (Art. 7 Abs. 1 DSGVO). Du kannst
+            die Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen, indem du deinen Stand
+            unter{" "}
+            <a href="#mein-stand" className="underline">
+              „Mein Stand"
+            </a>{" "}
+            vollständig löschst - danach verschwindet die Adresse sofort von der Karte.
+          </p>
         </section>
 
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">
-            4. Zugangscode statt Konto/Passwort
+            5. Zugangscode statt Konto/Passwort
           </h2>
           <p>
             Statt eines Kontos mit Passwort bekommst du einen Zugangscode per E-Mail, den du unter
@@ -82,12 +113,14 @@ export function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">5. Speicherdauer und Löschung</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">6. Speicherdauer und Löschung</h2>
           <p>
             Die Karte geht am 7. Oktober 2026 offline; sämtliche Anmeldedaten (Datenbank, generierte
-            Kartendaten, Backups) werden automatisiert zu diesem Termin gelöscht - durch einen
-            geplanten Job, nicht durch eine manuelle Erinnerung. Du kannst deinen Stand auch selbst
-            jederzeit vorher vollständig löschen: unter{" "}
+            Kartendaten) werden automatisiert zu diesem Termin gelöscht - durch einen täglich
+            laufenden, geplanten Job, nicht durch eine manuelle Erinnerung. Automatische
+            Datenbank-Backups sind bewusst auf eine kurze Aufbewahrung begrenzt, damit sie zeitnah
+            nach dem Löschtermin auslaufen. Du kannst deinen Stand auch selbst jederzeit vorher
+            vollständig löschen: unter{" "}
             <a href="#mein-stand" className="underline">
               „Mein Stand"
             </a>{" "}
@@ -96,29 +129,37 @@ export function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">6. Kartenkacheln</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">7. Kartenkacheln und Geocoding</h2>
           <p>
             Die Kartendarstellung lädt Kartenkacheln von OpenFreeMap (openfreemap.org). Dabei wird,
             wie bei jedem Webseitenaufruf, deine IP-Adresse an diesen Dienst übertragen; OpenFreeMap
-            ist ein nichtkommerzielles Projekt, das nach eigenen Angaben kein Tracking einsetzt.
-            Weitere Inhalte von Drittservern werden nicht geladen.
+            ist ein nichtkommerzielles Projekt, das nach eigenen Angaben kein Tracking einsetzt. Um
+            deine eingegebene Adresse in Kartenkoordinaten umzuwandeln, übermitteln wir sie einmalig
+            an OpenCage als Auftragsverarbeiter, gehostet bei Hetzner in Deutschland. Weitere
+            Inhalte von Drittservern werden nicht geladen; Schriftarten sind vollständig selbst
+            gehostet.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">7. Hosting und Logs</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">
+            8. Hosting und Auftragsverarbeitung
+          </h2>
           <p>
-            Die App läuft auf Servern von Scaleway innerhalb der EU. Unsere Anwendung protokolliert
+            Die App läuft auf Servern von Scaleway (Frankreich) innerhalb der EU. Scaleway
+            verarbeitet Daten dabei ausschließlich in unserem Auftrag als Auftragsverarbeiter (Art.
+            28 DSGVO), auf Basis eines Auftragsverarbeitungsvertrags. Unsere Anwendung protokolliert
             bewusst keine personenbezogenen Daten oder Zugangscodes in ihren Logs. Es werden keine
             Cookies gesetzt und keine Analyse- oder Trackingdienste eingebunden.
           </p>
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">8. Deine Rechte</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">9. Deine Rechte</h2>
           <p>
             Dir stehen die Betroffenenrechte nach Art. 15–21 DSGVO zu (Auskunft, Berichtigung,
-            Löschung, Einschränkung, Widerspruch, Datenübertragbarkeit). Eine vollständige Auskunft
+            Löschung, Einschränkung, Widerspruch, Datenübertragbarkeit) sowie das Recht, eine
+            Einwilligung jederzeit zu widerrufen (siehe Abschnitt 4). Eine vollständige Auskunft
             über deine gespeicherten Daten kannst du dir jederzeit selbst über deinen
             Bearbeitungsbereich („Meine Daten herunterladen") herunterladen. Zuständige
             Aufsichtsbehörde ist das Bayerische Landesamt für Datenschutzaufsicht (BayLDA), Ansbach.

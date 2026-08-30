@@ -190,3 +190,35 @@ Zum Bearbeiten: {FRONTEND_URL}#admin
 </html>
 """
     await asyncio.to_thread(_send_sync, ADMIN_CONTACT_EMAIL, subject, body_text, body_html)
+
+
+async def send_report_email(stand_id: int, nickname: str, grund: str | None) -> None:
+    """Meldefunktion für Besucher (falsche/fremde Einträge, siehe
+    POST /stands/{id}/report) - der Grund wird nur per Mail weitergeleitet,
+    nie in der DB gespeichert."""
+    if not smtp_configured():
+        return
+
+    grund_text = grund.strip() if grund and grund.strip() else "(kein Grund angegeben)"
+    subject = f"Garagenflohmarkt Zirndorf – Meldung zu Stand #{stand_id}"
+    body_text = f"""\
+Stand #{stand_id} ({nickname}) wurde von einem Besucher gemeldet:
+
+  {grund_text}
+
+Zum Bearbeiten: {FRONTEND_URL}#admin
+"""
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
+  <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
+  <p>Stand <strong>#{stand_id}</strong> ({nickname}) wurde von einem Besucher gemeldet:</p>
+  <blockquote style="border-left:3px solid #ea580c;margin:16px 0;padding:8px 16px;
+              background:#fff7ed;white-space:pre-wrap">{html.escape(grund_text)}</blockquote>
+  <p><a href="{FRONTEND_URL}#admin">Zum Admin-Panel</a></p>
+</body>
+</html>
+"""
+    await asyncio.to_thread(_send_sync, ADMIN_CONTACT_EMAIL, subject, body_text, body_html)

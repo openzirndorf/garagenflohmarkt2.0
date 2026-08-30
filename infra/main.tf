@@ -197,6 +197,10 @@ resource "scaleway_container" "flohmarkt_api" {
     # bekäme beim S3-PutObject auf diesen Bucket AccessDenied.
     S3_ACCESS_KEY = scaleway_iam_api_key.stands_storage.access_key
     S3_SECRET_KEY = scaleway_iam_api_key.stands_storage.secret_key
+    # Siehe variables.tf: ohne gesetzten Key fällt app/geocode.py auf die
+    # öffentliche Nominatim-Instanz zurück - für die Produktion vor dem
+    # ersten echten Betrieb bei locationiq.com registrieren und setzen.
+    GEOCODE_API_KEY = var.geocode_api_key
   }
 
   environment_variables = {

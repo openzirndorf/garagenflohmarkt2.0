@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { reportStand } from "../api";
 import { navigationUrl } from "../lib/navigation-url";
 import type { Stand } from "../types";
 import { ZAHLUNGSART_ICON } from "./stand-form";
@@ -7,6 +9,39 @@ interface Props {
   loading: boolean;
   favoriteIds?: Set<number>;
   onToggleFavorite?: (id: number) => void;
+}
+
+// Meldefunktion für Besucher (falsche/fremde Einträge) - bewusst kein
+// Freitextformular, nur ein Bestätigungsdialog: hält die Hürde bewusst
+// niedrig, der Admin bekommt ohnehin nur "gemeldet", nicht den Grund im
+// Klartext gespeichert (siehe POST /stands/{id}/report).
+function ReportButton({ standId }: { standId: number }) {
+  const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+
+  if (state === "done") {
+    return <p className="text-xs text-gray-400">Gemeldet, danke.</p>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        if (!confirm("Diesen Stand als falsch oder unangemessen melden?")) return;
+        setState("sending");
+        try {
+          await reportStand(standId);
+        } catch {
+          // Fehlschlag hier bewusst nicht extra anzeigen - Melden soll
+          // niedrigschwellig bleiben, ein zweiter Versuch kostet nichts.
+        }
+        setState("done");
+      }}
+      disabled={state === "sending"}
+      className="text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline disabled:opacity-50"
+    >
+      🚩 Melden
+    </button>
+  );
 }
 
 export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: Props) {
@@ -68,6 +103,9 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
             {s.beschreibung && (
               <p className="mt-1 text-sm leading-snug text-gray-600">{s.beschreibung}</p>
             )}
+            <div className="mt-1.5">
+              <ReportButton standId={s.id} />
+            </div>
           </div>
           {(s.lat !== null && s.lng !== null) || onToggleFavorite ? (
             <div className="flex shrink-0 flex-col items-end gap-1.5 self-center">

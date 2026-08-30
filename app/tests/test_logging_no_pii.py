@@ -19,7 +19,7 @@ async def test_no_pii_in_application_logs_across_full_cycle(
     email = "logtest@example.com"
     created = await client.post(
         "/stands/",
-        json={"adresse": "Musterstraße 1, Zirndorf", "email": email, "kategorien": []},
+        json={"adresse": "Musterstraße 1, Zirndorf", "email": email, "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     assert created.status_code == 201
@@ -29,7 +29,7 @@ async def test_no_pii_in_application_logs_across_full_cycle(
     session_token = login_resp.json()["session_token"]
 
     await client.get(f"/stands/by-session/{session_token}")
-    await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]})
+    await client.patch(f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
     await client.get("/stands/admin", headers=admin_headers)
     await client.delete(f"/stands/by-session/{session_token}")
 

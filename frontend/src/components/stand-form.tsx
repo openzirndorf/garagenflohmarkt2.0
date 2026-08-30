@@ -42,6 +42,8 @@ const EMPTY: StandFormData = {
   email: "",
   kategorien: [],
   zahlungsarten: [],
+  datenschutz_zustimmung: false,
+  mindestalter_bestaetigt: false,
   website: "", // Honeypot
 };
 
@@ -55,12 +57,19 @@ const RULES = [
 export function StandForm({ onSuccess }: Props) {
   const [form, setForm] = useState<StandFormData>(EMPTY);
   const [confirmed, setConfirmed] = useState<boolean[]>(RULES.map(() => false));
+  // Getrennt von den Teilnahmebedingungen-Checkboxen oben, weil das hier
+  // keine Verhaltensregeln sind, sondern eine eigene datenschutzrechtliche
+  // Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) bzw. Altersbestätigung
+  // (Art. 8 DSGVO) - beide werden serverseitig unabhängig voneinander
+  // erzwungen (siehe app/routes/stands.py create_stand).
+  const [datenschutzOk, setDatenschutzOk] = useState(false);
+  const [alterOk, setAlterOk] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [nickname, setNickname] = useState<string | null>(null);
   const mountedAt = useRef(Date.now());
 
-  const allConfirmed = confirmed.every(Boolean);
+  const allConfirmed = confirmed.every(Boolean) && datenschutzOk && alterOk;
 
   const toggleKategorie = (k: string) => {
     setForm((f) => {
@@ -102,10 +111,17 @@ export function StandForm({ onSuccess }: Props) {
 
     setStatus("loading");
     try {
-      const created = await createStand(form);
+      const created = await createStand({
+        ...form,
+        datenschutz_zustimmung: datenschutzOk,
+        mindestalter_bestaetigt: alterOk,
+      });
       setNickname(created.nickname);
       setStatus("success");
       setForm(EMPTY);
+      setConfirmed(RULES.map(() => false));
+      setDatenschutzOk(false);
+      setAlterOk(false);
       onSuccess();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Unbekannter Fehler");
@@ -165,6 +181,11 @@ export function StandForm({ onSuccess }: Props) {
               onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
               disabled={status === "loading"}
             />
+            <p className="text-xs text-gray-500">
+              Straße und Hausnummer werden nach der Bestätigung <strong>öffentlich</strong> auf der
+              Karte und in der Liste angezeigt. Bist du nicht Eigentümer*in des Grundstücks? Frag
+              vorher Vermieter*in oder Hausverwaltung.
+            </p>
           </div>
 
           <div className="flex flex-col gap-1.5">
@@ -280,6 +301,42 @@ export function StandForm({ onSuccess }: Props) {
               </a>
               .
             </p>
+          </div>
+
+          {/* Datenschutz-Einwilligung - bewusst getrennt von den
+              Teilnahmebedingungen oben: keine Verhaltensregel, sondern die
+              Rechtsgrundlage (Art. 6 Abs. 1 lit. a DSGVO) für die
+              Adressveröffentlichung. */}
+          <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p className="text-sm font-semibold text-blue-800">Datenschutz:</p>
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
+                checked={datenschutzOk}
+                onChange={(e) => setDatenschutzOk(e.target.checked)}
+                disabled={status === "loading"}
+              />
+              <span className="text-sm text-blue-900">
+                Ich willige ein, dass meine Adresse (Straße und Hausnummer) öffentlich auf der Karte
+                und in der Liste angezeigt wird. Ich kann diese Einwilligung jederzeit widerrufen,
+                indem ich meinen Stand unter „Mein Stand" vollständig lösche. Mehr dazu in der{" "}
+                <a href="#datenschutz" className="underline hover:text-blue-900">
+                  Datenschutzerklärung
+                </a>
+                .
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
+                checked={alterOk}
+                onChange={(e) => setAlterOk(e.target.checked)}
+                disabled={status === "loading"}
+              />
+              <span className="text-sm text-blue-900">Ich bin mindestens 16 Jahre alt.</span>
+            </label>
           </div>
 
           {/* Honeypot */}

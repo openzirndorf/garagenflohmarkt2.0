@@ -50,7 +50,9 @@ export function Faq() {
           ), ist an keinem Verkauf, keiner Zahlung und keiner Vor-Ort-Absprache beteiligt und
           übernimmt keine Haftung für Schäden, Vorfälle, Betrug oder Streitigkeiten zwischen
           Standbetreiber und Besucher. Versicherungstechnische Fragen kläre bitte direkt mit dem
-          Eigentümer oder der Hausverwaltung des Grundstücks.
+          Eigentümer oder der Hausverwaltung des Grundstücks. Wir behalten uns vor, Einträge ohne
+          Angabe von Gründen zu bearbeiten oder zu löschen, z.&nbsp;B. bei Verstößen gegen diese
+          Bedingungen oder gemeldeten Problemen.
         </p>
       </section>
 

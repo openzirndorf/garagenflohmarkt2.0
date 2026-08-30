@@ -4,7 +4,7 @@ async def _register(client, api_auth, email="test@example.com"):
         json={
             "adresse": "Musterstraße 1, Zirndorf",
             "email": email,
-            "kategorien": [],
+            "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": [],
         },
         auth=api_auth,
     )
@@ -114,7 +114,7 @@ async def test_owner_can_update_and_delete_own_stand(client, api_auth, captured_
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
-        f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]}
+        f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]}
     )
     assert patched.status_code == 200
     assert patched.json()["kategorien"] == ["Bücher"]
@@ -152,7 +152,7 @@ async def test_one_email_one_stand(client, api_auth):
     await _register(client, api_auth, email="doppelt@example.com")
     second = await client.post(
         "/stands/",
-        json={"adresse": "Andere Straße 5, Zirndorf", "email": "doppelt@example.com", "kategorien": []},
+        json={"adresse": "Andere Straße 5, Zirndorf", "email": "doppelt@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     assert second.status_code == 409

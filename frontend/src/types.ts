@@ -16,5 +16,9 @@ export interface StandFormData {
   email: string;
   kategorien: string[];
   zahlungsarten: string[];
+  // Beide müssen true sein - Server erzwingt das unabhängig vom Frontend
+  // (siehe app/routes/stands.py create_stand).
+  datenschutz_zustimmung: boolean;
+  mindestalter_bestaetigt: boolean;
   website?: string; // Honeypot – muss leer bleiben
 }

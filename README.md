@@ -64,7 +64,7 @@ garagenflohmarkt2.0/
 │   ├── auth.py            Basic Auth (API) + Bearer Token (Admin)
 │   ├── database.py        asyncpg-Connection-Pool
 │   ├── email.py            Magic-Link-Mail via Scaleway TEM
-│   ├── geocode.py          Adresse → GPS (Nominatim/OSM)
+│   ├── geocode.py          Adresse → GPS (OpenCage, Fallback: Nominatim)
 │   ├── tokens.py           Login-/Session-Token: erzeugen, hashen, prüfen
 │   ├── nicknames.py        Serverseitige Nickname-Generierung (fränkisch)
 │   ├── rate_limit.py       DB-gestütztes Ratelimiting (überlebt Multi-Instance)
@@ -91,7 +91,7 @@ garagenflohmarkt2.0/
 
 **Ablauf einer Stand-Anmeldung:**
 1. Nutzer füllt Formular aus → `POST /stands` (Basic Auth) — kein Namensfeld, nur Adresse/Beschreibung/Kategorien/E-Mail
-2. Backend geocodiert die Adresse via Nominatim/OSM, vergibt einen Nickname
+2. Backend geocodiert die Adresse via OpenCage (Fallback lokal: Nominatim), vergibt einen Nickname
 3. Stand landet als `PENDING` in der Datenbank, ein befristeter, einmaliger Login-Link geht per Mail raus
 4. Klick auf den Link → Bestätigungsseite ("Bist du das?", verbraucht den Link noch nicht) → "Ja, einloggen" → Stand wird `APPROVED`, ein Session-Token für diese Sitzung wird ausgestellt
 5. Das Karten-Artefakt wird im Hintergrund neu erzeugt (`app/jobs/stands_artifact.py`) und auf Object Storage hochgeladen — die Karte zeigt den Stand kurz danach

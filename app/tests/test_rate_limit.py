@@ -38,14 +38,14 @@ async def test_create_stand_endpoint_is_rate_limited(client, api_auth):
     for i in range(3):
         resp = await client.post(
             "/stands/",
-            json={"adresse": f"Straße {i}, Zirndorf", "email": f"limit{i}@example.com", "kategorien": []},
+            json={"adresse": f"Straße {i}, Zirndorf", "email": f"limit{i}@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
             auth=api_auth,
         )
         assert resp.status_code == 201
 
     fourth = await client.post(
         "/stands/",
-        json={"adresse": "Straße 4, Zirndorf", "email": "limit4@example.com", "kategorien": []},
+        json={"adresse": "Straße 4, Zirndorf", "email": "limit4@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
     assert fourth.status_code == 429

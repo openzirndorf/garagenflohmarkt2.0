@@ -16,6 +16,7 @@ const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   EDITED: "Bearbeitet",
   DELETED: "Gelöscht",
   REPLIED: "Antwort auf Sperre",
+  REPORTED: "Gemeldet",
 };
 
 const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
@@ -24,6 +25,7 @@ const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
   EDITED: "bg-blue-100 text-blue-700",
   DELETED: "bg-red-100 text-red-700",
   REPLIED: "bg-amber-100 text-amber-700",
+  REPORTED: "bg-orange-100 text-orange-700",
 };
 
 export function AdminPanel() {
@@ -543,6 +545,19 @@ export function AdminPanel() {
           </section>
         </>
       )}
+
+      {/* §5 DDG/Art. 13 DSGVO gelten für die ganze Seite, nicht nur für
+          #main - die Admin-Ansicht ist eine eigene, von flohmarkt-app.tsx
+          getrennte Komponente (siehe main.tsx) und hatte bisher gar keinen
+          Footer/Impressum-Link. */}
+      <footer className="mt-8 flex justify-center gap-4 border-t border-gray-100 pt-4 text-xs text-gray-400">
+        <a href="#impressum" className="hover:text-gray-600 hover:underline">
+          Impressum
+        </a>
+        <a href="#datenschutz" className="hover:text-gray-600 hover:underline">
+          Datenschutz
+        </a>
+      </footer>
     </main>
   );
 }

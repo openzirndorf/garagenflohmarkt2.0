@@ -1,8 +1,43 @@
-/* OpenZirndorf Design Tokens – werden live vom Portal geladen */
-@import url("https://portal.openzirndorf.de/theme.css");
 @import "tailwindcss";
 
+/* Schriften selbst gehostet statt per @import von Google Fonts geladen
+   (vorher transitiv über https://portal.openzirndorf.de/theme.css) - jeder
+   Seitenaufruf hätte sonst die IP der Besucher*innen unangekündigt an
+   Google übertragen (bekanntes Abmahnrisiko, siehe LG München 2022), ohne
+   dass die Datenschutzerklärung das je erwähnt hätte. Nur der "latin"-
+   Subset nötig (deckt auch deutsche Umlaute ab); Google liefert Inter und
+   Montserrat ohnehin als Variable Font, ein File pro Familie deckt alle
+   verwendeten Schnitte ab. Quelle: fonts.gstatic.com, Open Font License
+   (frei redistributierbar) - siehe frontend/src/assets/fonts/.
+   Design-Tokens hier fest hinterlegt statt vom Portal-Theme importiert,
+   aus demselben Grund - nur die tatsächlich in diesem Projekt genutzten
+   Werte, bei Bedarf hier ergänzen statt wieder auf einen Live-Import
+   umzustellen. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/inter-variable-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Montserrat";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/montserrat-variable-latin.woff2") format("woff2");
+}
+
 :root {
+  --oz-green: #009a00;
+  --oz-green-hover: #007a00;
+  --oz-font-heading: "Montserrat", sans-serif;
+  --oz-font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+  --oz-radius-lg: 16px;
+  --oz-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.08);
+  --oz-header-height: 64px;
+
   /* Tailwind-kompatible Aliases (garage-spezifisch) */
   --color-background: #ffffff;
   --color-foreground: #1f2937;

@@ -6,7 +6,7 @@ _MAX = 5  # muss mit _MAX_KATEGORIEN in app/routes/stands.py übereinstimmen
 
 
 async def _register(client, api_auth, email="kategorien@example.com", **overrides):
-    body = {"adresse": "Musterstraße 1, Zirndorf", "email": email, "kategorien": []}
+    body = {"adresse": "Musterstraße 1, Zirndorf", "email": email, "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []}
     body.update(overrides)
     return await client.post("/stands/", json=body, auth=api_auth)
 
@@ -38,7 +38,7 @@ async def test_owner_update_rejects_too_many_kategorien(client, api_auth, captur
 
     resp = await client.patch(
         f"/stands/by-session/{session_token}",
-        json={"kategorien": ["a", "b", "c", "d", "e", "f"]},
+        json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["a", "b", "c", "d", "e", "f"]},
     )
     assert resp.status_code == 400
 
@@ -47,7 +47,7 @@ async def test_admin_update_rejects_too_many_kategorien(client, api_auth, admin_
     stand = (await _register(client, api_auth)).json()
     resp = await client.patch(
         f"/stands/{stand['id']}",
-        json={"kategorien": ["a", "b", "c", "d", "e", "f"]},
+        json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["a", "b", "c", "d", "e", "f"]},
         headers=admin_headers,
     )
     assert resp.status_code == 400

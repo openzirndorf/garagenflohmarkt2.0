@@ -6,7 +6,7 @@ der öffentlichen Karte bedeuten."""
 
 
 async def _register(client, api_auth, email="zahlung@example.com", **overrides):
-    body = {"adresse": "Musterstraße 1, Zirndorf", "email": email, "kategorien": []}
+    body = {"adresse": "Musterstraße 1, Zirndorf", "email": email, "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []}
     body.update(overrides)
     return await client.post("/stands/", json=body, auth=api_auth)
 

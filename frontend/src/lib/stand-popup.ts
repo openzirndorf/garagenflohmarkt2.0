@@ -18,6 +18,14 @@ export interface FavoriteControls {
   onToggle: (id: number) => void;
 }
 
+// Wie FavoriteControls injiziert statt hier direkt zu fetchen - dieses
+// Modul bleibt bewusst frei von Netzwerk-Importen, damit es ohne
+// Karten-/Netzwerk-Mock testbar bleibt (siehe Kommentar an
+// buildStandPopupContent).
+export interface ReportControls {
+  onReport: (id: number) => Promise<void>;
+}
+
 // MapLibre GL kodiert GeoJSON-Feature-Properties intern wie Vector-Tiles
 // (die kein Array/Objekt als Wert kennen): ein Array-Property wie
 // kategorien/zahlungsarten kommt aus feature.properties eines
@@ -56,6 +64,7 @@ export function buildStandPopupContent(
   properties: StandPopupProperties,
   coords: { lat: number; lng: number } | null = null,
   favorite: FavoriteControls | null = null,
+  report: ReportControls | null = null,
 ): HTMLElement {
   const { id, nickname, adresse, beschreibung } = properties;
   const kategorien = toStringArray(properties.kategorien);
@@ -145,6 +154,31 @@ export function buildStandPopupContent(
 
   if (actionsRow.childElementCount > 0) {
     popupNode.appendChild(actionsRow);
+  }
+
+  if (report) {
+    const reportBtn = document.createElement("button");
+    reportBtn.type = "button";
+    reportBtn.textContent = "🚩 Melden";
+    Object.assign(reportBtn.style, {
+      display: "block",
+      marginTop: "6px",
+      border: "none",
+      background: "transparent",
+      cursor: "pointer",
+      fontFamily: "inherit",
+      fontSize: "0.7rem",
+      color: "#9ca3af",
+      padding: "0",
+    });
+    reportBtn.addEventListener("click", () => {
+      if (!confirm("Diesen Stand als falsch oder unangemessen melden?")) return;
+      reportBtn.disabled = true;
+      report.onReport(id).finally(() => {
+        reportBtn.textContent = "Gemeldet, danke.";
+      });
+    });
+    popupNode.appendChild(reportBtn);
   }
 
   return popupNode;

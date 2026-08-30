@@ -65,6 +65,7 @@ export interface AdminStand extends Stand {
   content_lock_message: string | null;
   lock_reply_message: string | null;
   lock_reply_created_at: string | null;
+  address_consent_at: string;
 }
 
 export async function fetchAdminStands(token: string): Promise<AdminStand[]> {
@@ -86,8 +87,8 @@ export async function approveStand(id: number, token: string): Promise<void> {
 export interface AuditLogEntry {
   id: number;
   stand_id: number;
-  action: "CREATED" | "APPROVED" | "EDITED" | "DELETED" | "REPLIED";
-  actor: "owner" | "admin";
+  action: "CREATED" | "APPROVED" | "EDITED" | "DELETED" | "REPLIED" | "REPORTED";
+  actor: "owner" | "admin" | "besucher";
   created_at: string;
 }
 
@@ -104,6 +105,7 @@ export interface OwnStand extends Stand {
   status: string;
   content_locked: boolean;
   content_lock_message: string | null;
+  address_consent_at: string;
 }
 
 export async function createStand(data: StandFormData): Promise<OwnStand> {
@@ -262,4 +264,18 @@ export async function cancelStand(sessionToken: string): Promise<void> {
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Stand konnte nicht gelöscht werden");
+}
+
+// Öffentliche Meldefunktion für Besucher (falsche/fremde Einträge) - kein
+// Basic Auth nötig, jede*r soll melden können.
+export async function reportStand(standId: number, grund?: string): Promise<void> {
+  const res = await fetch(`${API}/stands/${standId}/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ grund: grund ?? null }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail ?? "Meldung fehlgeschlagen");
+  }
 }

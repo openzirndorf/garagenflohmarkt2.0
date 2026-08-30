@@ -1,5 +1,5 @@
 async def _register(client, api_auth, email="mod@example.com", **overrides):
-    body = {"adresse": "Musterstraße 1, Zirndorf", "email": email, "kategorien": []}
+    body = {"adresse": "Musterstraße 1, Zirndorf", "email": email, "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []}
     body.update(overrides)
     return await client.post("/stands/", json=body, auth=api_auth)
 
@@ -40,7 +40,7 @@ async def test_owner_edit_of_other_fields_unaffected_by_blocklist(client, api_au
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    resp = await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Bücher"]})
+    resp = await client.patch(f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
     assert resp.status_code == 200
 
 
@@ -79,7 +79,7 @@ async def test_content_lock_does_not_block_unrelated_field_edits(
         f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
     )
 
-    resp = await client.patch(f"/stands/by-session/{session_token}", json={"kategorien": ["Möbel"]})
+    resp = await client.patch(f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Möbel"]})
     assert resp.status_code == 200
 
 

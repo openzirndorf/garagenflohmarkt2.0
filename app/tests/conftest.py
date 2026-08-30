@@ -120,7 +120,7 @@ def api_auth():
 
 @pytest_asyncio.fixture(autouse=True)
 def _no_real_geocoding(monkeypatch):
-    """Verhindert echte Nominatim-Aufrufe in Tests (Netzwerk, OSM-Rate-Limit)."""
+    """Verhindert echte Geocoding-Aufrufe (OpenCage/Nominatim) in Tests."""
 
     async def _fake_geocode(adresse: str):
         return (49.4436, 10.9563)
