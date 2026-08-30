@@ -27,7 +27,7 @@ export function OnboardingHint() {
       </span>
       <ul className="flex-1 list-disc pl-4 text-gray-700 [&>li]:mt-0.5">
         <li>
-          <strong>Suche + Filter</strong> oben durchsuchen Karte und Liste gemeinsam.
+          <strong>Suche + Filter</strong> unter der Karte durchsuchen Karte und Liste gemeinsam.
         </li>
         <li>
           Auf einen <strong>Pin tippen</strong> zeigt Adresse, Kategorien und „Navigieren".

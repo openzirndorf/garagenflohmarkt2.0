@@ -34,6 +34,14 @@ export function Faq() {
       {/* Allgemein - betrifft Standbetreiber wie Besucher gleichermaßen */}
       <section className="flex flex-col gap-4">
         <SectionHeading>Allgemein</SectionHeading>
+        <QA q="Wie funktioniert die App?">
+          Auf der Startseite zeigen Karte und Liste alle angemeldeten Stände - beide folgen
+          derselben Suche und denselben Filtern dazwischen. Tippe auf einen Pin oder einen Eintrag
+          für Details wie Kategorien, Zahlungsarten und einen „Navigieren"-Button. Mit „★ Favoriten"
+          merkst du dir Stände und findest sie über den Filter wieder. Willst du selbst mitmachen,
+          meldest du über „📍 Eigenen Stand anmelden" (oben im Menü oder im grünen Banner) deinen
+          eigenen Stand an.
+        </QA>
         <QA q="Kann ich die Seite als App installieren?">
           Ja - auf Android/Chrome zeigt ein Banner oben eine „Installieren"-Schaltfläche. Auf dem
           iPhone/iPad geht es über Safari: Teilen-Symbol antippen, dann „Zum Home-Bildschirm".

@@ -534,25 +534,39 @@ export function FlohmarktApp() {
 
           {/* Event-Info-Banner */}
           <div className="border-b border-green-100 bg-green-50 px-4 py-3">
-            <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-x-4 gap-y-1">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <p className="text-sm font-semibold text-[#009a00]">
-                  Sonntag, 4. Oktober 2026 · 10:00 – 16:00 Uhr
-                </p>
-                {daysUntilEvent() > 0 && (
-                  <span className="text-xs text-green-600">in {daysUntilEvent()} Tagen</span>
-                )}
+            <div className="mx-auto flex max-w-2xl flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <p className="text-sm font-semibold text-[#009a00]">
+                    Sonntag, 4. Oktober 2026 · 10:00 – 16:00 Uhr
+                  </p>
+                  {daysUntilEvent() > 0 && (
+                    <span className="text-xs text-green-600">in {daysUntilEvent()} Tagen</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={downloadICS}
+                    className="text-xs text-green-700 underline-offset-2 hover:underline"
+                  >
+                    + Kalender
+                  </button>
+                  <ShareButton options={appShareOptions()} />
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={downloadICS}
-                  className="text-xs text-green-700 underline-offset-2 hover:underline"
+              {/* Bisher nur im Hamburger-Menü versteckt - hier auf jeder
+                  Startseiten-Ansicht sichtbar, statt dass Neulinge erst das
+                  Menü öffnen müssen, um überhaupt zu finden, wie man
+                  mitmacht. */}
+              {!hasOwnStand && (
+                <a
+                  href="#stand-anmelden"
+                  className="inline-flex w-fit items-center gap-1.5 rounded-full bg-[#009a00] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#008400]"
                 >
-                  + Kalender
-                </button>
-                <ShareButton options={appShareOptions()} />
-              </div>
+                  📍 Eigenen Stand anmelden
+                </a>
+              )}
             </div>
           </div>
 

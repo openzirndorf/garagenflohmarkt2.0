@@ -56,20 +56,25 @@ const RULES = [
 
 export function StandForm({ onSuccess }: Props) {
   const [form, setForm] = useState<StandFormData>(EMPTY);
-  const [confirmed, setConfirmed] = useState<boolean[]>(RULES.map(() => false));
-  // Getrennt von den Teilnahmebedingungen-Checkboxen oben, weil das hier
-  // keine Verhaltensregeln sind, sondern eine eigene datenschutzrechtliche
-  // Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) bzw. Altersbestätigung
-  // (Art. 8 DSGVO) - beide werden serverseitig unabhängig voneinander
-  // erzwungen (siehe app/routes/stands.py create_stand).
-  const [datenschutzOk, setDatenschutzOk] = useState(false);
-  const [alterOk, setAlterOk] = useState(false);
+  // Ein Haken für alle vier Regeln statt vier einzelner - das sind
+  // Verhaltensregeln, keine getrennt einwilligungspflichtigen Zwecke, ein
+  // gemeinsamer Haken ("ich halte mich an das alles") ist hier ausreichend
+  // und weniger umständlich als vier Klicks für denselben Absatz.
+  const [rulesConfirmed, setRulesConfirmed] = useState(false);
+  // Auch Datenschutz-Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) und
+  // Altersbestätigung (Art. 8 DSGVO) in einem Haken zusammengefasst: beide
+  // sind ohnehin zwingende Voraussetzungen für die Teilnahme (kein Fall, in
+  // dem jemand sinnvoll das eine ohne das andere angeben würde), anders als
+  // z.B. Werbe-Einwilligung vs. Adressveröffentlichung, die man getrennt
+  // ablehnen können müsste. Serverseitig weiterhin zwei getrennte Felder
+  // (siehe app/routes/stands.py create_stand) - nur die Checkbox ist eine.
+  const [consentOk, setConsentOk] = useState(false);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [nickname, setNickname] = useState<string | null>(null);
   const mountedAt = useRef(Date.now());
 
-  const allConfirmed = confirmed.every(Boolean) && datenschutzOk && alterOk;
+  const allConfirmed = rulesConfirmed && consentOk;
 
   const toggleKategorie = (k: string) => {
     setForm((f) => {
@@ -113,15 +118,14 @@ export function StandForm({ onSuccess }: Props) {
     try {
       const created = await createStand({
         ...form,
-        datenschutz_zustimmung: datenschutzOk,
-        mindestalter_bestaetigt: alterOk,
+        datenschutz_zustimmung: consentOk,
+        mindestalter_bestaetigt: consentOk,
       });
       setNickname(created.nickname);
       setStatus("success");
       setForm(EMPTY);
-      setConfirmed(RULES.map(() => false));
-      setDatenschutzOk(false);
-      setAlterOk(false);
+      setRulesConfirmed(false);
+      setConsentOk(false);
       onSuccess();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Unbekannter Fehler");
@@ -280,25 +284,27 @@ export function StandForm({ onSuccess }: Props) {
             </p>
           </div>
 
-          {/* Teilnahmebedingungen */}
+          {/* Teilnahmebedingungen - ein gemeinsamer Haken statt vier
+              einzelner (siehe Kommentar bei rulesConfirmed oben). */}
           <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm font-semibold text-amber-800">
-              Bitte bestätige die Teilnahmebedingungen:
-            </p>
-            {RULES.map((rule, i) => (
-              <label key={rule} className="flex cursor-pointer items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
-                  checked={confirmed[i]}
-                  onChange={(e) =>
-                    setConfirmed((prev) => prev.map((v, j) => (j === i ? e.target.checked : v)))
-                  }
-                  disabled={status === "loading"}
-                />
-                <span className="text-sm text-amber-900">{rule}</span>
-              </label>
-            ))}
+            <p className="text-sm font-semibold text-amber-800">Teilnahmebedingungen:</p>
+            <ul className="flex flex-col gap-0.5 pl-4 text-sm text-amber-900 [&>li]:list-disc">
+              {RULES.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+            <label className="mt-1 flex cursor-pointer items-start gap-2.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
+                checked={rulesConfirmed}
+                onChange={(e) => setRulesConfirmed(e.target.checked)}
+                disabled={status === "loading"}
+              />
+              <span className="text-sm font-medium text-amber-900">
+                Ich bestätige, dass das alles auf meinen Stand zutrifft.
+              </span>
+            </label>
             <p className="mt-1 text-xs text-amber-700">
               Weitere Infos auf der{" "}
               <a href="#faq" className="underline hover:text-amber-900">
@@ -308,39 +314,35 @@ export function StandForm({ onSuccess }: Props) {
             </p>
           </div>
 
-          {/* Datenschutz-Einwilligung - bewusst getrennt von den
-              Teilnahmebedingungen oben: keine Verhaltensregel, sondern die
-              Rechtsgrundlage (Art. 6 Abs. 1 lit. a DSGVO) für die
-              Adressveröffentlichung. */}
+          {/* Datenschutz-Einwilligung - bewusst als eigene Box getrennt von
+              den Teilnahmebedingungen oben: keine Verhaltensregel, sondern
+              die Rechtsgrundlage (Art. 6 Abs. 1 lit. a DSGVO) für die
+              Adressveröffentlichung. Alter und Adress-Einwilligung dagegen
+              in einem gemeinsamen Haken (siehe Kommentar bei consentOk
+              oben) - anders als bei den Teilnahmeregeln oben oder einer
+              echten Zweitwahl (z.B. Werbe-Einwilligung) gibt es hier keinen
+              Fall, in dem jemand sinnvoll nur eines von beiden angeben
+              wollte. */}
           <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 p-4">
             <p className="text-sm font-semibold text-blue-800">Datenschutz:</p>
             <label className="flex cursor-pointer items-start gap-2.5">
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
-                checked={datenschutzOk}
-                onChange={(e) => setDatenschutzOk(e.target.checked)}
+                checked={consentOk}
+                onChange={(e) => setConsentOk(e.target.checked)}
                 disabled={status === "loading"}
               />
               <span className="text-sm text-blue-900">
-                Ich willige ein, dass meine Adresse (Straße und Hausnummer) öffentlich auf der Karte
-                und in der Liste angezeigt wird. Ich kann diese Einwilligung jederzeit widerrufen,
-                indem ich meinen Stand unter „Mein Stand" vollständig lösche. Mehr dazu in der{" "}
+                Ich bin mindestens 16 Jahre alt und willige ein, dass meine Adresse (Straße und
+                Hausnummer) öffentlich auf der Karte und in der Liste angezeigt wird. Ich kann diese
+                Einwilligung jederzeit widerrufen, indem ich meinen Stand unter „Mein Stand"
+                vollständig lösche. Mehr dazu in der{" "}
                 <a href="#datenschutz" className="underline hover:text-blue-900">
                   Datenschutzerklärung
                 </a>
                 .
               </span>
-            </label>
-            <label className="flex cursor-pointer items-start gap-2.5">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#009a00]"
-                checked={alterOk}
-                onChange={(e) => setAlterOk(e.target.checked)}
-                disabled={status === "loading"}
-              />
-              <span className="text-sm text-blue-900">Ich bin mindestens 16 Jahre alt.</span>
             </label>
           </div>
 
