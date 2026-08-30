@@ -212,14 +212,19 @@ export function buildStandPopupContent(
     addLine(zahlungsarten.map((z) => `${ZAHLUNGSART_ICON[z] ?? "💳"} ${z}`).join(", "));
   }
 
-  // "Navigieren" und Favorit-Umschalter als gleichwertige Aktions-Buttons
-  // in einer Zeile - der Stern allein (nur neben dem Namen) war zu
-  // unauffällig, um als eigene Aktion erkannt zu werden.
+  // "Navigieren", Favorit-Umschalter und Melden als gleichwertige
+  // Aktions-Buttons in einer Zeile - der Stern allein (nur neben dem Namen)
+  // war zu unauffällig, um als eigene Aktion erkannt zu werden. flexWrap
+  // statt eines festen Nebeneinanders: drei Pillen passen nicht immer in
+  // die Popup-Breite, quetschten sich davor ineinander statt sauber in
+  // eine zweite Zeile umzubrechen.
   const actionsRow = document.createElement("div");
   Object.assign(actionsRow.style, {
     display: "flex",
+    flexWrap: "wrap",
     alignItems: "center",
-    gap: "14px",
+    rowGap: "6px",
+    columnGap: "8px",
     marginTop: "8px",
   });
 
@@ -231,6 +236,7 @@ export function buildStandPopupContent(
     navLink.textContent = "Navigieren";
     Object.assign(navLink.style, {
       display: "inline-block",
+      whiteSpace: "nowrap",
       cursor: "pointer",
       fontFamily: "inherit",
       fontSize: "0.75rem",
@@ -251,6 +257,7 @@ export function buildStandPopupContent(
     const favBtn = document.createElement("button");
     favBtn.type = "button";
     Object.assign(favBtn.style, {
+      whiteSpace: "nowrap",
       cursor: "pointer",
       fontFamily: "inherit",
       fontSize: "0.75rem",
@@ -282,6 +289,7 @@ export function buildStandPopupContent(
     const reportBtn = document.createElement("button");
     reportBtn.type = "button";
     Object.assign(reportBtn.style, {
+      whiteSpace: "nowrap",
       cursor: "pointer",
       fontFamily: "inherit",
       fontSize: "0.75rem",

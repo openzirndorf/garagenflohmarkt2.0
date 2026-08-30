@@ -121,7 +121,14 @@ export function FlohmarktMap({
             },
             { onReport: (fid, grund) => reportStand(fid, grund) },
           );
-          new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(popupNode).addTo(map);
+          // Default-maxWidth (240px) reicht für Navigieren/Favoriten/Melden
+          // nebeneinander nicht - die Buttons quetschten sich dann ineinander
+          // (siehe buildStandPopupContent, das die Zeile zusätzlich umbrechen
+          // lässt, falls es trotzdem mal eng wird).
+          new maplibregl.Popup({ maxWidth: "280px" })
+            .setLngLat(e.lngLat)
+            .setDOMContent(popupNode)
+            .addTo(map);
         });
         map.on("mouseenter", "stands-pins", () => {
           map.getCanvas().style.cursor = "pointer";
