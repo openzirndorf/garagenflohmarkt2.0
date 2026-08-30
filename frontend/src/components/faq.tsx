@@ -12,7 +12,9 @@ function QA({ q, children }: { q: string; children: ReactNode }) {
   return (
     <div className="border-l-4 border-[#009a00] pl-4">
       <p className="font-semibold text-gray-800">{q}</p>
-      <p className="text-gray-600 text-sm mt-1">{children}</p>
+      {/* div statt p, damit Antworten mit mehreren Absätzen (z.B. die
+          PayPal-/Wero-Anleitung) sauber eigene <p>s verschachteln können. */}
+      <div className="mt-1 flex flex-col gap-2 text-gray-600 text-sm">{children}</div>
     </div>
   );
 }
@@ -162,8 +164,8 @@ export function Faq() {
           liegen, damit sie auf der Karte angezeigt werden kann.
         </QA>
         <QA q="Wie richte ich einen PayPal-/Wero-QR-Code für meinen Stand ein?">
-          <>
-            Für <strong>PayPal</strong>: Lege dir (falls noch nicht vorhanden) unter{" "}
+          <p>
+            <strong>PayPal:</strong> Lege dir (falls noch nicht vorhanden) unter{" "}
             <a
               href="https://www.paypal.com/paypalme"
               target="_blank"
@@ -172,20 +174,27 @@ export function Faq() {
             >
               paypal.me
             </a>{" "}
-            einen eigenen Zahlungslink an - die PayPal-App zeigt dazu direkt einen passenden
-            QR-Code, den du ausdrucken oder als Handy-Display an den Stand legen kannst. Für{" "}
-            <strong>Wero</strong>: Die Wero-Funktion in deiner Banking-App (falls deine Bank Wero
-            unterstützt) erzeugt genauso einen Zahlungs-QR-Code zum Auslegen. Richte beides direkt
-            in der jeweiligen offiziellen App ein - eine Anleitung dafür können wir hier nicht
-            geben, da sich das je nach Bank/App-Version unterscheidet.
-            <br />
-            <br />
+            einen eigenen Zahlungslink an - die PayPal-App zeigt dazu direkt einen passenden QR-Code
+            an. Den kannst du ausdrucken und gut sichtbar an deinem Stand auslegen, oder einfach
+            dein Handy mit dem QR-Code am Stand stehen lassen.
+          </p>
+          <p>
+            <strong>Wero:</strong> Die Wero-Funktion in deiner Banking-App (falls deine Bank Wero
+            unterstützt) erzeugt genauso einen eigenen Zahlungs-QR-Code - auch den kannst du
+            ausdrucken und auslegen oder direkt vom Handy anzeigen lassen.
+          </p>
+          <p>
+            Richte beides direkt in der jeweiligen offiziellen App ein - eine Schritt-für-Schritt-
+            Anleitung können wir hier nicht geben, da sich das je nach Bank/App-Version
+            unterscheidet.
+          </p>
+          <p>
             <strong>Wichtig:</strong> Diese Seite hat mit PayPal oder Wero nichts zu tun, betreibt
             selbst keine Zahlungsabwicklung und ist an keiner Zahlung beteiligt. Wir übernehmen
             keine Verantwortung für Zahlungen zwischen dir und deinen Käufer*innen - weder für
             Betrug noch für technische Probleme bei PayPal, Wero oder deiner Bank. Prüfe eingehende
             Zahlungen immer selbst, bevor du Ware aushändigst.
-          </>
+          </p>
         </QA>
       </section>
 

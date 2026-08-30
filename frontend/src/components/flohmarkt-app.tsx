@@ -203,6 +203,20 @@ function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
         </button>
         {menuOpen && (
           <div className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-gray-100 bg-white py-2 shadow-lg">
+            {/* Bewusst ein <button> statt <a href="#">: ist die Startseite
+                schon aktiv, ändert sich der Hash nicht, der hashchange-
+                Listener oben würde das Menü dann nicht automatisch
+                schließen - hier daher direkt per onClick. */}
+            <button
+              type="button"
+              onClick={() => {
+                goHome();
+                setMenuOpen(false);
+              }}
+              className={`w-full text-left ${menuLinkClass(page === "main")}`}
+            >
+              🏠 Startseite
+            </button>
             {!hasOwnStand && (
               <a href="#stand-anmelden" className={menuLinkClass(page === "stand-anmelden")}>
                 📍 Eigenen Stand anmelden
@@ -421,6 +435,14 @@ export function FlohmarktApp() {
                 </button>
               )}
             </div>
+            {/* Explizit statt implizit lassen, damit sofort klar ist, dass ein
+                einziger Satz Filter beide Ansichten steuert - vorher gab es
+                zwei fast identische Filterleisten (eine über der Karte, eine
+                über der Liste), was den Eindruck erweckte, es wären zwei
+                getrennte Filter. */}
+            <p className="px-1 text-xs text-gray-400">
+              🗺️ Karte &amp; 📋 Liste folgen derselben Suche und denselben Filtern.
+            </p>
           </div>
 
           {/* Karte als Startseite – volle Breite, prominent, ohne Overlay */}
