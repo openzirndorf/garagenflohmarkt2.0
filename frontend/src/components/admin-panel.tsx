@@ -8,7 +8,7 @@ import {
   fetchAuditLog,
   updateStandAdmin,
 } from "../api";
-import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
+import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 
 const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   CREATED: "Angemeldet",
@@ -121,12 +121,15 @@ export function AdminPanel() {
   };
 
   const toggleEditKat = (k: string) => {
-    setEditForm((f) => ({
-      ...f,
-      kategorien: f.kategorien.includes(k)
-        ? f.kategorien.filter((c) => c !== k)
-        : [...f.kategorien, k],
-    }));
+    setEditForm((f) => {
+      if (!f.kategorien.includes(k) && f.kategorien.length >= MAX_KATEGORIEN) return f;
+      return {
+        ...f,
+        kategorien: f.kategorien.includes(k)
+          ? f.kategorien.filter((c) => c !== k)
+          : [...f.kategorien, k],
+      };
+    });
   };
 
   const toggleEditZahlungsart = (z: string) => {
@@ -597,16 +600,20 @@ function EditForm({
         />
       </div>
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-gray-600">Kategorien</span>
+        <span className="text-xs font-medium text-gray-600">
+          Kategorien (max. {MAX_KATEGORIEN})
+        </span>
         <div className="flex flex-wrap gap-1.5">
           {KATEGORIEN.map((k) => {
             const active = form.kategorien.includes(k);
+            const disabled = !active && form.kategorien.length >= MAX_KATEGORIEN;
             return (
               <button
                 key={k}
                 type="button"
                 onClick={() => onToggleKat(k)}
-                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors ${
+                disabled={disabled}
+                className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
                   active
                     ? "border-[#009a00] bg-[#009a00] text-white"
                     : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00]"

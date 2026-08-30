@@ -33,6 +33,9 @@ export const KATEGORIEN = [
   "Sonstiges",
 ] as const;
 
+// Muss mit _MAX_KATEGORIEN in app/routes/stands.py übereinstimmen.
+export const MAX_KATEGORIEN = 5;
+
 const EMPTY: StandFormData = {
   adresse: "",
   beschreibung: "",
@@ -60,12 +63,15 @@ export function StandForm({ onSuccess }: Props) {
   const allConfirmed = confirmed.every(Boolean);
 
   const toggleKategorie = (k: string) => {
-    setForm((f) => ({
-      ...f,
-      kategorien: f.kategorien.includes(k)
-        ? f.kategorien.filter((c) => c !== k)
-        : [...f.kategorien, k],
-    }));
+    setForm((f) => {
+      if (!f.kategorien.includes(k) && f.kategorien.length >= MAX_KATEGORIEN) return f;
+      return {
+        ...f,
+        kategorien: f.kategorien.includes(k)
+          ? f.kategorien.filter((c) => c !== k)
+          : [...f.kategorien, k],
+      };
+    });
   };
 
   const toggleZahlungsart = (z: string) => {
@@ -162,16 +168,20 @@ export function StandForm({ onSuccess }: Props) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Kategorien (optional)</span>
+            <span className="text-sm font-medium">
+              Kategorien (optional, max. {MAX_KATEGORIEN})
+            </span>
             <div className="flex flex-wrap gap-2">
               {KATEGORIEN.map((k) => {
                 const active = form.kategorien.includes(k);
+                const disabled =
+                  status === "loading" || (!active && form.kategorien.length >= MAX_KATEGORIEN);
                 return (
                   <button
                     key={k}
                     type="button"
                     onClick={() => toggleKategorie(k)}
-                    disabled={status === "loading"}
+                    disabled={disabled}
                     className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                       active
                         ? "border-[#009a00] bg-[#009a00] text-white"

@@ -40,6 +40,12 @@ _LOCK_REPLY_RATE_MAX = 5  # max. Sperr-Antworten pro IP pro Zeitfenster
 # _reject_if_invalid_zahlungsarten).
 _VALID_ZAHLUNGSARTEN = {"PayPal", "Wero", "Barzahlung"}
 
+# Begrenzt, damit ein einzelner Stand nicht praktisch alle Kategorien auf
+# einmal markiert (macht die Kategorie-Badges in Liste/Karte unübersichtlich
+# und die Kategorie-Filter im Panel nutzlos, wenn die meisten Stände ohnehin
+# überall auftauchen).
+_MAX_KATEGORIEN = 5
+
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
@@ -70,6 +76,14 @@ def _reject_if_blocked_content(adresse: str | None, beschreibung: str | None) ->
 def _reject_if_invalid_zahlungsarten(values: list[str] | None) -> None:
     if values and not set(values) <= _VALID_ZAHLUNGSARTEN:
         raise HTTPException(status_code=400, detail="Ungültige Zahlungsart")
+
+
+def _reject_if_too_many_kategorien(values: list[str] | None) -> None:
+    if values and len(values) > _MAX_KATEGORIEN:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Höchstens {_MAX_KATEGORIEN} Kategorien pro Stand",
+        )
 
 
 class StandIn(BaseModel):
@@ -138,6 +152,7 @@ async def create_stand(body: StandIn, request: Request):
 
     _reject_if_blocked_content(body.adresse, body.beschreibung)
     _reject_if_invalid_zahlungsarten(body.zahlungsarten)
+    _reject_if_too_many_kategorien(body.kategorien)
 
     pool = await get_pool()
 
@@ -323,6 +338,8 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
         raise HTTPException(status_code=400, detail="Ungültiger Standname")
     if "zahlungsarten" in updates:
         _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
+    if "kategorien" in updates:
+        _reject_if_too_many_kategorien(updates["kategorien"])
 
     pool = await get_pool()
 
@@ -511,6 +528,8 @@ async def update_stand_admin(
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
     if "zahlungsarten" in updates:
         _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
+    if "kategorien" in updates:
+        _reject_if_too_many_kategorien(updates["kategorien"])
 
     # Entsperren gilt als "Antwort gelesen/erledigt" - räumt die
     # gespeicherte Sperr-Antwort mit auf, statt sie unbegrenzt stehen zu
