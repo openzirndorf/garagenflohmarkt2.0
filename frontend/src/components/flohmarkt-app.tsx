@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type OwnStand, fetchStands } from "../api";
 import { useFavorites } from "../lib/favorites";
+import { appShareOptions } from "../lib/share";
 import type { Stand } from "../types";
 import { Datenschutz } from "./datenschutz";
 import { Faq } from "./faq";
@@ -278,6 +279,16 @@ export function FlohmarktApp() {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  // Deep-Link zum Teilen des eigenen Stands (siehe lib/share.ts,
+  // standShareOptions()): "#suche=<nickname>" befüllt beim Start einfach die
+  // schon vorhandene Freitextsuche, statt eine eigene Karte-zentrieren-und-
+  // Popup-öffnen-Logik zu bauen - wer den Link öffnet, sieht Karte und Liste
+  // direkt auf den einen Stand gefiltert.
+  useEffect(() => {
+    const match = window.location.hash.match(/^#suche=(.+)$/);
+    if (match) setSearchInput(decodeURIComponent(match[1]));
+  }, []);
+
   const toggleFilter = (k: string) => {
     setKategorienFilter((prev) => (prev.includes(k) ? prev.filter((c) => c !== k) : [...prev, k]));
   };
@@ -478,7 +489,7 @@ export function FlohmarktApp() {
                 >
                   + Kalender
                 </button>
-                <ShareButton />
+                <ShareButton options={appShareOptions()} />
               </div>
             </div>
           </div>

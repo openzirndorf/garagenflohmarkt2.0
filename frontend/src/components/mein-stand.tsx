@@ -10,6 +10,8 @@ import {
   suggestNicknames,
   updateStand,
 } from "../api";
+import { standShareOptions } from "../lib/share";
+import { ShareButton } from "./share-button";
 import { KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 
 const SESSION_TOKEN_KEY = "flohmarkt_session_token";
@@ -488,6 +490,15 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                 >
                   Namen ändern
                 </button>
+              )}
+              {/* Erst ab Freigabe teilbar - vorher würde der Link bei
+                  Freund*innen einfach ins Leere laufen (Stand ist noch nicht
+                  öffentlich such-/sichtbar). */}
+              {isApproved && (
+                <ShareButton
+                  options={standShareOptions(stand.nickname)}
+                  label="↗ Meinen Stand teilen"
+                />
               )}
             </div>
             {showNicknamePicker && (

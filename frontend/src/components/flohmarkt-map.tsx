@@ -1,5 +1,5 @@
 import maplibregl from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchGeoJSON } from "../api";
 import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
@@ -31,7 +31,12 @@ export function FlohmarktMap({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const allGeoJSONRef = useRef<GeoJSON.FeatureCollection | null>(null);
+  // State statt Ref: das anfängliche Laden ist async (map.on("load", ...)),
+  // ein Ref-Write allein löst den Filter-Effekt unten nicht erneut aus - der
+  // lief dann schon (mit allGeoJSON noch null) und ohne einen State-Trigger
+  // nie wieder, sodass initial gesetzte Filter (z.B. übers Teilen eines
+  // einzelnen Stands, siehe lib/share.ts) auf der Karte ignoriert wurden.
+  const [allGeoJSON, setAllGeoJSON] = useState<GeoJSON.FeatureCollection | null>(null);
   // "Latest ref"-Muster: der Mount-once-Effekt unten registriert den
   // Klick-Handler nur einmal (siehe map.on("load", ...)), soll aber trotzdem
   // immer den aktuellen Favoriten-Stand sehen, statt den bei Mount
@@ -73,7 +78,7 @@ export function FlohmarktMap({
     map.on("load", async () => {
       try {
         const geojson = await fetchGeoJSON();
-        allGeoJSONRef.current = geojson;
+        setAllGeoJSON(geojson);
         map.addSource("stands", { type: "geojson", data: geojson });
         map.addLayer({
           id: "stands-pins",
@@ -125,7 +130,7 @@ export function FlohmarktMap({
   // Favoriten-Toggle direkt im Kartenpopup).
   useEffect(() => {
     const map = mapRef.current;
-    const all = allGeoJSONRef.current;
+    const all = allGeoJSON;
     if (!map || !all) return;
 
     const filtered: GeoJSON.FeatureCollection = {
@@ -153,7 +158,14 @@ export function FlohmarktMap({
 
     const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
     source?.setData(filtered);
-  }, [kategorienFilter, zahlungsartenFilter, showFavoritesOnly, searchQuery, favoriteIds]);
+  }, [
+    kategorienFilter,
+    zahlungsartenFilter,
+    showFavoritesOnly,
+    searchQuery,
+    favoriteIds,
+    allGeoJSON,
+  ]);
 
   return (
     <div
