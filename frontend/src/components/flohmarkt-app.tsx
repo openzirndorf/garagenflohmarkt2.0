@@ -387,15 +387,32 @@ export function FlohmarktApp() {
         <main className="flex-1">
           <OnboardingHint />
 
-          {/* Suche + Filter - EIN Kontrollbereich über der Karte statt zweier
-              fast identischer Filterleisten (früher: eine schwebend auf der
-              Karte, eine nochmal über der Liste). Filter-Pillen stecken
-              hinter einem eigenen "Filter"-Button mit Zähler-Badge statt
-              immer als lange Scroll-Reihe sichtbar zu sein - bei 18
-              Kategorien plus Zahlungsart plus Favoriten wirkte das trotz
-              Gruppierung unübersichtlich. Im geöffneten Panel sind die drei
-              Filterarten mit Mini-Label klar getrennt und brechen um
-              (flex-wrap), statt in einer versteckten Scroll-Reihe zu liegen. */}
+          {/* Karte als Startseite – volle Breite, prominent, ohne Overlay */}
+          <div className="relative mt-3 w-full" style={{ height: "min(65vh, 520px)" }}>
+            <MapOrList
+              kategorienFilter={kategorienFilter}
+              zahlungsartenFilter={zahlungsartenFilter}
+              showFavoritesOnly={showFavoritesOnly}
+              searchQuery={searchQuery}
+              favoriteIds={favoriteIds}
+              onToggleFavorite={toggleFavorite}
+              stands={filteredStands}
+              loading={loading}
+            />
+          </div>
+
+          {/* Suche + Filter - EIN Kontrollbereich zwischen Karte und Liste
+              statt zweier fast identischer Filterleisten (früher: eine
+              schwebend auf der Karte, eine nochmal über der Liste). Bewusst
+              zwischen beiden statt darüber: steuert sichtbar beide Ansichten
+              gleichzeitig (siehe Hinweistext unten), statt nur wie ein Zusatz
+              zur Karte davor zu wirken. Filter-Pillen stecken hinter einem
+              eigenen "Filter"-Button mit Zähler-Badge statt immer als lange
+              Scroll-Reihe sichtbar zu sein - bei 18 Kategorien plus
+              Zahlungsart plus Favoriten wirkte das trotz Gruppierung
+              unübersichtlich. Im geöffneten Panel sind die drei Filterarten
+              mit Mini-Label klar getrennt und brechen um (flex-wrap), statt
+              in einer versteckten Scroll-Reihe zu liegen. */}
           <div
             ref={filterPanelRef}
             className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 pt-3"
@@ -513,20 +530,6 @@ export function FlohmarktApp() {
             <p className="px-1 text-xs text-gray-400">
               🗺️ Karte &amp; 📋 Liste folgen derselben Suche und denselben Filtern.
             </p>
-          </div>
-
-          {/* Karte als Startseite – volle Breite, prominent, ohne Overlay */}
-          <div className="relative mt-3 w-full" style={{ height: "min(65vh, 520px)" }}>
-            <MapOrList
-              kategorienFilter={kategorienFilter}
-              zahlungsartenFilter={zahlungsartenFilter}
-              showFavoritesOnly={showFavoritesOnly}
-              searchQuery={searchQuery}
-              favoriteIds={favoriteIds}
-              onToggleFavorite={toggleFavorite}
-              stands={filteredStands}
-              loading={loading}
-            />
           </div>
 
           {/* Event-Info-Banner */}
