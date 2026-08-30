@@ -56,6 +56,20 @@ export function FlohmarktMap({
       style: "https://tiles.openfreemap.org/styles/liberty",
       center: CENTER,
       zoom: ZOOM,
+      // Ohne das fängt die Karte jedes Scrollen/Wischen über ihrer Fläche ab
+      // (Mausrad zoomt, Ein-Finger-Wisch verschiebt die Karte) - beim
+      // Herunterscrollen zur Standliste bleibt man dann in der Karte hängen.
+      // Mit cooperativeGestures braucht Zoomen per Mausrad Strg/⌘, Verschieben
+      // auf Touch zwei Finger - ein Finger/normales Scrollen geht ganz normal
+      // an der Karte vorbei zur Seite darunter durch.
+      cooperativeGestures: true,
+      locale: {
+        "CooperativeGesturesHandler.WindowsHelpText":
+          "Strg gedrückt halten und scrollen, um die Karte zu zoomen",
+        "CooperativeGesturesHandler.MacHelpText":
+          "⌘ gedrückt halten und scrollen, um die Karte zu zoomen",
+        "CooperativeGesturesHandler.MobileHelpText": "Mit zwei Fingern die Karte verschieben",
+      },
     });
     mapRef.current = map;
 
