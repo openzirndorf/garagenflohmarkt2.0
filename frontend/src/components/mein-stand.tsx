@@ -7,7 +7,6 @@ import {
   redeemCode,
   requestLogin,
   sendLockReply,
-  suggestNicknames,
   updateStand,
 } from "../api";
 import { standShareOptions } from "../lib/share";
@@ -52,15 +51,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [codeInput, setCodeInput] = useState("");
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemError, setRedeemError] = useState<string | null>(null);
-
-  // Standname wählen/wechseln - immer eine Auswahl aus serverseitig
-  // gewürfelten Namen, nie Freitext (siehe app/nicknames.py is_valid_nickname).
-  const [showNicknamePicker, setShowNicknamePicker] = useState(false);
-  const [nicknameSuggestions, setNicknameSuggestions] = useState<string[]>([]);
-  const [selectedNickname, setSelectedNickname] = useState<string | null>(null);
-  const [nicknameLoading, setNicknameLoading] = useState(false);
-  const [nicknameSaving, setNicknameSaving] = useState(false);
-  const [nicknameError, setNicknameError] = useState<string | null>(null);
 
   // Antwort auf eine Inhalts-Sperre - einzige Möglichkeit, den Admin von
   // hier aus zu erreichen (siehe app/routes/stands.py POST .../lock-reply).
@@ -117,41 +107,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
       setRedeemError(err instanceof Error ? err.message : "Fehler");
     } finally {
       setRedeemLoading(false);
-    }
-  };
-
-  const rerollNicknames = useCallback(async () => {
-    if (!sessionToken) return;
-    setNicknameLoading(true);
-    setNicknameError(null);
-    try {
-      const suggestions = await suggestNicknames(sessionToken);
-      setNicknameSuggestions(suggestions);
-      setSelectedNickname(null);
-    } catch (err) {
-      setNicknameError(err instanceof Error ? err.message : "Vorschläge fehlgeschlagen");
-    } finally {
-      setNicknameLoading(false);
-    }
-  }, [sessionToken]);
-
-  const openNicknamePicker = () => {
-    setShowNicknamePicker(true);
-    rerollNicknames();
-  };
-
-  const applyNickname = async () => {
-    if (!sessionToken || !selectedNickname) return;
-    setNicknameSaving(true);
-    setNicknameError(null);
-    try {
-      const updated = await updateStand(sessionToken, { nickname: selectedNickname });
-      setStand(updated);
-      setShowNicknamePicker(false);
-    } catch (err) {
-      setNicknameError(err instanceof Error ? err.message : "Speichern fehlgeschlagen");
-    } finally {
-      setNicknameSaving(false);
     }
   };
 
@@ -488,16 +443,10 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-0.5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              {/* Kennung ist die Adresse selbst (siehe app/identifiers.py) -
+                  keine separate Adresszeile mehr darunter, das wäre reine
+                  Wiederholung. */}
               <p className="font-semibold text-gray-900">{stand.nickname}</p>
-              {!showNicknamePicker && (
-                <button
-                  type="button"
-                  onClick={openNicknamePicker}
-                  className="text-xs text-green-700 transition-colors hover:text-green-900 hover:underline"
-                >
-                  Namen ändern
-                </button>
-              )}
               {/* Erst ab Freigabe teilbar - vorher würde der Link bei
                   Freund*innen einfach ins Leere laufen (Stand ist noch nicht
                   öffentlich such-/sichtbar). */}
@@ -508,58 +457,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                 />
               )}
             </div>
-            {showNicknamePicker && (
-              <div className="mt-1 flex flex-col gap-2 rounded-lg border border-green-100 bg-white p-2.5">
-                {nicknameLoading ? (
-                  <p className="text-xs text-gray-400">Würfelt…</p>
-                ) : (
-                  <div className="flex flex-col gap-1">
-                    {nicknameSuggestions.map((n) => (
-                      <label
-                        key={n}
-                        className="flex items-center gap-2 rounded-md px-1.5 py-1 text-sm hover:bg-gray-50"
-                      >
-                        <input
-                          type="radio"
-                          name="nickname-suggestion"
-                          checked={selectedNickname === n}
-                          onChange={() => setSelectedNickname(n)}
-                        />
-                        {n}
-                      </label>
-                    ))}
-                  </div>
-                )}
-                <div className="flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={rerollNicknames}
-                    disabled={nicknameLoading || nicknameSaving}
-                    className="text-xs text-gray-500 transition-colors hover:text-gray-700 disabled:opacity-50"
-                  >
-                    🎲 Neue Vorschläge
-                  </button>
-                  <button
-                    type="button"
-                    onClick={applyNickname}
-                    disabled={!selectedNickname || nicknameSaving}
-                    className="rounded bg-[#009a00] px-2.5 py-1 text-xs font-medium text-white hover:bg-[#008400] disabled:opacity-50"
-                  >
-                    {nicknameSaving ? "Speichern…" : "Übernehmen"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowNicknamePicker(false)}
-                    disabled={nicknameSaving}
-                    className="text-xs text-gray-400 hover:text-gray-600 disabled:opacity-50"
-                  >
-                    Abbrechen
-                  </button>
-                </div>
-                {nicknameError && <p className="text-xs text-red-600">{nicknameError}</p>}
-              </div>
-            )}
-            <p className="text-sm text-gray-500">{stand.adresse}</p>
             {stand.kategorien && stand.kategorien.length > 0 && (
               <div className="mt-1 flex flex-wrap gap-1">
                 {stand.kategorien.map((k) => (

@@ -142,8 +142,8 @@ export function StandForm({ onSuccess }: Props) {
           </p>
           {nickname && (
             <p className="text-sm text-gray-700">
-              Auf der Karte erscheinst du unter der Kennung <strong>„{nickname}“</strong> - nicht
-              mit deinem echten Namen.
+              Auf der Karte erscheinst du als <strong>„{nickname}“</strong> (deine Adresse dient als
+              Kennung) - dein echter Name wird nirgends angezeigt.
             </p>
           )}
           <p className="mt-1 text-sm text-gray-600">
@@ -270,8 +270,9 @@ export function StandForm({ onSuccess }: Props) {
             />
             <p className="text-xs text-gray-500">
               Du erhältst einen Bestätigungscode per Mail – erst danach wird dein Stand sichtbar.
-              Auf der Karte erscheinst du nur unter einer automatisch vergebenen Kennung (z.B.
-              „Gscheide Kellerkönig“), nie mit deinem echten Namen.
+              Auf der Karte erscheinst du unter deiner Adresse als Kennung, nie mit deinem echten
+              Namen. Gibt es an derselben Adresse schon einen Stand, wird automatisch „#2“ o.Ä.
+              angehängt.
             </p>
           </div>
 

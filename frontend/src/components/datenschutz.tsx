@@ -65,10 +65,10 @@ export function Datenschutz() {
           <p>
             Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien
             sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein Namensfeld - ein echter
-            Name kann technisch gar nicht erst ins System gelangen. Stattdessen vergeben wir
-            automatisch eine Kennung (z.&nbsp;B. „Gscheide Kellerkönig"), unter der du auf der Karte
-            erscheinst. Zusätzlich bestätigst du bei der Anmeldung aktiv, dass du mindestens 16
-            Jahre alt bist (Art. 8 DSGVO).
+            Name kann technisch gar nicht erst ins System gelangen. Deine Adresse selbst dient als
+            öffentliche Kennung, unter der du auf der Karte erscheinst (bei mehreren Ständen an
+            derselben Adresse mit angehängter Zählnummer, z.&nbsp;B. „#2"). Zusätzlich bestätigst du
+            bei der Anmeldung aktiv, dass du mindestens 16 Jahre alt bist (Art. 8 DSGVO).
           </p>
         </section>
 
@@ -77,8 +77,8 @@ export function Datenschutz() {
             4. Öffentlich sichtbar auf der Karte - deine Einwilligung
           </h2>
           <p>
-            Nur folgende Angaben sind öffentlich auf der Karte und in der Liste sichtbar: deine
-            automatisch vergebene Kennung, Straße und Hausnummer sowie die Beschreibung. Deine
+            Nur folgende Angaben sind öffentlich auf der Karte und in der Liste sichtbar: Straße und
+            Hausnummer (zugleich deine öffentliche Kennung) sowie die Beschreibung. Deine
             E-Mail-Adresse und dein echter Name (den wir ohnehin nicht erfassen) erreichen die
             öffentliche Ausgabe unter keinen Umständen.
           </p>
@@ -135,9 +135,11 @@ export function Datenschutz() {
             wie bei jedem Webseitenaufruf, deine IP-Adresse an diesen Dienst übertragen; OpenFreeMap
             ist ein nichtkommerzielles Projekt, das nach eigenen Angaben kein Tracking einsetzt. Um
             deine eingegebene Adresse in Kartenkoordinaten umzuwandeln, übermitteln wir sie einmalig
-            an OpenCage als Auftragsverarbeiter, gehostet bei Hetzner in Deutschland. Weitere
-            Inhalte von Drittservern werden nicht geladen; Schriftarten sind vollständig selbst
-            gehostet.
+            an OpenCage als weiteren Auftragsverarbeiter. OpenCage selbst hostet nach eigenen
+            Angaben ausschließlich bei Hetzner in Deutschland - das betrifft nur diesen einen
+            Verarbeitungsschritt bei OpenCage, nicht unsere eigene Infrastruktur (siehe Abschnitt 8:
+            wir selbst hosten bei Scaleway). Weitere Inhalte von Drittservern werden nicht geladen;
+            Schriftarten sind vollständig selbst gehostet.
           </p>
         </section>
 

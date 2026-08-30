@@ -119,7 +119,7 @@ export function FlohmarktMap({
               isFavorite: (fid) => favoriteIdsRef.current.has(fid),
               onToggle: (fid) => onToggleFavoriteRef.current(fid),
             },
-            { onReport: (fid) => reportStand(fid) },
+            { onReport: (fid, grund) => reportStand(fid, grund) },
           );
           new maplibregl.Popup().setLngLat(e.lngLat).setDOMContent(popupNode).addTo(map);
         });

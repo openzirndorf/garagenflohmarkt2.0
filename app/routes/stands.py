@@ -15,9 +15,9 @@ from app.email import (
     smtp_debug_info,
 )
 from app.geocode import geocode
+from app.identifiers import generate_unique_identifier
 from app.jobs.stands_artifact import regenerate_stands_artifact
 from app.moderation import contains_blocked_content
-from app.nicknames import generate_unique_nickname, is_valid_nickname
 from app.public_fields import PUBLIC_GEOJSON_COLUMNS, PUBLIC_LIST_COLUMNS, rows_to_geojson
 from app.rate_limit import check_rate_limit
 from app.tokens import (
@@ -118,10 +118,9 @@ class StandPatch(BaseModel):
     beschreibung: str | None = None
     kategorien: list[str] | None = None
     zahlungsarten: list[str] | None = None
-    # Nur einer der vom Server vorgeschlagenen Namen (siehe
-    # POST .../nickname-suggestions), nie Freitext - is_valid_nickname()
-    # unten erzwingt das serverseitig, unabhängig vom Frontend.
-    nickname: str | None = None
+    # Kein Nickname-Feld mehr: die öffentliche Kennung ist die Adresse
+    # selbst und wird bei einer Adressänderung automatisch neu berechnet
+    # (siehe update_stand/update_stand_admin), nicht mehr frei wählbar.
 
 
 class AdminStandPatch(StandPatch):
@@ -135,8 +134,13 @@ class LoginRequestIn(BaseModel):
     email: EmailStr
 
 
-async def _nickname_exists(pool, candidate: str) -> bool:
-    return bool(await pool.fetchval("SELECT EXISTS(SELECT 1 FROM stands WHERE nickname = $1)", candidate))
+async def _nickname_taken(pool, candidate: str, exclude_id: int | None = None) -> bool:
+    return bool(
+        await pool.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM stands WHERE nickname = $1 AND id IS DISTINCT FROM $2)",
+            candidate, exclude_id,
+        )
+    )
 
 
 # GET /stands - öffentlich (Karte ist public)
@@ -189,11 +193,11 @@ async def create_stand(body: StandIn, request: Request):
     coords = await geocode(body.adresse)
     lat, lng = (coords[0], coords[1]) if coords else (None, None)
 
-    nickname = await generate_unique_nickname(lambda c: _nickname_exists(pool, c))
+    nickname = await generate_unique_identifier(body.adresse, lambda c: _nickname_taken(pool, c))
     login_code, login_token_hash, login_token_expires_at = new_login_code(REGISTRATION_LOGIN_TTL)
 
-    try:
-        row = await pool.fetchrow(
+    async def _insert(nickname: str):
+        return await pool.fetchrow(
             "INSERT INTO stands (nickname, adresse, lat, lng, beschreibung, email, kategorien, "
             "zahlungsarten, login_token_hash, login_token_expires_at, address_consent_at) "
             "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()) "
@@ -201,6 +205,9 @@ async def create_stand(body: StandIn, request: Request):
             nickname, body.adresse, lat, lng, body.beschreibung, body.email,
             body.kategorien, body.zahlungsarten, login_token_hash, login_token_expires_at,
         )
+
+    try:
+        row = await _insert(nickname)
     except asyncpg.UniqueViolationError as exc:
         if "email" in str(exc):
             raise HTTPException(
@@ -208,7 +215,18 @@ async def create_stand(body: StandIn, request: Request):
                 detail="Für diese E-Mail-Adresse existiert bereits ein Stand. "
                 "Nutze 'Zugang anfordern', um ihn zu verwalten.",
             ) from exc
-        raise
+        if "nickname" in str(exc):
+            # Seltene Race zwischen Kollisionsprüfung und Insert (zwei
+            # gleichzeitige Anmeldungen derselben Adresse) - einmal neu
+            # berechnen (sieht die inzwischen eingefügte Zeile) und erneut
+            # versuchen, statt eine verwirrende 409 an eine Adresseingabe
+            # zurückzugeben, die der Nutzer nicht "gewählt" hat.
+            nickname = await generate_unique_identifier(
+                body.adresse, lambda c: _nickname_taken(pool, c)
+            )
+            row = await _insert(nickname)
+        else:
+            raise
 
     result = dict(row)
     await log_action(pool, result["id"], "CREATED", "owner")
@@ -359,22 +377,21 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
 
-    if "nickname" in updates and not is_valid_nickname(updates["nickname"]):
-        raise HTTPException(status_code=400, detail="Ungültiger Standname")
     if "zahlungsarten" in updates:
         _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
     if "kategorien" in updates:
         _reject_if_too_many_kategorien(updates["kategorien"])
 
     pool = await get_pool()
+    own_id: int | None = None
 
     if "adresse" in updates or "beschreibung" in updates:
         _reject_if_blocked_content(updates.get("adresse"), updates.get("beschreibung"))
         # Separate Prüfung statt Teil der UPDATE-Klausel, weil eine Sperre
-        # überhaupt nur diese beiden Felder betrifft - Standname/Kategorien
-        # bleiben trotz Sperre änderbar.
+        # überhaupt nur diese beiden Felder betrifft - Kategorien/
+        # Zahlungsarten bleiben trotz Sperre änderbar.
         lock_row = await pool.fetchrow(
-            "SELECT content_locked, content_lock_message FROM stands "
+            "SELECT id, content_locked, content_lock_message FROM stands "
             "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
             hash_token(session_token),
         )
@@ -386,28 +403,43 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
                 detail=lock_row["content_lock_message"]
                 or "Adresse und Beschreibung wurden von einem Admin gesperrt.",
             )
+        own_id = lock_row["id"]
 
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])
         updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
+        # Die Kennung ist die Adresse selbst - bei einer Änderung neu
+        # berechnen (inkl. #2/#3-Suffix bei Kollision), eigene Zeile dabei
+        # ausschließen, sonst würde sie sich fälschlich mit sich selbst
+        # als "belegt" sehen.
+        updates["nickname"] = await generate_unique_identifier(
+            updates["adresse"], lambda c: _nickname_taken(pool, c, exclude_id=own_id)
+        )
 
     set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
     values = list(updates.values())
 
-    try:
-        row = await pool.fetchrow(
+    async def _update():
+        return await pool.fetchrow(
             f"UPDATE stands SET {set_clause} "
             "WHERE session_token_hash = $1 AND session_token_expires_at > now() "
             f"RETURNING {_OWNER_COLUMNS}",
             hash_token(session_token), *values,
         )
+
+    try:
+        row = await _update()
     except asyncpg.UniqueViolationError as exc:
-        if "nickname" in str(exc):
-            raise HTTPException(
-                status_code=409,
-                detail="Dieser Standname ist inzwischen vergeben. Bitte neu würfeln.",
-            ) from exc
-        raise
+        if "nickname" not in str(exc):
+            raise
+        # Seltene Race (siehe create_stand) - einmal neu berechnen und
+        # erneut versuchen, statt eine 409 auf eine Adresse zurückzugeben,
+        # die der Nutzer nicht als "Namen" gewählt hat.
+        idx = list(updates.keys()).index("nickname")
+        values[idx] = await generate_unique_identifier(
+            updates["adresse"], lambda c: _nickname_taken(pool, c, exclude_id=own_id)
+        )
+        row = await _update()
     if not row:
         raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
     await log_action(pool, row["id"], "EDITED", "owner")
@@ -466,32 +498,6 @@ async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request)
     return {"message": "Deine Nachricht wurde an das Team geschickt."}
 
 
-# POST /stands/by-session/{session_token}/nickname-suggestions - würfelt
-# 3 alternative Standnamen zur Auswahl, ohne sie zu reservieren (reine
-# Vorschau; erst PATCH mit dem gewählten Namen schreibt in die DB).
-@router.post("/by-session/{session_token}/nickname-suggestions")
-async def suggest_nicknames(session_token: str):
-    pool = await get_pool()
-    session_valid = await pool.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM stands "
-        "WHERE session_token_hash = $1 AND session_token_expires_at > now())",
-        hash_token(session_token),
-    )
-    if not session_valid:
-        raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
-
-    batch: set[str] = set()
-
-    async def taken(candidate: str) -> bool:
-        return candidate in batch or await _nickname_exists(pool, candidate)
-
-    for _ in range(3):
-        candidate = await generate_unique_nickname(taken)
-        batch.add(candidate)
-
-    return {"suggestions": sorted(batch)}
-
-
 # DELETE /stands/by-session/{session_token} - eigenen Stand vollständig löschen
 @router.delete("/by-session/{session_token}", status_code=204)
 async def cancel_stand(session_token: str, background_tasks: BackgroundTasks):
@@ -508,16 +514,21 @@ async def cancel_stand(session_token: str, background_tasks: BackgroundTasks):
 
 
 class ReportStandIn(BaseModel):
-    grund: str | None = None
+    grund: str
 
 
 # POST /stands/{id}/report - öffentlich, Meldefunktion für Besucher (falsche
-# oder fremde Einträge). Bewusst kein neuer Kontaktweg mit sichtbarer
-# E-Mail-Adresse zum Abschöpfen durch Bots - stattdessen wie bei
-# lock-reply nur eine Mail an den Admin-Kontakt, der Grund wird nicht
-# gespeichert, nur die Aktion selbst (kein Freitext im Audit-Log).
+# oder fremde Einträge). Grund ist Pflicht (serverseitig erzwungen, nicht
+# nur im Frontend) - eine grundlose Meldung wäre für den Admin nicht
+# einordenbar. Bewusst kein neuer Kontaktweg mit sichtbarer E-Mail-Adresse
+# zum Abschöpfen durch Bots - stattdessen wie bei lock-reply nur eine Mail
+# an den Admin-Kontakt, der Grund wird nicht gespeichert, nur die Aktion
+# selbst (kein Freitext im Audit-Log).
 @router.post("/{stand_id}/report")
 async def report_stand(stand_id: int, body: ReportStandIn, request: Request):
+    if not body.grund.strip():
+        raise HTTPException(status_code=400, detail="Bitte gib einen Grund für die Meldung an.")
+
     pool = await get_pool()
 
     client_ip = request.client.host if request.client else "unknown"
@@ -530,7 +541,7 @@ async def report_stand(stand_id: int, body: ReportStandIn, request: Request):
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
 
     try:
-        await send_report_email(row["id"], row["nickname"], body.grund)
+        await send_report_email(row["id"], row["nickname"], body.grund.strip())
     except Exception as exc:  # noqa: BLE001 - Mailversand darf die Meldung nie fehlschlagen lassen
         logger.error("Melde-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
 
@@ -594,19 +605,38 @@ async def update_stand_admin(
         updates["lock_reply_message"] = None
         updates["lock_reply_created_at"] = None
 
+    pool = await get_pool()
+
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])
         updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
+        # Die Kennung ist die Adresse selbst - bei einer Änderung neu
+        # berechnen (inkl. #2/#3-Suffix bei Kollision), eigene Zeile dabei
+        # ausschließen (siehe update_stand für den Nicht-Admin-Fall).
+        updates["nickname"] = await generate_unique_identifier(
+            updates["adresse"], lambda c: _nickname_taken(pool, c, exclude_id=stand_id)
+        )
 
     set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
     values = list(updates.values())
 
-    pool = await get_pool()
-    row = await pool.fetchrow(
-        f"UPDATE stands SET {set_clause} WHERE id = $1 "
-        f"RETURNING {_ADMIN_COLUMNS}",
-        stand_id, *values,
-    )
+    async def _update():
+        return await pool.fetchrow(
+            f"UPDATE stands SET {set_clause} WHERE id = $1 "
+            f"RETURNING {_ADMIN_COLUMNS}",
+            stand_id, *values,
+        )
+
+    try:
+        row = await _update()
+    except asyncpg.UniqueViolationError as exc:
+        if "nickname" not in str(exc):
+            raise
+        idx = list(updates.keys()).index("nickname")
+        values[idx] = await generate_unique_identifier(
+            updates["adresse"], lambda c: _nickname_taken(pool, c, exclude_id=stand_id)
+        )
+        row = await _update()
     if not row:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
     await log_action(pool, stand_id, "EDITED", "admin")

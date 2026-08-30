@@ -23,7 +23,20 @@ export interface FavoriteControls {
 // Karten-/Netzwerk-Mock testbar bleibt (siehe Kommentar an
 // buildStandPopupContent).
 export interface ReportControls {
-  onReport: (id: number) => Promise<void>;
+  onReport: (id: number, grund: string) => Promise<void>;
+}
+
+// Fragt so lange nach einem Grund, bis entweder Text eingegeben oder
+// abgebrochen wird - der Grund ist Pflicht (siehe POST /stands/{id}/report),
+// sonst wäre die Meldung im Admin-Panel/in der Mail nicht einordenbar.
+function askForReason(): string | null {
+  let grund = window.prompt("Warum meldest du diesen Stand? (Pflichtfeld)");
+  while (grund !== null && grund.trim() === "") {
+    grund = window.prompt(
+      "Bitte einen Grund angeben, sonst kann die Meldung nicht gesendet werden.",
+    );
+  }
+  return grund === null ? null : grund.trim();
 }
 
 // MapLibre GL kodiert GeoJSON-Feature-Properties intern wie Vector-Tiles
@@ -66,12 +79,14 @@ export function buildStandPopupContent(
   favorite: FavoriteControls | null = null,
   report: ReportControls | null = null,
 ): HTMLElement {
-  const { id, nickname, adresse, beschreibung } = properties;
+  const { id, nickname, beschreibung } = properties;
   const kategorien = toStringArray(properties.kategorien);
   const zahlungsarten = toStringArray(properties.zahlungsarten);
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
+  // Kennung ist die Adresse selbst (siehe app/identifiers.py) - keine
+  // separate Adresszeile mehr darunter, das wäre reine Wiederholung.
   title.textContent = nickname;
   popupNode.appendChild(title);
 
@@ -79,7 +94,6 @@ export function buildStandPopupContent(
     popupNode.appendChild(document.createElement("br"));
     popupNode.appendChild(document.createTextNode(text));
   };
-  addLine(adresse);
   if (kategorien.length > 0) addLine(kategorien.join(", "));
   if (beschreibung) addLine(beschreibung);
   if (zahlungsarten.length > 0) {
@@ -152,33 +166,36 @@ export function buildStandPopupContent(
     actionsRow.appendChild(favBtn);
   }
 
-  if (actionsRow.childElementCount > 0) {
-    popupNode.appendChild(actionsRow);
-  }
-
   if (report) {
     const reportBtn = document.createElement("button");
     reportBtn.type = "button";
-    reportBtn.textContent = "🚩 Melden";
     Object.assign(reportBtn.style, {
-      display: "block",
-      marginTop: "6px",
-      border: "none",
-      background: "transparent",
       cursor: "pointer",
       fontFamily: "inherit",
-      fontSize: "0.7rem",
-      color: "#9ca3af",
-      padding: "0",
+      fontSize: "0.75rem",
+      fontWeight: "600",
+      padding: "3px 10px",
+      borderRadius: "9999px",
+      borderWidth: "1px",
+      borderStyle: "solid",
+      borderColor: "#d1d5db",
+      background: "#fff",
+      color: "#4b5563",
     });
+    reportBtn.textContent = "🚩 Melden";
     reportBtn.addEventListener("click", () => {
-      if (!confirm("Diesen Stand als falsch oder unangemessen melden?")) return;
+      const grund = askForReason();
+      if (grund === null) return;
       reportBtn.disabled = true;
-      report.onReport(id).finally(() => {
-        reportBtn.textContent = "Gemeldet, danke.";
+      report.onReport(id, grund).finally(() => {
+        reportBtn.textContent = "Gemeldet";
       });
     });
-    popupNode.appendChild(reportBtn);
+    actionsRow.appendChild(reportBtn);
+  }
+
+  if (actionsRow.childElementCount > 0) {
+    popupNode.appendChild(actionsRow);
   }
 
   return popupNode;

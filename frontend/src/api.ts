@@ -184,23 +184,11 @@ interface StandPatchData {
   beschreibung?: string;
   kategorien?: string[];
   zahlungsarten?: string[];
-  nickname?: string;
 }
 
 interface AdminStandPatchData extends StandPatchData {
   content_locked?: boolean;
   content_lock_message?: string;
-}
-
-// Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst
-// updateStand() mit dem gewählten Namen schreibt in die DB.
-export async function suggestNicknames(sessionToken: string): Promise<string[]> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}/nickname-suggestions`, {
-    method: "POST",
-  });
-  if (!res.ok) throw new Error("Vorschläge konnten nicht geladen werden");
-  const data = await res.json();
-  return data.suggestions;
 }
 
 // Einzige Möglichkeit für einen gesperrten Standinhaber, den Admin zu
@@ -268,11 +256,11 @@ export async function cancelStand(sessionToken: string): Promise<void> {
 
 // Öffentliche Meldefunktion für Besucher (falsche/fremde Einträge) - kein
 // Basic Auth nötig, jede*r soll melden können.
-export async function reportStand(standId: number, grund?: string): Promise<void> {
+export async function reportStand(standId: number, grund: string): Promise<void> {
   const res = await fetch(`${API}/stands/${standId}/report`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ grund: grund ?? null }),
+    body: JSON.stringify({ grund }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => null);

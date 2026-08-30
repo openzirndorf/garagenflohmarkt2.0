@@ -72,8 +72,15 @@ async def test_report_stand_never_stores_reason_content(client, api_auth, pool):
     assert secret_reason not in str(dict(row))
 
 
+async def test_report_stand_requires_a_reason(client, api_auth):
+    stand = (await client.post("/stands/", json=_base_body(), auth=api_auth)).json()
+
+    resp = await client.post(f"/stands/{stand['id']}/report", json={"grund": "   "})
+    assert resp.status_code == 400
+
+
 async def test_report_unknown_stand_returns_404(client):
-    resp = await client.post("/stands/999999/report", json={})
+    resp = await client.post("/stands/999999/report", json={"grund": "Testgrund"})
     assert resp.status_code == 404
 
 
@@ -81,8 +88,8 @@ async def test_report_stand_is_rate_limited(client, api_auth):
     stand = (await client.post("/stands/", json=_base_body(), auth=api_auth)).json()
 
     for _ in range(5):
-        resp = await client.post(f"/stands/{stand['id']}/report", json={})
+        resp = await client.post(f"/stands/{stand['id']}/report", json={"grund": "Testgrund"})
         assert resp.status_code == 200
 
-    sixth = await client.post(f"/stands/{stand['id']}/report", json={})
+    sixth = await client.post(f"/stands/{stand['id']}/report", json={"grund": "Testgrund"})
     assert sixth.status_code == 429

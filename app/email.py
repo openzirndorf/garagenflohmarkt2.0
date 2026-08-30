@@ -99,19 +99,22 @@ async def send_login_email(email: str, nickname: str, login_code: str, *, first_
 
     if first_time:
         subject = "Garagenflohmarkt Zirndorf – Dein Bestätigungscode"
-        intro = "vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf!"
+        intro = (
+            f"vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf! Dein Stand "
+            f"erscheint als „{nickname}\" auf der Karte."
+        )
         action_text = (
             "Gib diesen Code unter „Mein Stand\" ein, damit dein Stand auf der Karte erscheint:"
         )
     else:
         subject = "Garagenflohmarkt Zirndorf – Dein Zugangscode"
-        intro = "du hast einen Zugangscode für deinen Stand angefordert."
+        intro = f"du hast einen Zugangscode für deinen Stand „{nickname}\" angefordert."
         action_text = 'Gib diesen Code unter „Mein Stand" ein, um deinen Stand zu verwalten:'
 
     validity = "24 Stunden" if first_time else "30 Minuten"
 
     body_text = f"""\
-Hallo {nickname},
+Hallo,
 
 {intro}
 
@@ -135,7 +138,7 @@ Das Garagenflohmarkt-Team
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
   <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
-  <p>Hallo <strong>{nickname}</strong>,</p>
+  <p>Hallo,</p>
   <p>{intro}</p>
   <p>{action_text}</p>
   <p style="margin:24px 0;text-align:center">
@@ -192,14 +195,14 @@ Zum Bearbeiten: {FRONTEND_URL}#admin
     await asyncio.to_thread(_send_sync, ADMIN_CONTACT_EMAIL, subject, body_text, body_html)
 
 
-async def send_report_email(stand_id: int, nickname: str, grund: str | None) -> None:
+async def send_report_email(stand_id: int, nickname: str, grund: str) -> None:
     """Meldefunktion für Besucher (falsche/fremde Einträge, siehe
-    POST /stands/{id}/report) - der Grund wird nur per Mail weitergeleitet,
-    nie in der DB gespeichert."""
+    POST /stands/{id}/report) - Grund ist Pflicht (siehe report_stand),
+    wird nur per Mail weitergeleitet, nie in der DB gespeichert."""
     if not smtp_configured():
         return
 
-    grund_text = grund.strip() if grund and grund.strip() else "(kein Grund angegeben)"
+    grund_text = grund
     subject = f"Garagenflohmarkt Zirndorf – Meldung zu Stand #{stand_id}"
     body_text = f"""\
 Stand #{stand_id} ({nickname}) wurde von einem Besucher gemeldet:
