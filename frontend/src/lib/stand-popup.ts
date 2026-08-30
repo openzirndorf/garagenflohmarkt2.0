@@ -26,17 +26,128 @@ export interface ReportControls {
   onReport: (id: number, grund: string) => Promise<void>;
 }
 
-// Fragt so lange nach einem Grund, bis entweder Text eingegeben oder
-// abgebrochen wird - der Grund ist Pflicht (siehe POST /stands/{id}/report),
-// sonst wäre die Meldung im Admin-Panel/in der Mail nicht einordenbar.
-function askForReason(): string | null {
-  let grund = window.prompt("Warum meldest du diesen Stand? (Pflichtfeld)");
-  while (grund !== null && grund.trim() === "") {
-    grund = window.prompt(
-      "Bitte einen Grund angeben, sonst kann die Meldung nicht gesendet werden.",
-    );
+// Eigener, zum Rest der App passender Dialog statt eines nackten
+// window.prompt() - der Grund ist Pflicht (siehe POST /stands/{id}/report),
+// "Melden" bleibt bis zu einer Eingabe deaktiviert. Escape oder Klick auf
+// den abgedunkelten Hintergrund bricht ab, ohne zu senden. Bewusst mit
+// reinen DOM-APIs statt React aufgebaut, siehe Modul-Kommentar oben.
+function openReportDialog(onSubmit: (grund: string) => void): void {
+  const overlay = document.createElement("div");
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    background: "rgba(0, 0, 0, 0.4)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: "10000",
+  });
+
+  const card = document.createElement("div");
+  Object.assign(card.style, {
+    background: "#fff",
+    borderRadius: "16px",
+    padding: "20px",
+    width: "min(320px, 90vw)",
+    boxSizing: "border-box",
+    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+    fontFamily: "inherit",
+  });
+
+  const title = document.createElement("strong");
+  title.textContent = "Stand melden";
+
+  const hint = document.createElement("p");
+  hint.textContent = "Warum meldest du diesen Stand?";
+  Object.assign(hint.style, { margin: "0", fontSize: "0.85rem", color: "#4b5563" });
+
+  const textarea = document.createElement("textarea");
+  textarea.rows = 3;
+  textarea.placeholder = "Grund (Pflichtfeld)";
+  Object.assign(textarea.style, {
+    width: "100%",
+    resize: "vertical",
+    fontFamily: "inherit",
+    fontSize: "0.875rem",
+    padding: "8px 10px",
+    borderRadius: "8px",
+    border: "1px solid #d1d5db",
+    boxSizing: "border-box",
+  });
+
+  const error = document.createElement("p");
+  error.textContent = "Bitte einen Grund angeben.";
+  Object.assign(error.style, { margin: "0", fontSize: "0.75rem", color: "#dc2626" });
+  error.hidden = true;
+
+  const actions = document.createElement("div");
+  Object.assign(actions.style, {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "8px",
+    marginTop: "4px",
+  });
+
+  const pillStyle = {
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: "0.8rem",
+    fontWeight: "600",
+    padding: "6px 14px",
+    borderRadius: "9999px",
+    borderWidth: "1px",
+    borderStyle: "solid",
+  };
+
+  const cancelBtn = document.createElement("button");
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "Abbrechen";
+  Object.assign(cancelBtn.style, pillStyle, {
+    borderColor: "#d1d5db",
+    background: "#fff",
+    color: "#4b5563",
+  });
+
+  const submitBtn = document.createElement("button");
+  submitBtn.type = "button";
+  submitBtn.textContent = "Melden";
+  Object.assign(submitBtn.style, pillStyle, {
+    borderColor: "#009a00",
+    background: "#009a00",
+    color: "#fff",
+  });
+
+  function close() {
+    document.removeEventListener("keydown", onKeydown);
+    overlay.remove();
   }
-  return grund === null ? null : grund.trim();
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") close();
+  }
+  document.addEventListener("keydown", onKeydown);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  cancelBtn.addEventListener("click", close);
+  submitBtn.addEventListener("click", () => {
+    const grund = textarea.value.trim();
+    if (!grund) {
+      error.hidden = false;
+      textarea.focus();
+      return;
+    }
+    close();
+    onSubmit(grund);
+  });
+
+  actions.append(cancelBtn, submitBtn);
+  card.append(title, hint, textarea, error, actions);
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  textarea.focus();
 }
 
 // MapLibre GL kodiert GeoJSON-Feature-Properties intern wie Vector-Tiles
@@ -79,15 +190,16 @@ export function buildStandPopupContent(
   favorite: FavoriteControls | null = null,
   report: ReportControls | null = null,
 ): HTMLElement {
-  const { id, nickname, beschreibung } = properties;
+  const { id, adresse, beschreibung } = properties;
   const kategorien = toStringArray(properties.kategorien);
   const zahlungsarten = toStringArray(properties.zahlungsarten);
 
   const popupNode = document.createElement("div");
   const title = document.createElement("strong");
-  // Kennung ist die Adresse selbst (siehe app/identifiers.py) - keine
-  // separate Adresszeile mehr darunter, das wäre reine Wiederholung.
-  title.textContent = nickname;
+  // Öffentlich wird die Adresse gezeigt, nicht der intern vergebene
+  // Standname (properties.nickname) - die Adresse ist das, was Besucher
+  // zum Wiederfinden auf der Karte brauchen.
+  title.textContent = adresse;
   popupNode.appendChild(title);
 
   const addLine = (text: string) => {
@@ -113,7 +225,7 @@ export function buildStandPopupContent(
 
   if (coords) {
     const navLink = document.createElement("a");
-    navLink.href = navigationUrl(coords.lat, coords.lng, nickname);
+    navLink.href = navigationUrl(coords.lat, coords.lng, adresse);
     navLink.target = "_blank";
     navLink.rel = "noopener noreferrer";
     navLink.textContent = "Navigieren";
@@ -184,11 +296,11 @@ export function buildStandPopupContent(
     });
     reportBtn.textContent = "🚩 Melden";
     reportBtn.addEventListener("click", () => {
-      const grund = askForReason();
-      if (grund === null) return;
-      reportBtn.disabled = true;
-      report.onReport(id, grund).finally(() => {
-        reportBtn.textContent = "Gemeldet";
+      openReportDialog((grund) => {
+        reportBtn.disabled = true;
+        report.onReport(id, grund).finally(() => {
+          reportBtn.textContent = "Gemeldet";
+        });
       });
     });
     actionsRow.appendChild(reportBtn);

@@ -99,22 +99,19 @@ async def send_login_email(email: str, nickname: str, login_code: str, *, first_
 
     if first_time:
         subject = "Garagenflohmarkt Zirndorf – Dein Bestätigungscode"
-        intro = (
-            f"vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf! Dein Stand "
-            f"erscheint als „{nickname}\" auf der Karte."
-        )
+        intro = "vielen Dank für deine Anmeldung zum Garagenflohmarkt Zirndorf!"
         action_text = (
             "Gib diesen Code unter „Mein Stand\" ein, damit dein Stand auf der Karte erscheint:"
         )
     else:
         subject = "Garagenflohmarkt Zirndorf – Dein Zugangscode"
-        intro = f"du hast einen Zugangscode für deinen Stand „{nickname}\" angefordert."
+        intro = "du hast einen Zugangscode für deinen Stand angefordert."
         action_text = 'Gib diesen Code unter „Mein Stand" ein, um deinen Stand zu verwalten:'
 
     validity = "24 Stunden" if first_time else "30 Minuten"
 
     body_text = f"""\
-Hallo,
+Hallo {nickname},
 
 {intro}
 
@@ -138,7 +135,7 @@ Das Garagenflohmarkt-Team
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
   <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
-  <p>Hallo,</p>
+  <p>Hallo <strong>{nickname}</strong>,</p>
   <p>{intro}</p>
   <p>{action_text}</p>
   <p style="margin:24px 0;text-align:center">

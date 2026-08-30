@@ -11,19 +11,77 @@ interface Props {
   onToggleFavorite?: (id: number) => void;
 }
 
-// Fragt so lange nach einem Grund, bis entweder Text eingegeben oder
-// abgebrochen wird - der Grund ist Pflicht, damit die Meldung im
-// Admin-Panel/in der Mail überhaupt einordenbar ist (siehe
-// POST /stands/{id}/report, Grund wird per Mail weitergeleitet, nie
-// gespeichert).
-function askForReason(): string | null {
-  let grund = window.prompt("Warum meldest du diesen Stand? (Pflichtfeld)");
-  while (grund !== null && grund.trim() === "") {
-    grund = window.prompt(
-      "Bitte einen Grund angeben, sonst kann die Meldung nicht gesendet werden.",
-    );
-  }
-  return grund === null ? null : grund.trim();
+// Eigener, zum Rest der App passender Dialog statt eines nackten
+// window.prompt() - der Grund ist Pflicht (siehe POST /stands/{id}/report),
+// "Melden" bleibt bis zu einer Eingabe deaktiviert. Klick auf den
+// abgedunkelten Hintergrund bricht ab, ohne zu senden.
+function ReportDialog({
+  onCancel,
+  onSubmit,
+}: {
+  onCancel: () => void;
+  onSubmit: (grund: string) => void;
+}) {
+  const [grund, setGrund] = useState("");
+  const [showError, setShowError] = useState(false);
+
+  const submit = () => {
+    const trimmed = grund.trim();
+    if (!trimmed) {
+      setShowError(true);
+      return;
+    }
+    onSubmit(trimmed);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onCancel();
+      }}
+    >
+      <div
+        style={{ borderRadius: "var(--oz-radius-lg)" }}
+        className="flex w-full max-w-sm flex-col gap-3 bg-white p-5 shadow-lg"
+      >
+        <p className="font-semibold text-gray-900">Stand melden</p>
+        <p className="text-sm text-gray-500">Warum meldest du diesen Stand?</p>
+        <textarea
+          // biome-ignore lint/a11y/noAutofocus: Dialog öffnet sich erst per Klick, Fokus direkt aufs einzige Eingabefeld ist hier gewollt.
+          autoFocus
+          rows={3}
+          value={grund}
+          onChange={(e) => {
+            setGrund(e.target.value);
+            setShowError(false);
+          }}
+          placeholder="Grund (Pflichtfeld)"
+          className="resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        />
+        {showError && <p className="text-xs text-red-600">Bitte einen Grund angeben.</p>}
+        <div className="flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50"
+          >
+            Abbrechen
+          </button>
+          <button
+            type="button"
+            onClick={submit}
+            className="rounded-full bg-[#009a00] px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#008400]"
+          >
+            Melden
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Optisch wie "Navigieren"/"Favoriten" daneben - eine gleichwertige,
@@ -31,27 +89,32 @@ function askForReason(): string | null {
 // unauffälligen Text-Links.
 function ReportButton({ standId }: { standId: number }) {
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const submitReport = async (grund: string) => {
+    setDialogOpen(false);
+    setState("sending");
+    try {
+      await reportStand(standId, grund);
+    } catch {
+      // Fehlschlag hier bewusst nicht extra anzeigen - Melden soll
+      // niedrigschwellig bleiben, ein zweiter Versuch kostet nichts.
+    }
+    setState("done");
+  };
 
   return (
-    <button
-      type="button"
-      onClick={async () => {
-        const grund = askForReason();
-        if (grund === null) return;
-        setState("sending");
-        try {
-          await reportStand(standId, grund);
-        } catch {
-          // Fehlschlag hier bewusst nicht extra anzeigen - Melden soll
-          // niedrigschwellig bleiben, ein zweiter Versuch kostet nichts.
-        }
-        setState("done");
-      }}
-      disabled={state !== "idle"}
-      className="whitespace-nowrap rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50"
-    >
-      {state === "done" ? "Gemeldet" : "🚩 Melden"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setDialogOpen(true)}
+        disabled={state !== "idle"}
+        className="whitespace-nowrap rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50"
+      >
+        {state === "done" ? "Gemeldet" : "🚩 Melden"}
+      </button>
+      {dialogOpen && <ReportDialog onCancel={() => setDialogOpen(false)} onSubmit={submitReport} />}
+    </>
   );
 }
 
@@ -85,9 +148,11 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
         >
           <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#009a00]" />
           <div className="min-w-0 flex-1">
-            {/* Kennung ist die Adresse selbst (siehe app/identifiers.py) -
-                keine separate Adresszeile mehr, das wäre reine Wiederholung. */}
-            <p className="font-semibold leading-tight text-gray-900">{s.nickname}</p>
+            {/* Öffentlich wird die Adresse gezeigt, nicht der intern
+                vergebene Standname (s.nickname) - die Adresse ist das, was
+                Besucher zum Wiederfinden auf der Karte/in der Liste
+                brauchen. */}
+            <p className="font-semibold leading-tight text-gray-900">{s.adresse}</p>
             {s.kategorien.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1">
                 {s.kategorien.map((k) => (
@@ -119,7 +184,7 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
           <div className="flex shrink-0 flex-col items-end gap-1.5 self-center">
             {s.lat !== null && s.lng !== null && (
               <a
-                href={navigationUrl(s.lat, s.lng, s.nickname)}
+                href={navigationUrl(s.lat, s.lng, s.adresse)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-full border border-[#009a00] px-3 py-1.5 text-xs font-semibold text-[#009a00] transition-colors hover:bg-green-50"

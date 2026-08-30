@@ -1,18 +1,6 @@
-function goHome() {
-  window.location.hash = "";
-}
-
 export function Datenschutz() {
   return (
     <div className="flex flex-col gap-4 py-4">
-      <button
-        type="button"
-        onClick={goHome}
-        className="inline-block w-fit text-sm text-[#009a00] hover:underline"
-      >
-        ← Zurück
-      </button>
-
       <h1 style={{ fontFamily: "var(--oz-font-heading)" }} className="text-3xl font-extrabold">
         Datenschutzerklärung
       </h1>
@@ -65,9 +53,9 @@ export function Datenschutz() {
           <p>
             Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien
             sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein Namensfeld - ein echter
-            Name kann technisch gar nicht erst ins System gelangen. Deine Adresse selbst dient als
-            öffentliche Kennung, unter der du auf der Karte erscheinst (bei mehreren Ständen an
-            derselben Adresse mit angehängter Zählnummer, z.&nbsp;B. „#2"). Zusätzlich bestätigst du
+            Name kann technisch gar nicht erst ins System gelangen. Stattdessen vergeben wir intern
+            eine automatisch ausgewürfelte Fantasie-Kennung (z.&nbsp;B. „Gscheide Kellerkönig"), die
+            aber nirgends öffentlich angezeigt wird - siehe Abschnitt 4. Zusätzlich bestätigst du
             bei der Anmeldung aktiv, dass du mindestens 16 Jahre alt bist (Art. 8 DSGVO).
           </p>
         </section>
@@ -78,9 +66,10 @@ export function Datenschutz() {
           </h2>
           <p>
             Nur folgende Angaben sind öffentlich auf der Karte und in der Liste sichtbar: Straße und
-            Hausnummer (zugleich deine öffentliche Kennung) sowie die Beschreibung. Deine
-            E-Mail-Adresse und dein echter Name (den wir ohnehin nicht erfassen) erreichen die
-            öffentliche Ausgabe unter keinen Umständen.
+            Hausnummer sowie die Beschreibung - dort erscheinst du unter deiner Adresse, nicht unter
+            der internen Fantasie-Kennung aus Abschnitt 3. Deine E-Mail-Adresse und dein echter Name
+            (den wir ohnehin nicht erfassen) erreichen die öffentliche Ausgabe unter keinen
+            Umständen.
           </p>
           <p className="mt-2">
             Weil dabei eine Privatadresse öffentlich sichtbar wird, stützen wir das bewusst nicht

@@ -60,3 +60,22 @@
     margin: 0;
   }
 }
+
+/* MapLibres Standard-Schließen-Kreuz im Popup ist winzig (16px, kaum
+   Kontrast) - im fahrenden Auto/einhändig kaum zuverlässig zu treffen.
+   Größerer Klickbereich, deutlicherer Kontrast, rundes Hover statt eines
+   eckigen grauen Kastens. */
+.maplibregl-popup-close-button {
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 26px;
+  color: #4b5563;
+  right: 4px;
+  top: 4px;
+  border-radius: 9999px;
+}
+.maplibregl-popup-close-button:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}

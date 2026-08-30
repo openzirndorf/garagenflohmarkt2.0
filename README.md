@@ -8,7 +8,7 @@ Der **Garagenflohmarkt Zirndorf** ist ein jährliches Stadtteilfest, bei dem Anw
 
 Diese App macht es einfach, mitzumachen und den Überblick zu behalten:
 
-- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte, unter der Adresse als Kennung statt des echten Namens.
+- **Stand anmelden** — Adresse, kurze Beschreibung und Kategorie eintragen, E-Mail bestätigen, fertig. Der Stand erscheint nach kurzer Freigabe auf der Karte, unter der eigenen Adresse statt des echten Namens.
 - **Karte** — Alle freigegebenen Stände auf einer interaktiven Karte, filterbar nach Kategorien (Kleidung, Spielzeug, Bücher …)
 - **Eigenen Stand verwalten** — Beschreibung ändern oder den Stand jederzeit vollständig löschen, ohne Konto/Passwort: ein eintippbarer Code aus der Mail loggt für eine Sitzung ein (bewusst kein Link, siehe unten); verloren gegangen ist er nicht schlimm, ein neuer lässt sich jederzeit anfordern.
 
@@ -66,7 +66,7 @@ garagenflohmarkt2.0/
 │   ├── email.py            Magic-Link-Mail via Scaleway TEM
 │   ├── geocode.py          Adresse → GPS (OpenCage, Fallback: Nominatim)
 │   ├── tokens.py           Login-/Session-Token: erzeugen, hashen, prüfen
-│   ├── identifiers.py      Adresse -> eindeutige öffentliche Kennung (#2, #3, ...)
+│   ├── nicknames.py        Serverseitige Nickname-Generierung (fränkisch)
 │   ├── rate_limit.py       DB-gestütztes Ratelimiting (überlebt Multi-Instance)
 │   ├── public_fields.py    Positivliste öffentlicher Felder (eine Quelle der Wahrheit)
 │   ├── jobs/
@@ -91,7 +91,7 @@ garagenflohmarkt2.0/
 
 **Ablauf einer Stand-Anmeldung:**
 1. Nutzer füllt Formular aus → `POST /stands` (Basic Auth) — kein Namensfeld, nur Adresse/Beschreibung/Kategorien/E-Mail
-2. Backend geocodiert die Adresse via OpenCage (Fallback lokal: Nominatim), berechnet die öffentliche Kennung aus der Adresse (`app/identifiers.py`)
+2. Backend geocodiert die Adresse via OpenCage (Fallback lokal: Nominatim), vergibt einen Nickname (intern, öffentlich auf Karte/Liste erscheint stattdessen die Adresse)
 3. Stand landet als `PENDING` in der Datenbank, ein befristeter, einmaliger Login-Link geht per Mail raus
 4. Klick auf den Link → Bestätigungsseite ("Bist du das?", verbraucht den Link noch nicht) → "Ja, einloggen" → Stand wird `APPROVED`, ein Session-Token für diese Sitzung wird ausgestellt
 5. Das Karten-Artefakt wird im Hintergrund neu erzeugt (`app/jobs/stands_artifact.py`) und auf Object Storage hochgeladen — die Karte zeigt den Stand kurz danach
@@ -387,7 +387,8 @@ gehasht gespeichert.
 | `POST` | `/stands/redeem-code` | – | Code einlösen (einmalig), gibt `session_token` zurück |
 | `GET` | `/stands/by-session/{session_token}` | – | Eigenen Stand abrufen |
 | `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
-| `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (Adresse ändert automatisch die Kennung, siehe `app/identifiers.py`) |
+| `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (inkl. Standname wechseln) |
+| `POST` | `/stands/by-session/{session_token}/nickname-suggestions` | – | 3 alternative Standnamen würfeln |
 | `POST` | `/stands/by-session/{session_token}/lock-reply` | – | Antwort auf eine Inhalts-Sperre an den Admin schicken (nur bei `content_locked`) |
 | `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand vollständig löschen |
 | `POST` | `/stands/{id}/report` | – | Stand melden (Besucher, Grund per Mail an den Admin, nie gespeichert) |

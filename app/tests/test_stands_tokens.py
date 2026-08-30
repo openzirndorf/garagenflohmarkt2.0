@@ -191,51 +191,57 @@ async def test_request_login_gives_same_response_for_unknown_email(client, api_a
     assert len(captured_emails) == 1
 
 
-async def test_identifier_is_the_address(client, api_auth):
-    stand = await _register(client, api_auth)
-    assert stand["nickname"] == "Musterstraße 1, Zirndorf"
+async def test_nickname_suggestions_returns_three_distinct_valid_names(client, api_auth, captured_emails):
+    from app.nicknames import is_valid_nickname
+
+    await _register(client, api_auth)
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    resp = await client.post(f"/stands/by-session/{session_token}/nickname-suggestions")
+    assert resp.status_code == 200
+    suggestions = resp.json()["suggestions"]
+    assert len(suggestions) == 3
+    assert len(set(suggestions)) == 3
+    assert all(is_valid_nickname(n) for n in suggestions)
 
 
-async def test_second_stand_at_same_address_gets_counter_suffix(client, api_auth):
-    first = await _register(client, api_auth, email="erster@example.com")
-    second = await _register(client, api_auth, email="zweiter@example.com")
-    assert first["nickname"] == "Musterstraße 1, Zirndorf"
-    assert second["nickname"] == "Musterstraße 1, Zirndorf #2"
+async def test_owner_can_change_nickname_to_a_valid_suggestion(client, api_auth, captured_emails):
+    await _register(client, api_auth)
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    suggestions = (
+        await client.post(f"/stands/by-session/{session_token}/nickname-suggestions")
+    ).json()["suggestions"]
+    chosen = suggestions[0]
+
+    patched = await client.patch(f"/stands/by-session/{session_token}", json={"nickname": chosen})
+    assert patched.status_code == 200
+    assert patched.json()["nickname"] == chosen
 
 
-async def test_changing_address_recomputes_identifier(client, api_auth, captured_emails):
+async def test_nickname_change_rejects_freetext(client, api_auth, captured_emails):
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
-        f"/stands/by-session/{session_token}", json={"adresse": "Andere Straße 9, Zirndorf"}
+        f"/stands/by-session/{session_token}", json={"nickname": "Max Mustermann"}
     )
-    assert patched.status_code == 200
-    assert patched.json()["nickname"] == "Andere Straße 9, Zirndorf"
+    assert patched.status_code == 400
 
 
-async def test_changing_address_to_a_taken_one_gets_counter_suffix(client, api_auth, captured_emails):
-    await _register(client, api_auth, email="erster@example.com")  # "Musterstraße 1, Zirndorf"
+async def test_nickname_change_rejects_collision_with_other_stand(client, api_auth, captured_emails):
+    await _register(client, api_auth, email="erster@example.com")
+    first_session = await _login(client, captured_emails[0]["login_code"])
+    first_nickname = (await client.get(f"/stands/by-session/{first_session}")).json()["nickname"]
+    captured_emails.clear()
 
-    resp = await client.post(
-        "/stands/",
-        json={
-            "adresse": "Andere Straße 9, Zirndorf",
-            "email": "zweiter@example.com",
-            "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": [],
-        },
-        auth=api_auth,
-    )
-    assert resp.status_code == 201
-    second_session = await _login(client, captured_emails[-1]["login_code"])
+    await _register(client, api_auth, email="zweiter@example.com")
+    second_session = await _login(client, captured_emails[0]["login_code"])
 
-    # Zweiter zieht jetzt an dieselbe Adresse wie der erste - muss sich
-    # automatisch als "#2" wiederfinden, nicht mit einer 409 abbrechen.
     patched = await client.patch(
-        f"/stands/by-session/{second_session}", json={"adresse": "Musterstraße 1, Zirndorf"}
+        f"/stands/by-session/{second_session}", json={"nickname": first_nickname}
     )
-    assert patched.status_code == 200
-    assert patched.json()["nickname"] == "Musterstraße 1, Zirndorf #2"
+    assert patched.status_code == 409
 
 
 async def test_request_login_is_rate_limited(client, api_auth):

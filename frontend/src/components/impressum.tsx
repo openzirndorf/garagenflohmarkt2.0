@@ -1,17 +1,6 @@
 export function Impressum() {
-  const goHome = () => {
-    window.location.hash = "";
-  };
   return (
     <div className="flex flex-col gap-4 py-4">
-      <button
-        type="button"
-        onClick={goHome}
-        className="inline-block w-fit text-sm text-[#009a00] hover:underline"
-      >
-        ← Zurück
-      </button>
-
       <h1 style={{ fontFamily: "var(--oz-font-heading)" }} className="text-3xl font-extrabold">
         Impressum
       </h1>

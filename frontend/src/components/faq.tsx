@@ -158,8 +158,7 @@ export function Faq() {
         <QA q="Kann ich meinen Stand nach der Anmeldung noch ändern?">
           Ja – gib deinen Zugangscode aus der Bestätigungsmail unter „Mein Stand" ein (oder fordere
           dir dort jederzeit einen neuen an), dann kannst du Adresse, Beschreibung, Kategorien und
-          Zahlungsarten jederzeit bearbeiten. Deine öffentliche Kennung (= deine Adresse) passt sich
-          dabei automatisch an, falls du umziehst.
+          Zahlungsarten jederzeit bearbeiten.
         </QA>
         <QA q="Was passiert, wenn mein Stand nicht auf der Karte erscheint?">
           Prüfe, ob du den Bestätigungscode in der Mail unter „Mein Stand" eingegeben hast. Ohne

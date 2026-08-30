@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildStandPopupContent } from "./stand-popup";
 
 describe("buildStandPopupContent", () => {
@@ -16,11 +16,11 @@ describe("buildStandPopupContent", () => {
     expect(node.textContent).toContain("<img src=x onerror=alert(1)>");
   });
 
-  it("does not interpret HTML in the nickname either", () => {
+  it("does not interpret HTML in the address either", () => {
     const node = buildStandPopupContent({
       id: 1,
-      nickname: "<script>alert(1)</script>",
-      adresse: "Musterstraße 1",
+      nickname: "Fröhlicher Dachs",
+      adresse: "<script>alert(1)</script>",
       beschreibung: null,
     });
 
@@ -160,5 +160,76 @@ describe("buildStandPopupContent", () => {
       beschreibung: null,
     });
     expect(withoutFavorite.querySelector("button")).toBeNull();
+  });
+
+  // Regression: der Melden-Button öffnete früher ein nacktes window.prompt() -
+  // jetzt einen eigenen, zum Design passenden Dialog (siehe openReportDialog
+  // in stand-popup.ts). Der Dialog hängt bewusst am document.body, nicht am
+  // Popup-Node selbst (Platz im Popup reicht dafür nicht).
+  describe("report dialog", () => {
+    afterEach(() => {
+      document.body.innerHTML = "";
+    });
+
+    function findButton(root: HTMLElement, text: string): HTMLButtonElement {
+      const btn = Array.from(root.querySelectorAll("button")).find((b) => b.textContent === text);
+      if (!btn) throw new Error(`Button "${text}" nicht gefunden`);
+      return btn;
+    }
+
+    it("requires a non-empty reason before submitting", () => {
+      const onReport = vi.fn().mockResolvedValue(undefined);
+      const node = buildStandPopupContent(
+        { id: 1, nickname: "Flotte Eule", adresse: "Teststraße 2", beschreibung: null },
+        null,
+        null,
+        { onReport },
+      );
+      document.body.appendChild(node);
+
+      findButton(node, "🚩 Melden").click();
+      const dialog = document.body.querySelector("textarea")?.closest("div");
+      expect(dialog).not.toBeNull();
+
+      findButton(document.body as unknown as HTMLElement, "Melden").click();
+      expect(onReport).not.toHaveBeenCalled();
+      expect(document.body.textContent).toContain("Bitte einen Grund angeben.");
+    });
+
+    it("submits the trimmed reason and closes the dialog", async () => {
+      const onReport = vi.fn().mockResolvedValue(undefined);
+      const node = buildStandPopupContent(
+        { id: 7, nickname: "Flotte Eule", adresse: "Teststraße 2", beschreibung: null },
+        null,
+        null,
+        { onReport },
+      );
+      document.body.appendChild(node);
+
+      findButton(node, "🚩 Melden").click();
+      const textarea = document.body.querySelector("textarea") as HTMLTextAreaElement;
+      textarea.value = "  Falsche Adresse  ";
+      findButton(document.body as unknown as HTMLElement, "Melden").click();
+
+      expect(onReport).toHaveBeenCalledWith(7, "Falsche Adresse");
+      expect(document.body.querySelector("textarea")).toBeNull();
+    });
+
+    it("cancels without reporting when Abbrechen is clicked", () => {
+      const onReport = vi.fn().mockResolvedValue(undefined);
+      const node = buildStandPopupContent(
+        { id: 1, nickname: "Flotte Eule", adresse: "Teststraße 2", beschreibung: null },
+        null,
+        null,
+        { onReport },
+      );
+      document.body.appendChild(node);
+
+      findButton(node, "🚩 Melden").click();
+      findButton(document.body as unknown as HTMLElement, "Abbrechen").click();
+
+      expect(onReport).not.toHaveBeenCalled();
+      expect(document.body.querySelector("textarea")).toBeNull();
+    });
   });
 });

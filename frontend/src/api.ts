@@ -184,11 +184,23 @@ interface StandPatchData {
   beschreibung?: string;
   kategorien?: string[];
   zahlungsarten?: string[];
+  nickname?: string;
 }
 
 interface AdminStandPatchData extends StandPatchData {
   content_locked?: boolean;
   content_lock_message?: string;
+}
+
+// Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst
+// updateStand() mit dem gewählten Namen schreibt in die DB.
+export async function suggestNicknames(sessionToken: string): Promise<string[]> {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}/nickname-suggestions`, {
+    method: "POST",
+  });
+  if (!res.ok) throw new Error("Vorschläge konnten nicht geladen werden");
+  const data = await res.json();
+  return data.suggestions;
 }
 
 // Einzige Möglichkeit für einen gesperrten Standinhaber, den Admin zu

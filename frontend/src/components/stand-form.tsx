@@ -140,12 +140,17 @@ export function StandForm({ onSuccess }: Props) {
             Wir haben dir eine E-Mail mit einem Bestätigungscode geschickt. Gib ihn unter "Mein
             Stand" ein - erst danach erscheint dein Stand auf der Karte.
           </p>
-          {nickname && (
-            <p className="text-sm text-gray-700">
-              Auf der Karte erscheinst du als <strong>„{nickname}“</strong> (deine Adresse dient als
-              Kennung) - dein echter Name wird nirgends angezeigt.
-            </p>
-          )}
+          <p className="text-sm text-gray-700">
+            Auf der Karte und in der Liste erscheinst du unter deiner Adresse - nie mit deinem
+            echten Namen.
+            {nickname && (
+              <>
+                {" "}
+                Unter „Mein Stand" findest du deinen Stand außerdem unter der internen Kennung{" "}
+                <strong>„{nickname}“</strong> wieder.
+              </>
+            )}
+          </p>
           <p className="mt-1 text-sm text-gray-600">
             Mit demselben Code kannst du deinen Stand danach auch jederzeit bearbeiten oder
             vollständig löschen. Solltest du die Mail verlieren, kannst du dir über "Mein Stand"
@@ -270,9 +275,8 @@ export function StandForm({ onSuccess }: Props) {
             />
             <p className="text-xs text-gray-500">
               Du erhältst einen Bestätigungscode per Mail – erst danach wird dein Stand sichtbar.
-              Auf der Karte erscheinst du unter deiner Adresse als Kennung, nie mit deinem echten
-              Namen. Gibt es an derselben Adresse schon einen Stand, wird automatisch „#2“ o.Ä.
-              angehängt.
+              Auf der Karte und in der Liste erscheinst du unter deiner Adresse, nie mit deinem
+              echten Namen.
             </p>
           </div>
 
