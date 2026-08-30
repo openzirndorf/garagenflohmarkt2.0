@@ -251,6 +251,7 @@ export function FlohmarktApp() {
   const [zahlungsartenFilter, setZahlungsartenFilter] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [hasOwnStand, setHasOwnStand] = useState(false);
   const { favoriteIds, toggleFavorite } = useFavorites();
 
@@ -304,11 +305,13 @@ export function FlohmarktApp() {
   // Beschreibung), ohne die Filterleiste weiter zu füllen.
   const searchQuery = searchInput.trim().toLowerCase();
 
-  const hasActiveFilter =
-    kategorienFilter.length > 0 ||
-    zahlungsartenFilter.length > 0 ||
-    showFavoritesOnly ||
-    searchQuery !== "";
+  // Nur die Pillen-Filter (Favoriten/Zahlungsart/Kategorie) zählen für das
+  // Badge am "Filter"-Button - die Suche hat ihr eigenes, immer sichtbares
+  // Feld und braucht keinen Zähler.
+  const activeFilterCount =
+    kategorienFilter.length + zahlungsartenFilter.length + (showFavoritesOnly ? 1 : 0);
+
+  const hasActiveFilter = activeFilterCount > 0 || searchQuery !== "";
 
   const matchesSearch = (s: Stand) =>
     searchQuery === "" ||
@@ -368,89 +371,124 @@ export function FlohmarktApp() {
         <main className="flex-1">
           {/* Suche + Filter - EIN Kontrollbereich über der Karte statt zweier
               fast identischer Filterleisten (früher: eine schwebend auf der
-              Karte, eine nochmal über der Liste). Karte bleibt dadurch frei
-              von Overlays; die Kategorie-Zeile bleibt horizontal scrollbar
-              statt umzubrechen, da 18 Kategorien sonst mehrzeilig sehr viel
-              Platz brauchen (v.a. mobil). */}
+              Karte, eine nochmal über der Liste). Filter-Pillen stecken
+              hinter einem eigenen "Filter"-Button mit Zähler-Badge statt
+              immer als lange Scroll-Reihe sichtbar zu sein - bei 18
+              Kategorien plus Zahlungsart plus Favoriten wirkte das trotz
+              Gruppierung unübersichtlich. Im geöffneten Panel sind die drei
+              Filterarten mit Mini-Label klar getrennt und brechen um
+              (flex-wrap), statt in einer versteckten Scroll-Reihe zu liegen. */}
           <div className="mx-auto flex w-full max-w-2xl flex-col gap-2 px-4 pt-3">
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Suche, z.B. „Kinderwagen“ oder eine Straße…"
-              className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-            <div
-              style={{ scrollbarWidth: "none" }}
-              className="flex gap-1.5 overflow-x-auto rounded-2xl border border-gray-100 bg-white px-3 py-2 shadow-sm [&::-webkit-scrollbar]:hidden"
-            >
+            <div className="flex gap-2">
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Suche, z.B. „Kinderwagen“ oder eine Straße…"
+                className="w-full flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
               <button
                 type="button"
-                onClick={() => setShowFavoritesOnly((v) => !v)}
-                className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
-                  showFavoritesOnly
-                    ? "border-amber-400 bg-amber-400 text-white"
-                    : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
+                onClick={() => setFilterPanelOpen((v) => !v)}
+                aria-expanded={filterPanelOpen}
+                className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  activeFilterCount > 0
+                    ? "border-[#009a00] bg-green-50 text-[#009a00]"
+                    : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
                 }`}
               >
-                ★ Favoriten
+                Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
               </button>
-              <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
-              {ZAHLUNGSARTEN.map((z) => {
-                const active = zahlungsartenFilter.includes(z);
-                return (
-                  <button
-                    key={z}
-                    type="button"
-                    onClick={() => toggleZahlungsartFilter(z)}
-                    className={`shrink-0 rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
-                      active
-                        ? "border-blue-600 bg-blue-600 text-white"
-                        : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
-                    }`}
-                  >
-                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
-                  </button>
-                );
-              })}
-              <div className="mx-0.5 h-4 w-px shrink-0 self-center bg-gray-200" />
-              {KATEGORIEN.map((k) => {
-                const active = kategorienFilter.includes(k);
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    onClick={() => toggleFilter(k)}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                      active
-                        ? "border-[#009a00] bg-[#009a00] text-white"
-                        : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
-                    }`}
-                  >
-                    {k}
-                  </button>
-                );
-              })}
-              {hasActiveFilter && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setKategorienFilter([]);
-                    setZahlungsartenFilter([]);
-                    setShowFavoritesOnly(false);
-                    setSearchInput("");
-                  }}
-                  className="shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs text-gray-400 hover:text-gray-600"
-                >
-                  ✕ Alle
-                </button>
-              )}
             </div>
+
+            {filterPanelOpen && (
+              <div className="flex flex-col gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Favoriten
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowFavoritesOnly((v) => !v)}
+                    className={`rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                      showFavoritesOnly
+                        ? "border-amber-400 bg-amber-400 text-white"
+                        : "border-amber-300 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
+                    }`}
+                  >
+                    ★ Favoriten
+                  </button>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Zahlungsart
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ZAHLUNGSARTEN.map((z) => {
+                      const active = zahlungsartenFilter.includes(z);
+                      return (
+                        <button
+                          key={z}
+                          type="button"
+                          onClick={() => toggleZahlungsartFilter(z)}
+                          className={`rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                            active
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : "border-blue-300 bg-blue-50 text-blue-700 hover:border-blue-600 hover:bg-blue-100"
+                          }`}
+                        >
+                          {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Kategorie
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {KATEGORIEN.map((k) => {
+                      const active = kategorienFilter.includes(k);
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => toggleFilter(k)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                            active
+                              ? "border-[#009a00] bg-[#009a00] text-white"
+                              : "border-gray-300 bg-white text-gray-600 hover:border-[#009a00] hover:text-[#009a00]"
+                          }`}
+                        >
+                          {k}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {hasActiveFilter && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKategorienFilter([]);
+                      setZahlungsartenFilter([]);
+                      setShowFavoritesOnly(false);
+                      setSearchInput("");
+                    }}
+                    className="self-start text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
+                  >
+                    ✕ Alle Filter zurücksetzen
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Explizit statt implizit lassen, damit sofort klar ist, dass ein
-                einziger Satz Filter beide Ansichten steuert - vorher gab es
-                zwei fast identische Filterleisten (eine über der Karte, eine
-                über der Liste), was den Eindruck erweckte, es wären zwei
-                getrennte Filter. */}
+                einziger Satz Filter beide Ansichten steuert. */}
             <p className="px-1 text-xs text-gray-400">
               🗺️ Karte &amp; 📋 Liste folgen derselben Suche und denselben Filtern.
             </p>
