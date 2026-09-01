@@ -179,13 +179,20 @@ jobs:
           SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: fr-par
         # "update" redeployt automatisch, sobald sich das Image ändert - der
-        # scw-CLI kennt kein eigenständiges "deploy"-Subkommando. Das Update-
-        # Argument heißt "image" (die REST-API selbst nennt das Feld weiterhin
-        # "registry_image", siehe jq-Pfad oben - reine CLI-Umbenennung).
+        # scw-CLI kennt kein eigenständiges "deploy"-Subkommando. Das
+        # Update-Argument heißt "registry-image" (scw container container
+        # update --help zeigt die gültigen Argumentnamen) - ein früheres
+        # "image=..." wurde von der CLI klaglos als unbekanntes Argument
+        # ignoriert, worauf der Rollback-Schritt unten das Feld einmal
+        # live auf den String "null" gesetzt hat (Scaleway zeigte danach
+        # "image was not found in container registry"). Immer erst gegen
+        # "scw container container update --help" prüfen, bevor hier ein
+        # Argumentname geändert wird - die CLI validiert unbekannte
+        # Argumente nicht immer mit einem Fehler.
         run: |
           scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
-            image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
+            registry-image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
             region=fr-par
 
   smoke-test:
@@ -215,8 +222,18 @@ jobs:
           SCW_DEFAULT_REGION: fr-par
         run: |
           curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+          prev="${{ needs.deploy.outputs.previous_image }}"
+          # Ohne diese Prüfung hätte ein leerer/"null"-Wert (z.B. weil der
+          # Capture-Schritt nichts fand) das Feld live auf den String
+          # "null" gesetzt statt auf ein echtes Image - genau das ist
+          # einmal live passiert ("image was not found in container
+          # registry"). Lieber gar nicht zurückrollen als kaputt zurückrollen.
+          if [ -z "$prev" ] || [ "$prev" = "null" ]; then
+            echo "::error::Kein gültiges vorheriges Image bekannt (previous_image=\"$prev\") - Rollback übersprungen, manuell prüfen."
+            exit 1
+          fi
           scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
-            image=${{ needs.deploy.outputs.previous_image }} \
+            registry-image="$prev" \
             region=fr-par
-          echo "::error::Deploy fehlgeschlagen, vorheriges Image (${{ needs.deploy.outputs.previous_image }}) wiederhergestellt."
+          echo "::error::Deploy fehlgeschlagen, vorheriges Image ($prev) wiederhergestellt."
