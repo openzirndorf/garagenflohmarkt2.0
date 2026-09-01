@@ -26,6 +26,13 @@ FRONTEND_URL = os.getenv(
 ).rstrip("/")
 ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "team@openzirndorf.de")
 
+# Muss zu UNLOCK_PARAM/UNLOCK_VALUE in frontend/src/lib/preview-unlock.ts
+# passen. Vor dem offiziellen Start (siehe /launch-config, app/main.py)
+# zeigt die Domain sonst nur die Platzhalterseite - ein per Mail
+# verschickter Bestätigungscode/Admin-Link soll trotzdem funktionieren,
+# statt dort hängen zu bleiben.
+_PREVIEW_UNLOCK_QUERY = "?vorschau=zirndorf2026"
+
 
 def smtp_configured() -> bool:
     return bool(
@@ -95,7 +102,7 @@ async def send_login_email(email: str, nickname: str, login_code: str, *, first_
         return
 
     frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
-    mein_stand_url = f"{frontend_url}#mein-stand"
+    mein_stand_url = f"{frontend_url}/{_PREVIEW_UNLOCK_QUERY}#mein-stand"
 
     if first_time:
         subject = "Garagenflohmarkt Zirndorf – Dein Bestätigungscode"
@@ -173,7 +180,7 @@ Inhalts-Sperre geantwortet:
 
   {message}
 
-Zum Bearbeiten: {FRONTEND_URL}#admin
+Zum Bearbeiten: {FRONTEND_URL}/{_PREVIEW_UNLOCK_QUERY}#admin
 """
     body_html = f"""\
 <!DOCTYPE html>
@@ -185,7 +192,7 @@ Zum Bearbeiten: {FRONTEND_URL}#admin
   Inhalts-Sperre geantwortet:</p>
   <blockquote style="border-left:3px solid #f59e0b;margin:16px 0;padding:8px 16px;
               background:#fffbeb;white-space:pre-wrap">{html.escape(message)}</blockquote>
-  <p><a href="{FRONTEND_URL}#admin">Zum Admin-Panel</a></p>
+  <p><a href="{FRONTEND_URL}/{_PREVIEW_UNLOCK_QUERY}#admin">Zum Admin-Panel</a></p>
 </body>
 </html>
 """
@@ -206,7 +213,7 @@ Stand #{stand_id} ({nickname}) wurde von einem Besucher gemeldet:
 
   {grund_text}
 
-Zum Bearbeiten: {FRONTEND_URL}#admin
+Zum Bearbeiten: {FRONTEND_URL}/{_PREVIEW_UNLOCK_QUERY}#admin
 """
     body_html = f"""\
 <!DOCTYPE html>
@@ -217,7 +224,7 @@ Zum Bearbeiten: {FRONTEND_URL}#admin
   <p>Stand <strong>#{stand_id}</strong> ({nickname}) wurde von einem Besucher gemeldet:</p>
   <blockquote style="border-left:3px solid #ea580c;margin:16px 0;padding:8px 16px;
               background:#fff7ed;white-space:pre-wrap">{html.escape(grund_text)}</blockquote>
-  <p><a href="{FRONTEND_URL}#admin">Zum Admin-Panel</a></p>
+  <p><a href="{FRONTEND_URL}/{_PREVIEW_UNLOCK_QUERY}#admin">Zum Admin-Panel</a></p>
 </body>
 </html>
 """

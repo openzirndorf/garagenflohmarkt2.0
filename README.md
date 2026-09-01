@@ -14,7 +14,7 @@ Diese App macht es einfach, mitzumachen und den Überblick zu behalten:
 
 Die App ist kostenlos, ohne Account und ohne Tracking nutzbar.
 
-**→ [openzirndorf.github.io/garagenflohmarkt2.0](https://openzirndorf.github.io/garagenflohmarkt2.0/)**
+**→ [garagenflohmarkt.openzirndorf.de](https://garagenflohmarkt.openzirndorf.de/)**
 
 ---
 
@@ -25,16 +25,25 @@ Die App ist kostenlos, ohne Account und ohne Tracking nutzbar.
 
 ## Architektur
 
+Ein Scaleway Serverless Container liefert beides aus - Frontend und Backend
+teilen sich dieselbe Origin, kein GitHub Pages mehr:
+
 ```
 Browser
-  ├── GitHub Pages (React-SPA, statisch)
-  │     └── Object Storage: stands.json / stands.geojson
-  │           (öffentliche Karte liest direkt hier - kein DB-Zugriff,
-  │            übersteht einen Ausfall von Backend/DB)
-  └── https://api.openzirndorf.de  (nur Anmeldung, Login, Verwaltung, Admin)
-        └── Scaleway Serverless Container (FastAPI, Docker)
+  ├── https://garagenflohmarkt.openzirndorf.de  (React-SPA, statisch aus dist/)
+  │     ├── Object Storage: stands.json / stands.geojson
+  │     │     (öffentliche Karte liest direkt hier - kein DB-Zugriff,
+  │     │      übersteht einen Ausfall von Backend/DB)
+  │     └── relative API-Aufrufe (/stands/...) - dieselbe Origin
+  └── https://api.openzirndorf.de  (zusätzliche Domain auf demselben Container)
+        └── Scaleway Serverless Container (FastAPI + gebautes Vite-Frontend, Docker)
               ├── Scaleway Datenbank-Instanz (PostgreSQL, RDB)
               └── Scaleway Object Storage (Artefakt-Upload)
+
+Vor dem offiziellen Start: garagenflohmarkt.openzirndorf.de zeigt eine
+Platzhalter-/Countdown-Seite statt der echten App (siehe GET /launch-config,
+frontend/src/components/coming-soon.tsx) - mit Bypass-Link für Entwicklung/
+Tests (frontend/src/lib/preview-unlock.ts).
 
 Scaleway Serverless Jobs (Cron, kein Container-Dauerbetrieb):
   ├── alle 5 Min:  Karten-Artefakt neu erzeugen (Sicherheitsnetz)
@@ -60,7 +69,7 @@ garagenflohmarkt2.0/
 │           ├── impressum.tsx       #impressum
 │           └── datenschutz.tsx     #datenschutz
 ├── app/               FastAPI-Backend
-│   ├── main.py           App-Einstiegspunkt, CORS
+│   ├── main.py           App-Einstiegspunkt, CORS, /launch-config, liefert gebautes Frontend (dist/) aus
 │   ├── auth.py            Basic Auth (API) + Bearer Token (Admin)
 │   ├── database.py        asyncpg-Connection-Pool
 │   ├── email.py            Magic-Link-Mail via Scaleway TEM
@@ -217,6 +226,32 @@ curl -X POST -H "Authorization: Bearer TOKEN" "https://api.openzirndorf.de/stand
 
 ---
 
+### 7. Platzhalter-/Countdown-Seite
+**Zweck:** `garagenflohmarkt.openzirndorf.de` zeigt bis zum öffentlichen Start
+eine Platzhalterseite (`GET /launch-config`, `frontend/src/components/
+coming-soon.tsx`) statt der echten App - Impressum/Datenschutz/FAQ bleiben
+davon unabhängig erreichbar (Impressumspflicht).
+
+| Wo | Variable |
+|----|----------|
+| `infra/terraform.tfvars` | `launch_at` (leer = Datum steht noch nicht fest) |
+| Container-Env | `LAUNCH_AT` (nicht geheim, von OpenTofu) |
+
+**Startdatum setzen/ändern** (kein Rebuild/Redeploy des Images nötig):
+```bash
+# in terraform.tfvars: launch_at = "2026-09-15T00:00:00+02:00"
+cd infra && tofu apply
+```
+
+**Platzhalter für Entwicklung/Tests umgehen:** einmal
+`https://garagenflohmarkt.openzirndorf.de/?vorschau=zirndorf2026` öffnen
+(Parameter/Wert siehe `frontend/src/lib/preview-unlock.ts`) - setzt ein
+dauerhaftes `localStorage`-Flag im Browser, danach erscheint immer die
+echte App. Bestätigungs-/Admin-Mails (`app/email.py`) hängen denselben
+Parameter automatisch an ihre Links an.
+
+---
+
 ## Lokale Entwicklung
 
 ### Voraussetzungen
@@ -332,12 +367,14 @@ tofu apply
 
 | Geänderte Pfade | Workflow | Stufen |
 |-----------------|----------|--------|
-| `frontend/**` | `deploy-frontend.yml` | Test (Lint+Typecheck+Vitest) → Build → **manuelle Freigabe** → GitHub Pages |
-| `app/**`, `scripts/**`, `migrations/**`, `Dockerfile`, `pyproject.toml` | `deploy-backend.yml` | Test → Image bauen+pushen → Migrationen anwenden → **manuelle Freigabe** → Container-Deploy → Smoke-Test → automatischer Rollback bei Fehler |
+| `app/**`, `scripts/**`, `migrations/**`, `frontend/**`, `Dockerfile`, `pyproject.toml` | `deploy-backend.yml` | Backend-Test + Frontend-Test (Lint+Typecheck+Vitest) → Image bauen (Frontend+Backend in einer Docker-Stage) + pushen → Migrationen anwenden → **manuelle Freigabe** → Container-Deploy → Smoke-Test → automatischer Rollback bei Fehler |
 | jeder Push/PR | `test.yml` | Lint, Typecheck, Backend-/Frontend-Tests, **Datenschutz-Tests als eigener Job** |
 | jeder Push/PR | `security.yml` | Secret-Scan (Gitleaks), Dependency-Scan (pip-audit, npm audit, Trivy), IaC-Scan (Checkov) |
 
-Kein Deploy ohne grüne Tests - beide Deploy-Workflows hängen am `test`-Job.
+Kein Deploy ohne grüne Tests - der Deploy-Workflow hängt an beiden Test-Jobs.
+Frontend läuft nicht mehr separat auf GitHub Pages - ein Push auf
+`frontend/**` baut jetzt ebenfalls das komplette Docker-Image neu und
+deployt es auf denselben Scaleway Container wie das Backend.
 Die manuelle Freigabe läuft über ein GitHub Environment `production` mit
 Required Reviewers; der Solo-Maintainer kann seine eigene Freigabe erteilen,
 es ist kein zweiter Mensch nötig.

@@ -167,10 +167,16 @@ resource "scaleway_registry_namespace" "flohmarkt" {
   is_public = false
 }
 
-# Container Namespace (Serverless Containers)
+# Container Namespace (Serverless Containers). War ursprünglich (Name
+# "openzirndorf") versehentlich im geteilten openzirndorf-Projekt angelegt,
+# nicht im dedizierten garagenflohmarkt-Projekt - project_id war früher
+# implizit (kein eigenes Scaleway-Projekt für dieses Repo, computed einmalig
+# bei Erstellung, seither nie neu bewertet). Explizit gesetzt + umbenannt,
+# damit der Namespace-Name zum tatsächlichen Projekt passt.
 resource "scaleway_container_namespace" "flohmarkt_ns" {
-  name   = "openzirndorf"
-  region = var.scw_region
+  name       = "garagenflohmarkt"
+  region     = var.scw_region
+  project_id = var.scw_project_id
 }
 
 # Serverless Container – läuft das FastAPI-Backend
@@ -182,8 +188,14 @@ resource "scaleway_container" "flohmarkt_api" {
   port         = 8080
   cpu_limit    = 1000
   memory_limit = 1024
-  min_scale    = 0
-  max_scale    = 5
+  # 0 spart Kosten außerhalb des Events, riskiert aber Kaltstarts (siehe
+  # bekannte Falle zu memory_limit/timeout weiter oben in diesem Projekt).
+  # Kurz vor dem 4. Oktober manuell auf 1 setzen (keine Kaltstarts mehr am
+  # Veranstaltungstag selbst), danach wieder auf 0 zurück - bewusst kein
+  # Dauerzustand (läuft sonst durchgehend und kostet entsprechend) und
+  # keine automatische Zeitsteuerung für ein derart seltenes Ereignis.
+  min_scale = 0
+  max_scale = 5
 
   secret_environment_variables = {
     DATABASE_URL  = local.database_url
@@ -199,7 +211,7 @@ resource "scaleway_container" "flohmarkt_api" {
     S3_SECRET_KEY = scaleway_iam_api_key.stands_storage.secret_key
     # Siehe variables.tf: ohne gesetzten Key fällt app/geocode.py auf die
     # öffentliche Nominatim-Instanz zurück - für die Produktion vor dem
-    # ersten echten Betrieb bei locationiq.com registrieren und setzen.
+    # ersten echten Betrieb bei opencagedata.com registrieren und setzen.
     GEOCODE_API_KEY = var.geocode_api_key
   }
 
@@ -210,6 +222,10 @@ resource "scaleway_container" "flohmarkt_api" {
     SMTP_FROM     = var.smtp_from
     BACKEND_URL   = var.backend_url
     FRONTEND_URL  = var.frontend_url
+    # Siehe variables.tf: steuert die Platzhalter-/Countdown-Seite
+    # (GET /launch-config, frontend/src/components/coming-soon.tsx). Leer
+    # ist ein gültiger Zustand ("Datum steht noch nicht fest").
+    LAUNCH_AT     = var.launch_at
     STANDS_BUCKET = scaleway_object_bucket.stands.name
     S3_ENDPOINT   = "https://s3.${var.scw_region}.scw.cloud"
     S3_REGION     = var.scw_region
@@ -278,9 +294,23 @@ resource "scaleway_job_definition" "deletion_job" {
   }
 }
 
-# Custom Domain für den Container
+# Custom Domain für den Container - bleibt bestehen, auch wenn das Frontend
+# jetzt vom selben Container mitbeantwortet wird (siehe
+# scaleway_container_domain.flohmarkt_frontend unten): kostet nichts extra,
+# und nichts zwingt dazu, sie stillzulegen.
 resource "scaleway_container_domain" "flohmarkt_api" {
   container_id = scaleway_container.flohmarkt_api.id
   hostname     = "api.openzirndorf.de"
+  region       = var.scw_region
+}
+
+# Zweite Custom Domain für denselben Container - liefert ab jetzt sowohl
+# die API als auch das mitgebaute Frontend aus (siehe Dockerfile,
+# app/main.py Catch-all-Route). Ersetzt das bisherige Hosting auf GitHub
+# Pages. Der Nutzer legt den DNS-Eintrag (CNAME auf den unten ausgegebenen
+# Scaleway-Endpunkt) selbst um, sobald diese Ressource existiert.
+resource "scaleway_container_domain" "flohmarkt_frontend" {
+  container_id = scaleway_container.flohmarkt_api.id
+  hostname     = "garagenflohmarkt.openzirndorf.de"
   region       = var.scw_region
 }

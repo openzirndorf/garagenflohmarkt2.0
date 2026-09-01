@@ -1,3 +1,26 @@
+# Stage 1: Frontend bauen. Wird ins Backend-Image kopiert (siehe Runner-
+# Stage) - ein Container, eine Domain, statt Frontend (GitHub Pages) und
+# Backend (Scaleway) getrennt zu hosten. Muster aus dem Schwesterprojekt
+# erfahre (erfahre/backend/Dockerfile).
+FROM node:22-slim AS frontend-builder
+WORKDIR /frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ .
+# Leer = relative API-Pfade ("/stands/...") statt einer fest eingebrannten
+# Domain - Frontend und Backend teilen sich ab jetzt dieselbe Origin. Nur
+# der Docker-Build bekommt diesen Default; "npm run dev" außerhalb von
+# Docker fällt weiterhin auf http://localhost:8080 zurück (siehe api.ts).
+ARG VITE_API_URL=""
+ARG VITE_API_USERNAME=""
+ARG VITE_API_PASSWORD=""
+ARG VITE_STATIC_BASE_URL=""
+ENV VITE_API_URL=$VITE_API_URL \
+    VITE_API_USERNAME=$VITE_API_USERNAME \
+    VITE_API_PASSWORD=$VITE_API_PASSWORD \
+    VITE_STATIC_BASE_URL=$VITE_STATIC_BASE_URL
+RUN npm run build
+
 FROM python:3.12-slim AS builder
 WORKDIR /app
 COPY pyproject.toml .
@@ -22,6 +45,10 @@ COPY app/ ./app/
 # "deletion_job", siehe infra/main.tf) läuft mit demselben Image und
 # überschriebenem Befehl "python -m scripts.deletion_job".
 COPY scripts/ ./scripts/
+# Gebautes Frontend - app/main.py liefert es über eine Catch-all-Route nach
+# den API-Routen aus (nur aktiv, wenn dieses Verzeichnis existiert - lokale
+# Entwicklung ohne Docker bleibt davon unberührt).
+COPY --from=frontend-builder /frontend/dist ./dist
 EXPOSE 8080
 # --no-access-log: Tokens reisen als URL-Pfadsegment (z.B. /stands/confirm/{token}) -
 # Uvicorns Standard-Access-Log würde sie sonst im Klartext in die Container-Logs schreiben.

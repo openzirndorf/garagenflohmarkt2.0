@@ -1,5 +1,9 @@
-name: Deploy Backend
+name: Deploy
 
+# Deployt Backend UND Frontend in einem Rutsch: das Docker-Image baut das
+# Vite-Frontend in einer eigenen Stage und kopiert dessen dist/ mit hinein
+# (siehe Dockerfile, app/main.py) - ein Container statt Backend (Scaleway)
+# und Frontend (bisher GitHub Pages) getrennt zu hosten.
 on:
   push:
     branches: [main]
@@ -7,6 +11,7 @@ on:
       - "app/**"
       - "scripts/**"
       - "migrations/**"
+      - "frontend/**"
       - "Dockerfile"
       - "pyproject.toml"
   workflow_dispatch:
@@ -48,8 +53,28 @@ jobs:
       - run: ruff check app scripts
       - run: python -m pytest app/tests -v
 
+  # Ehemals eigener Workflow deploy-frontend.yml (GitHub Pages) - jetzt Teil
+  # dieses gemeinsamen Deploys, blockiert build-and-push wie zuvor bei
+  # eigenständigem Frontend-Deploy.
+  frontend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -p tsconfig.json --noEmit
+      - run: npx vitest --run
+
   build-and-push:
-    needs: test
+    needs: [test, frontend-test]
     runs-on: ubuntu-latest
     outputs:
       sha_tag: ${{ steps.tags.outputs.sha_tag }}
@@ -77,6 +102,13 @@ jobs:
           tags: |
             rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:latest
             rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ steps.tags.outputs.sha_tag }}
+          # VITE_API_URL bewusst leer: Frontend und Backend teilen sich ab
+          # jetzt dieselbe Origin, relative Pfade ("/stands/...") reichen.
+          build-args: |
+            VITE_API_URL=
+            VITE_API_USERNAME=${{ secrets.VITE_API_USERNAME }}
+            VITE_API_PASSWORD=${{ secrets.VITE_API_PASSWORD }}
+            VITE_STATIC_BASE_URL=${{ vars.VITE_STATIC_BASE_URL }}
 
   # Wendet ausstehende Migrationen automatisiert an, VOR dem Deploy des neuen
   # Images (das evtl. schon das neue Schema voraussetzt). Migrationsdateien

@@ -27,10 +27,18 @@ smtp_from     = "noreply@automail.DEINE_DOMAIN.de"  # Absenderadresse, muss in S
 # Öffentliche Backend-URL (für Bestätigungslinks in E-Mails)
 # Beim ersten Deploy leer lassen (""), nach Apply mit Container-URL befüllen
 backend_url   = "https://api.DEINE_DOMAIN.de"
-frontend_url  = "https://openzirndorf.github.io/garagenflohmarkt2.0"
+# Läuft im selben Container wie das Backend (siehe
+# scaleway_container_domain.flohmarkt_frontend in main.tf) - kein
+# separates Frontend-Hosting mehr nötig.
+frontend_url  = "https://DEINE_FRONTEND_DOMAIN.de"
 
 # Kostenloser Account unter https://opencagedata.com - ohne diesen Key fällt
 # app/geocode.py auf die öffentliche Nominatim-Instanz zurück, was gegen
 # deren Nutzungsbedingungen verstößt (siehe app/geocode.py). Vor dem
 # ersten echten Produktivbetrieb setzen.
 geocode_api_key = "<OpenCage Access Token>"
+
+# Datum für die Platzhalter-/Countdown-Seite (GET /launch-config) - leer
+# lassen, solange noch nicht feststeht, wann die App öffentlich sichtbar
+# werden soll (siehe app/main.py, frontend/src/components/coming-soon.tsx).
+launch_at = ""

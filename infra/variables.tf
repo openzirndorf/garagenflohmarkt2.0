@@ -69,9 +69,15 @@ variable "backend_url" {
 }
 
 variable "frontend_url" {
-  description = "Öffentliche URL des Frontends (für Weiterleitungen nach Bestätigung)"
+  description = "Öffentliche URL des Frontends (für Weiterleitungen nach Bestätigung) - läuft jetzt im selben Container wie das Backend (siehe scaleway_container_domain.flohmarkt_frontend), nicht mehr auf GitHub Pages"
   type        = string
-  default     = "https://openzirndorf.github.io/garagenflohmarkt2.0"
+  default     = "https://garagenflohmarkt.openzirndorf.de"
+}
+
+variable "launch_at" {
+  description = "ISO-8601-Zeitpunkt, ab dem die App öffentlich (ohne Bypass) sichtbar ist - siehe GET /launch-config und frontend/src/components/coming-soon.tsx. Leer = Datum steht noch nicht fest, Platzhalterseite bleibt unbefristet aktiv. Spätere Änderung ist ein reiner 'tofu apply', kein Rebuild/Redeploy des Images nötig."
+  type        = string
+  default     = ""
 }
 
 variable "geocode_api_key" {

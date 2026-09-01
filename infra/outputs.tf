@@ -10,7 +10,7 @@ output "registry_endpoint" {
 }
 
 output "container_url" {
-  description = "Automatisch generierte Container URL (vor Custom Domain)"
+  description = "Automatisch generierte Container URL (vor Custom Domain) - identisch für api.openzirndorf.de und garagenflohmarkt.openzirndorf.de (derselbe Container beantwortet beide), das ist der CNAME-Zielwert für den DNS-Eintrag von garagenflohmarkt.openzirndorf.de"
   value       = scaleway_container.flohmarkt_api.domain_name
 }
 
