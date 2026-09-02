@@ -157,7 +157,20 @@ jobs:
       previous_image: ${{ steps.capture.outputs.previous_image }}
     steps:
       - name: Scaleway CLI installieren
-        run: curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+        # Gepinnte Version statt "curl get.sh | sh" (installiert immer die
+        # jeweils neueste Version zum Laufzeitpunkt): Scaleway hat das
+        # Update-Argument für "container update" zwischen Versionen
+        # umbenannt (v2.53.0: "registry-image", v2.62.0: "image", exakte
+        # Version des Wechsels unbekannt) - ein ungepinntes "latest" ändert
+        # sich unter dem Workflow weg, ohne dass sich hier am Code etwas
+        # ändert. Bei einer künftigen bewussten CLI-Aktualisierung: Version
+        # hier UND im Rollback-Schritt unten gemeinsam anheben, danach
+        # "scw container container update --help" auf das dann gültige
+        # Argument prüfen, bevor man sich auf denselben Namen verlässt.
+        run: |
+          curl -sL "https://github.com/scaleway/scaleway-cli/releases/download/v2.62.0/scaleway-cli_2.62.0_linux_amd64" -o scw
+          chmod +x scw
+          sudo mv scw /usr/local/bin/scw
 
       - name: Aktuell deploytes Image merken (für Rollback)
         id: capture
@@ -180,19 +193,14 @@ jobs:
           SCW_DEFAULT_REGION: fr-par
         # "update" redeployt automatisch, sobald sich das Image ändert - der
         # scw-CLI kennt kein eigenständiges "deploy"-Subkommando. Das
-        # Update-Argument heißt "registry-image" (scw container container
-        # update --help zeigt die gültigen Argumentnamen) - ein früheres
-        # "image=..." wurde von der CLI klaglos als unbekanntes Argument
-        # ignoriert, worauf der Rollback-Schritt unten das Feld einmal
-        # live auf den String "null" gesetzt hat (Scaleway zeigte danach
-        # "image was not found in container registry"). Immer erst gegen
-        # "scw container container update --help" prüfen, bevor hier ein
-        # Argumentname geändert wird - die CLI validiert unbekannte
-        # Argumente nicht immer mit einem Fehler.
+        # Update-Argument heißt in der oben gepinnten Version "image" (per
+        # "scw container container update --help" geprüft) - bei einem
+        # künftigen CLI-Versionswechsel hier erneut prüfen, siehe Kommentar
+        # beim Installations-Schritt oben.
         run: |
           scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
-            registry-image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
+            image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
             region=fr-par
 
   smoke-test:
@@ -221,7 +229,9 @@ jobs:
           SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
           SCW_DEFAULT_REGION: fr-par
         run: |
-          curl -s https://raw.githubusercontent.com/scaleway/scaleway-cli/master/scripts/get.sh | sh
+          curl -sL "https://github.com/scaleway/scaleway-cli/releases/download/v2.62.0/scaleway-cli_2.62.0_linux_amd64" -o scw
+          chmod +x scw
+          sudo mv scw /usr/local/bin/scw
           prev="${{ needs.deploy.outputs.previous_image }}"
           # Ohne diese Prüfung hätte ein leerer/"null"-Wert (z.B. weil der
           # Capture-Schritt nichts fand) das Feld live auf den String
@@ -234,6 +244,6 @@ jobs:
           fi
           scw container container update \
             $(scw container container list name=flohmarkt-api -o json | jq -r '.[0].id') \
-            registry-image="$prev" \
+            image="$prev" \
             region=fr-par
           echo "::error::Deploy fehlgeschlagen, vorheriges Image ($prev) wiederhergestellt."
