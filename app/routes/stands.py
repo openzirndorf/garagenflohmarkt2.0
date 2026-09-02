@@ -139,7 +139,15 @@ async def _nickname_exists(pool, candidate: str) -> bool:
     return bool(await pool.fetchval("SELECT EXISTS(SELECT 1 FROM stands WHERE nickname = $1)", candidate))
 
 
-# GET /stands - öffentlich (Karte ist public)
+# GET /stands - öffentlich (Karte ist public). Zusätzlich auf "" (ohne
+# Slash) registriert: seit app/main.py eine Catch-all-Route für das
+# mitgebaute Frontend hat (siehe dort), matcht "/stands" ohne Slash sonst
+# diese Catch-all-Route statt zu "/stands/" umzuleiten (Starlettes
+# automatischer redirect_slashes greift nur, wenn sich sonst KEIN Match
+# findet) - lieferte dann index.html statt der Standliste aus. Live
+# beobachtet: fetchStands()' Fallback-Pfad in api.ts ruft bewusst ohne
+# Slash auf.
+@router.get("")
 @router.get("/")
 async def list_stands():
     pool = await get_pool()

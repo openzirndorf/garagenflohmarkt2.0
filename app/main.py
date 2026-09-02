@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -57,13 +57,25 @@ app.include_router(stands_router, prefix="/stands")
 # Schwesterprojekt erfahre (erfahre/backend/main.py). Bewusst NACH
 # app.include_router(): FastAPI matcht Routen in Registrierungsreihenfolge,
 # echte API-Pfade wie /stands/geojson greifen also immer zuerst - diese
-# Catch-all-Route sieht nur, was sonst nirgends passt. Nur aktiv, wenn
-# dist/ existiert, damit lokale Entwicklung ohne Docker-Build unverändert
-# funktioniert (kein Frontend-Build, kein 404-Sturz ins Leere).
+# Catch-all-Route sieht nur, was sonst nirgends passt.
+#
+# Die Route selbst ist IMMER registriert (nicht nur wenn dist/ existiert) -
+# war anfangs bedingt und hat dadurch genau den Bug verschleiert, den sie
+# selbst verursacht hat: ohne lokal gebautes dist/ lief in Tests nie die
+# Routing-Topologie, die in Produktion tatsächlich aktiv ist. So bricht
+# eine kaputte Route (siehe list_stands oben, "" zusätzlich zu "/") auch
+# ohne echten Docker-Build in den Tests sichtbar, statt erst live
+# aufzufallen (ist einmal live passiert: GET /stands ohne Slash landete
+# hier statt beim echten Endpunkt, lieferte index.html statt der
+# Standliste - die öffentliche Liste war leer, obwohl Stände existierten).
 _DIST_DIR = Path(__file__).parent.parent / "dist"
-if _DIST_DIR.is_dir():
 
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def spa(full_path: str) -> FileResponse:
-        candidate = _DIST_DIR / full_path
-        return FileResponse(candidate if candidate.is_file() else _DIST_DIR / "index.html")
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa(full_path: str) -> FileResponse:
+    if not _DIST_DIR.is_dir():
+        # Lokale Entwicklung ohne Docker-Build: kein Frontend zum
+        # Ausliefern vorhanden, sauberer 404 statt eines FileNotFoundError.
+        raise HTTPException(status_code=404, detail="Nicht gefunden")
+    candidate = _DIST_DIR / full_path
+    return FileResponse(candidate if candidate.is_file() else _DIST_DIR / "index.html")
