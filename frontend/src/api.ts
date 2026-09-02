@@ -279,3 +279,79 @@ export async function reportStand(standId: number, grund: string): Promise<void>
     throw new Error(err?.detail ?? "Meldung fehlgeschlagen");
   }
 }
+
+// --- Admin-Login (E-Mail + Code, wie requestLogin/redeemCode für
+// Standbetreiber oben) - ersetzt für die alltäglichen Admin-Endpunkte den
+// bisher fest eingetippten Master-Token. ---
+
+// Basic Auth wie requestLogin (Standbetreiber) - verhindert Spam von
+// außerhalb der eigenen App, siehe app/routes/admins.py.
+export async function requestAdminLogin(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API}/admins/request-login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${apiAuth}`,
+    },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) throw new Error("Anfrage fehlgeschlagen");
+  return res.json();
+}
+
+export async function redeemAdminCode(code: string): Promise<{ session_token: string }> {
+  const res = await fetch(`${API}/admins/redeem-code`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail ?? "Code konnte nicht eingelöst werden");
+  }
+  return res.json();
+}
+
+// --- Admin-Roster-Verwaltung (wer zählt als Admin) - bewusst weiterhin
+// hinter dem statischen Master-Token, nicht hinter einer Admin-Session
+// (siehe app/routes/admins.py: löst das Henne-Ei-Problem beim
+// allerersten Eintrag). "masterToken" ist bewusst ein anderer Parameter-
+// name als die Session-Tokens oben, um Verwechslung zu vermeiden. ---
+
+export interface AdminRosterEntry {
+  id: number;
+  email: string;
+  created_at: string;
+}
+
+export async function listAdmins(masterToken: string): Promise<AdminRosterEntry[]> {
+  const res = await fetch(`${API}/admins`, {
+    headers: { Authorization: `Bearer ${masterToken}` },
+  });
+  if (!res.ok) throw new Error("Admin-Liste konnte nicht geladen werden");
+  return res.json();
+}
+
+export async function addAdmin(masterToken: string, email: string): Promise<AdminRosterEntry> {
+  const res = await fetch(`${API}/admins`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${masterToken}`,
+    },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => null);
+    throw new Error(err?.detail ?? "Admin konnte nicht hinzugefügt werden");
+  }
+  return res.json();
+}
+
+export async function removeAdmin(masterToken: string, id: number): Promise<void> {
+  const res = await fetch(`${API}/admins/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${masterToken}` },
+  });
+  if (!res.ok) throw new Error("Admin konnte nicht entfernt werden");
+}

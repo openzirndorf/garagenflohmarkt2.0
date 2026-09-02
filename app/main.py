@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from app.database import close_pool
+from app.routes.admins import router as admins_router
 from app.routes.stands import router as stands_router
 
 
@@ -49,6 +50,7 @@ def launch_config():
 
 
 app.include_router(stands_router, prefix="/stands")
+app.include_router(admins_router, prefix="/admins")
 
 
 # Gebautes Frontend ausliefern (siehe Dockerfile: COPY --from=frontend-

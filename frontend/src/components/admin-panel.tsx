@@ -1,14 +1,25 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
+  type AdminRosterEntry,
   type AdminStand,
   type AuditLogEntry,
+  addAdmin,
   approveStand,
   deleteStandAdmin,
   fetchAdminStands,
   fetchAuditLog,
+  listAdmins,
+  redeemAdminCode,
+  removeAdmin,
+  requestAdminLogin,
   updateStandAdmin,
 } from "../api";
 import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
+
+// Wie SESSION_TOKEN_KEY in mein-stand.tsx - eigener Schlüssel, damit sich
+// eine Admin- und eine Standbetreiber-Sitzung im selben Browser nicht
+// überschreiben.
+const ADMIN_SESSION_TOKEN_KEY = "flohmarkt_admin_session_token";
 
 const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   CREATED: "Angemeldet",
@@ -29,7 +40,10 @@ const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
 };
 
 export function AdminPanel() {
-  const [token, setToken] = useState("");
+  // Beim Laden vorhandene Sitzung übernehmen, statt bei jedem Öffnen neu
+  // einzutippen (das war das eigentliche Problem am alten, fest
+  // eingetippten Master-Token: keine Persistenz).
+  const [token, setToken] = useState(() => sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY));
   const [stands, setStands] = useState<AdminStand[] | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,6 +61,14 @@ export function AdminPanel() {
     content_lock_message: "",
   });
 
+  // Login per E-Mail + Code, genau wie Standbetreiber unter "Mein Stand" -
+  // ersetzt das bisherige feste Eintippen des (geteilten) Master-Tokens.
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginCode, setLoginCode] = useState("");
+  const [codeRequested, setCodeRequested] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
   const load = useCallback(async (t: string) => {
     setLoading(true);
     setError(null);
@@ -60,17 +82,63 @@ export function AdminPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler");
       setStands(null);
+      // Sitzung war ungültig/abgelaufen - nicht als "eingeloggt" stehen
+      // lassen, sonst zeigt der Screen dauerhaft nur die Fehlermeldung.
+      sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+      setToken(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    load(token);
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      await requestAdminLogin(loginEmail.trim());
+      setCodeRequested(true);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : "Anfrage fehlgeschlagen");
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
+  const handleRedeemCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError(null);
+    try {
+      const { session_token } = await redeemAdminCode(loginCode.trim());
+      sessionStorage.setItem(ADMIN_SESSION_TOKEN_KEY, session_token);
+      setToken(session_token);
+      await load(session_token);
+    } catch (err) {
+      setLoginError(err instanceof Error ? err.message : "Code konnte nicht eingelöst werden");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+    setToken(null);
+    setStands(null);
+    setLoginEmail("");
+    setLoginCode("");
+    setCodeRequested(false);
+  };
+
+  // Wiederhergestellte Sitzung (siehe useState oben) automatisch laden,
+  // statt trotz vorhandenem Token erst noch mal einloggen zu müssen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: nur beim Mount ausführen, load() selbst ist stabil (useCallback mit []-Deps)
+  useEffect(() => {
+    if (token) load(token);
+  }, []);
+
   const handleApprove = async (id: number) => {
+    if (!token) return;
     setApprovingId(id);
     try {
       await approveStand(id, token);
@@ -84,6 +152,7 @@ export function AdminPanel() {
 
   const handleDelete = async (id: number, nickname: string) => {
     if (!confirm(`„${nickname}" wirklich löschen?`)) return;
+    if (!token) return;
     setDeletingId(id);
     try {
       await deleteStandAdmin(id, token);
@@ -109,6 +178,7 @@ export function AdminPanel() {
   };
 
   const handleSave = async (id: number) => {
+    if (!token) return;
     setSavingId(id);
     setError(null);
     try {
@@ -177,41 +247,74 @@ export function AdminPanel() {
       </h1>
 
       {stands === null ? (
-        <form
-          onSubmit={handleLogin}
-          style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
-          className="flex max-w-sm flex-col gap-3 border border-gray-100 bg-white p-6"
-        >
-          <label htmlFor="token" className="text-sm font-medium text-gray-700">
-            Admin-Token
-          </label>
-          <input
-            id="token"
-            type="password"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            className="rounded-md border border-input px-3 py-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            placeholder="Token eingeben…"
-            required
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-md bg-[#009a00] px-4 py-2 font-medium text-white hover:bg-[#008400] disabled:opacity-50"
+        <>
+          <form
+            onSubmit={codeRequested ? handleRedeemCode : handleRequestCode}
+            style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+            className="flex max-w-sm flex-col gap-3 border border-gray-100 bg-white p-6"
           >
-            {loading ? "Laden…" : "Anmelden"}
-          </button>
-        </form>
+            {!codeRequested ? (
+              <>
+                <label htmlFor="admin-email" className="text-sm font-medium text-gray-700">
+                  E-Mail
+                </label>
+                <input
+                  id="admin-email"
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="deine@email.de"
+                  required
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">
+                  Falls diese E-Mail-Adresse als Admin hinterlegt ist, hast du gerade einen
+                  Zugangscode bekommen.
+                </p>
+                <label htmlFor="admin-code" className="text-sm font-medium text-gray-700">
+                  Zugangscode
+                </label>
+                <input
+                  id="admin-code"
+                  value={loginCode}
+                  onChange={(e) => setLoginCode(e.target.value)}
+                  className="rounded-md border border-input px-3 py-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder="Code eingeben…"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setCodeRequested(false)}
+                  className="self-start text-xs text-gray-400 hover:text-gray-600 hover:underline"
+                >
+                  Andere E-Mail-Adresse
+                </button>
+              </>
+            )}
+            {loginError && <p className="text-sm text-red-600">{loginError}</p>}
+            <button
+              type="submit"
+              disabled={loginLoading}
+              className="rounded-md bg-[#009a00] px-4 py-2 font-medium text-white hover:bg-[#008400] disabled:opacity-50"
+            >
+              {loginLoading ? "Laden…" : codeRequested ? "Einloggen" : "Code anfordern"}
+            </button>
+          </form>
+          <AdminRosterManager />
+        </>
       ) : (
         <>
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               {pending.length} ausstehend · {approved.length} freigegeben
+              {loading && " · lädt…"}
             </p>
             <button
               type="button"
-              onClick={() => setStands(null)}
+              onClick={handleLogout}
               className="text-sm text-gray-500 hover:underline"
             >
               Abmelden
@@ -559,6 +662,137 @@ export function AdminPanel() {
         </a>
       </footer>
     </main>
+  );
+}
+
+// Wer als Admin gilt, bleibt bewusst hinter dem Master-Token statt einer
+// Admin-Session (siehe app/routes/admins.py) - löst das Henne-Ei-Problem
+// beim allerersten Eintrag, ohne ein eigenes Bootstrap-Skript zu
+// brauchen. Deshalb eingeklappt/zurückhaltend und mit eigener
+// Token-Abfrage, statt Teil der normalen Login-Sitzung zu sein.
+function AdminRosterManager() {
+  const [expanded, setExpanded] = useState(false);
+  const [masterToken, setMasterToken] = useState("");
+  const [admins, setAdmins] = useState<AdminRosterEntry[] | null>(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      setAdmins(await listAdmins(masterToken));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fehler");
+      setAdmins(null);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmail.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await addAdmin(masterToken, newEmail.trim());
+      setNewEmail("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRemove = async (id: number) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await removeAdmin(masterToken, id);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Fehler");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="max-w-sm self-start text-xs text-gray-400 hover:text-gray-600 hover:underline"
+      >
+        ⚙️ Admins verwalten (Master-Token)
+      </button>
+    );
+  }
+
+  return (
+    <section
+      style={{ borderRadius: "var(--oz-radius-lg)" }}
+      className="flex max-w-sm flex-col gap-3 border border-gray-200 bg-gray-50 p-4"
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        Admins verwalten
+      </p>
+      <input
+        type="password"
+        value={masterToken}
+        onChange={(e) => setMasterToken(e.target.value)}
+        placeholder="Master-Token"
+        className="rounded-md border border-input px-3 py-2 font-mono text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      <button
+        type="button"
+        onClick={load}
+        disabled={busy || !masterToken}
+        className="self-start rounded-full border border-gray-300 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50"
+      >
+        Liste laden
+      </button>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      {admins && (
+        <ul className="flex flex-col gap-1.5">
+          {admins.map((a) => (
+            <li key={a.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate">{a.email}</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(a.id)}
+                disabled={busy}
+                className="shrink-0 text-xs text-red-500 hover:underline disabled:opacity-50"
+              >
+                Entfernen
+              </button>
+            </li>
+          ))}
+          {admins.length === 0 && <li className="text-xs text-gray-400">Noch keine Admins.</li>}
+        </ul>
+      )}
+      {admins && (
+        <form onSubmit={handleAdd} className="flex gap-2">
+          <input
+            type="email"
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            placeholder="neue@email.de"
+            className="min-w-0 flex-1 rounded-md border border-input px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="shrink-0 rounded-full bg-[#009a00] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#008400] disabled:opacity-50"
+          >
+            Hinzufügen
+          </button>
+        </form>
+      )}
+    </section>
   );
 }
 

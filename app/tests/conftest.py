@@ -64,7 +64,7 @@ async def _clean_tables(_migrated_db):
     async with pool.acquire() as conn:
         tables = await conn.fetch(
             "SELECT tablename FROM pg_tables WHERE schemaname = 'public' "
-            "AND tablename IN ('stands', 'rate_limit_buckets', 'admin_audit_log')"
+            "AND tablename IN ('stands', 'rate_limit_buckets', 'admin_audit_log', 'admins')"
         )
         if tables:
             names = ", ".join(r["tablename"] for r in tables)
@@ -109,7 +109,47 @@ def captured_emails(monkeypatch):
 
 
 @pytest.fixture
-def admin_headers():
+def captured_admin_emails(monkeypatch):
+    """Wie captured_emails oben, für den Admin-Login-Flow (app/routes/admins.py)."""
+    sent: list[dict] = []
+
+    async def _fake_send_admin_login_email(email, login_code):
+        sent.append({"email": email, "login_code": login_code})
+
+    monkeypatch.setattr("app.routes.admins.send_admin_login_email", _fake_send_admin_login_email)
+    return sent
+
+
+@pytest_asyncio.fixture
+async def admin_headers(pool):
+    """Admin-Session-Token statt des statischen ADMIN_TOKEN - die
+    alltäglichen Admin-Endpunkte verlangen seit require_admin_session_auth
+    (app/auth.py) einen echten Roster-Eintrag mit gültiger Session, nicht
+    mehr den Master-Token. Legt den Eintrag/die Session direkt in der DB
+    an statt über den echten request-login/redeem-code-HTTP-Flow zu gehen
+    (der bekommt eigene, dedizierte Tests in test_admin_auth.py) - hier
+    soll die Fixture nur schnell gültige Headers liefern."""
+    from app.tokens import new_session_token
+
+    session_token, session_token_hash, session_token_expires_at = new_session_token()
+    await pool.execute(
+        """
+        INSERT INTO admins (email, session_token_hash, session_token_expires_at)
+        VALUES ('test-admin@example.com', $1, $2)
+        ON CONFLICT (email) DO UPDATE SET
+            session_token_hash = EXCLUDED.session_token_hash,
+            session_token_expires_at = EXCLUDED.session_token_expires_at
+        """,
+        session_token_hash, session_token_expires_at,
+    )
+    return {"Authorization": f"Bearer {session_token}"}
+
+
+@pytest.fixture
+def master_admin_headers():
+    """Der statische ADMIN_TOKEN - gilt nur noch für die Roster-Verwaltung
+    (POST/GET/DELETE /admins) und den Diagnose-Endpunkt
+    POST /stands/test-email, siehe app/auth.py require_admin_auth."""
     return {"Authorization": f"Bearer {ADMIN_TOKEN}"}
 
 

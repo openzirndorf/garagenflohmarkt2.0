@@ -177,6 +177,66 @@ Der Garagenflohmarkt ist ein ehrenamtliches Projekt von OpenZirndorf:
     await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
 
 
+async def send_admin_login_email(email: str, login_code: str) -> None:
+    """Login-Code für den Admin-Bereich (siehe app/routes/admins.py) -
+    strukturell dieselbe Mail wie send_login_email(first_time=False), nur
+    ohne Nickname/mein-stand-Link: Admins haben keinen Stand, der Code wird
+    unter #admin eingetippt."""
+    if not smtp_configured():
+        return
+
+    frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
+    admin_url = f"{frontend_url}/{_PREVIEW_UNLOCK_QUERY}#admin"
+    subject = "Garagenflohmarkt Zirndorf – Dein Admin-Zugangscode"
+
+    body_text = f"""\
+Hallo,
+
+du hast einen Zugangscode für den Admin-Bereich angefordert.
+
+Gib diesen Code unter „Admin" ein:
+
+  {login_code}
+
+Öffne dazu {admin_url} und tippe den Code dort ein.
+
+Der Code ist 30 Minuten lang gültig und nur einmal verwendbar. Falls du
+ihn verlierst oder er abläuft, kannst du dir jederzeit einen neuen
+anfordern.
+
+Viele Grüße
+Das Garagenflohmarkt-Team
+"""
+
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
+  <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
+  <p>Hallo,</p>
+  <p>du hast einen Zugangscode für den Admin-Bereich angefordert.</p>
+  <p>Gib diesen Code unter „Admin" ein:</p>
+  <p style="margin:24px 0;text-align:center">
+    <span style="display:inline-block;background:#f3f4f6;color:#111;padding:16px 28px;
+                 border-radius:8px;font-weight:bold;font-size:1.5rem;letter-spacing:0.15em;
+                 font-family:monospace">
+      {login_code}
+    </span>
+  </p>
+  <p style="font-size:0.9em;color:#444">
+    Öffne dazu <a href="{admin_url}">{admin_url}</a> und tippe den Code dort ein.
+  </p>
+  <p style="font-size:0.8em;color:#999">
+    Gültig für 30 Minuten, nur einmal verwendbar.
+  </p>
+</body>
+</html>
+"""
+
+    await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
+
+
 async def send_lock_reply_email(stand_id: int, nickname: str, message: str) -> None:
     """Leitet die Antwort eines gesperrten Standinhabers an den Admin-Kontakt
     weiter. Bewusst ohne die E-Mail-Adresse des Inhabers im Mailtext - der

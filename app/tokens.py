@@ -70,8 +70,10 @@ def new_login_code(ttl: timedelta) -> tuple[str, str, datetime]:
     return code, hash_token(code), expires_at
 
 
-def new_session_token() -> tuple[str, str, datetime]:
-    """Gibt (Klartext-Token, Hash, Ablaufzeitpunkt) zurück."""
+def new_session_token(ttl: timedelta = SESSION_TOKEN_TTL) -> tuple[str, str, datetime]:
+    """Gibt (Klartext-Token, Hash, Ablaufzeitpunkt) zurück. Optionales ttl
+    für Sitzungen mit anderer Lebensdauer als die einer Stand-Bearbeitung
+    (siehe ADMIN_SESSION_TTL in app/routes/admins.py)."""
     token = generate_token()
-    expires_at = datetime.now(UTC) + SESSION_TOKEN_TTL
+    expires_at = datetime.now(UTC) + ttl
     return token, hash_token(token), expires_at

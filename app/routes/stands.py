@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
 from app.audit import log_action
-from app.auth import require_admin_auth, require_api_auth
+from app.auth import require_admin_auth, require_admin_session_auth, require_api_auth
 from app.database import get_pool
 from app.email import (
     send_lock_reply_email,
@@ -564,8 +564,8 @@ async def test_email(to: str):
         return {"ok": False, "config": info, "error": str(exc)}
 
 
-# GET /stands/admin - Bearer Token, NIE im Frontend verwenden
-@router.get("/admin", dependencies=[Depends(require_admin_auth)])
+# GET /stands/admin - Bearer Token (Admin-Session, siehe app/routes/admins.py), NIE im Frontend verwenden
+@router.get("/admin", dependencies=[Depends(require_admin_session_auth)])
 async def admin_list():
     pool = await get_pool()
     rows = await pool.fetch(f"SELECT {_ADMIN_COLUMNS} FROM stands ORDER BY created_at DESC")
@@ -573,7 +573,7 @@ async def admin_list():
 
 
 # GET /stands/admin/audit-log - Bearer Token, letzte Aktionen (kein Personenbezug)
-@router.get("/admin/audit-log", dependencies=[Depends(require_admin_auth)])
+@router.get("/admin/audit-log", dependencies=[Depends(require_admin_session_auth)])
 async def admin_audit_log():
     pool = await get_pool()
     rows = await pool.fetch(
@@ -588,7 +588,7 @@ async def admin_audit_log():
 # setzen, und ist selbst von der Blockliste ausgenommen (muss z.B. einen
 # problematischen Text sehen/korrigieren können, statt selbst geblockt zu
 # werden).
-@router.patch("/{stand_id}", dependencies=[Depends(require_admin_auth)])
+@router.patch("/{stand_id}", dependencies=[Depends(require_admin_session_auth)])
 async def update_stand_admin(
     stand_id: int, body: AdminStandPatch, background_tasks: BackgroundTasks
 ):
@@ -629,7 +629,7 @@ async def update_stand_admin(
 
 
 # DELETE /stands/{id} - Bearer Token (Admin löscht Stand)
-@router.delete("/{stand_id}", status_code=204, dependencies=[Depends(require_admin_auth)])
+@router.delete("/{stand_id}", status_code=204, dependencies=[Depends(require_admin_session_auth)])
 async def delete_stand_admin(stand_id: int, background_tasks: BackgroundTasks):
     pool = await get_pool()
     result = await pool.execute("DELETE FROM stands WHERE id = $1", stand_id)
@@ -641,7 +641,7 @@ async def delete_stand_admin(stand_id: int, background_tasks: BackgroundTasks):
 
 # POST /stands/{id}/approve - Bearer Token (manuelle Freigabe, z.B. falls die
 # Login-Mail nie ankommt und Admin und Person sich direkt abstimmen)
-@router.post("/{stand_id}/approve", dependencies=[Depends(require_admin_auth)])
+@router.post("/{stand_id}/approve", dependencies=[Depends(require_admin_session_auth)])
 async def approve_stand(stand_id: int, background_tasks: BackgroundTasks):
     pool = await get_pool()
     row = await pool.fetchrow(
