@@ -12,6 +12,8 @@ interface Props {
   onToggleFavorite: (id: number) => void;
   stands: Stand[];
   loading: boolean;
+  hasActiveFilter: boolean;
+  onResetFilters: () => void;
 }
 
 // Schaltet bei einem Kartenfehler (Style/Kacheln laden nicht) auf die
@@ -26,6 +28,8 @@ export function MapOrList({
   onToggleFavorite,
   stands,
   loading,
+  hasActiveFilter,
+  onResetFilters,
 }: Props) {
   const [mapFailed, setMapFailed] = useState(false);
 
@@ -40,6 +44,8 @@ export function MapOrList({
           loading={loading}
           favoriteIds={favoriteIds}
           onToggleFavorite={onToggleFavorite}
+          hasActiveFilter={hasActiveFilter}
+          onResetFilters={onResetFilters}
         />
       </div>
     );

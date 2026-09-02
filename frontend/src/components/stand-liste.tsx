@@ -9,6 +9,12 @@ interface Props {
   loading: boolean;
   favoriteIds?: Set<number>;
   onToggleFavorite?: (id: number) => void;
+  // Unterscheidet im leeren Zustand "wirklich noch keine Stände
+  // angemeldet" von "Suche/Filter trifft gerade nichts" - ohne das zeigte
+  // eine zu enge Suche fälschlich "Sei der Erste!", obwohl längst Stände
+  // existieren.
+  hasActiveFilter?: boolean;
+  onResetFilters?: () => void;
 }
 
 // Eigener, zum Rest der App passender Dialog statt eines nackten
@@ -118,7 +124,14 @@ function ReportButton({ standId }: { standId: number }) {
   );
 }
 
-export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: Props) {
+export function StandListe({
+  stands,
+  loading,
+  favoriteIds,
+  onToggleFavorite,
+  hasActiveFilter,
+  onResetFilters,
+}: Props) {
   if (loading) {
     return (
       <div className="flex flex-col gap-3">
@@ -132,8 +145,25 @@ export function StandListe({ stands, loading, favoriteIds, onToggleFavorite }: P
   if (!stands.length) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center">
-        <p className="text-sm text-gray-400">Noch keine Stände angemeldet.</p>
-        <p className="mt-1 text-xs text-gray-300">Sei der Erste!</p>
+        {hasActiveFilter ? (
+          <>
+            <p className="text-sm text-gray-400">Keine Treffer für Suche/Filter.</p>
+            {onResetFilters && (
+              <button
+                type="button"
+                onClick={onResetFilters}
+                className="mt-1 text-xs text-[#009a00] underline-offset-2 hover:underline"
+              >
+                ✕ Alle Filter zurücksetzen
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-gray-400">Noch keine Stände angemeldet.</p>
+            <p className="mt-1 text-xs text-gray-300">Sei der Erste!</p>
+          </>
+        )}
       </div>
     );
   }

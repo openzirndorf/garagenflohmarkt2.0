@@ -26,6 +26,9 @@ FRONTEND_URL = os.getenv(
 ).rstrip("/")
 ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "team@openzirndorf.de")
 
+# Muss zu PORTAL_URL in frontend/src/components/footer.tsx passen.
+_PORTAL_URL = "https://portal.openzirndorf.de/"
+
 # Muss zu UNLOCK_PARAM/UNLOCK_VALUE in frontend/src/lib/preview-unlock.ts
 # passen. Vor dem offiziellen Start (siehe /launch-config, app/main.py)
 # zeigt die Domain sonst nur die Platzhalterseite - ein per Mail
@@ -134,6 +137,10 @@ verlierst oder er abläuft, kannst du dir jederzeit einen neuen über
 
 Viele Grüße
 Das Garagenflohmarkt-Team
+
+---
+Der Garagenflohmarkt ist ein ehrenamtliches Projekt von OpenZirndorf:
+{_PORTAL_URL}
 """
 
     body_html = f"""\
@@ -157,6 +164,11 @@ Das Garagenflohmarkt-Team
   </p>
   <p style="font-size:0.8em;color:#999">
     Gültig für {validity}, nur einmal verwendbar.
+  </p>
+  <hr style="border:none;border-top:1px solid #eee;margin:20px 0">
+  <p style="font-size:0.75em;color:#aaa">
+    Der Garagenflohmarkt ist ein ehrenamtliches Projekt von
+    <a href="{_PORTAL_URL}" style="color:#aaa">OpenZirndorf</a>.
   </p>
 </body>
 </html>

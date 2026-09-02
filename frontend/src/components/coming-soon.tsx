@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { Datenschutz } from "./datenschutz";
 import { Faq } from "./faq";
-import { Footer } from "./footer";
+import { Footer, PORTAL_URL } from "./footer";
 import { Impressum } from "./impressum";
 
 // Zeigt sich, solange die App noch nicht öffentlich gestartet ist (siehe
@@ -95,6 +95,18 @@ function Placeholder({ launchAt }: { launchAt: string | null }) {
           <CountdownBlock value={countdown.minutes} label="Min" />
         </div>
       )}
+      <p className="max-w-sm text-xs text-gray-400">
+        Der Garagenflohmarkt ist ein ehrenamtliches Projekt von{" "}
+        <a
+          href={PORTAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-gray-600"
+        >
+          OpenZirndorf
+        </a>{" "}
+        - mehr über die Initiative und wie du sie unterstützen kannst gibt's dort.
+      </p>
     </div>
   );
 }

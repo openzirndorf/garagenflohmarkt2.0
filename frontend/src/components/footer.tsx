@@ -44,6 +44,15 @@ export function Footer() {
         <a href="#faq" className="font-semibold hover:underline" style={linkStyle}>
           FAQ
         </a>
+        <a
+          href={PORTAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold hover:underline"
+          style={linkStyle}
+        >
+          OpenZirndorf unterstützen
+        </a>
       </div>
       <div className="mt-2 flex flex-wrap justify-center gap-3 text-gray-400">
         <a

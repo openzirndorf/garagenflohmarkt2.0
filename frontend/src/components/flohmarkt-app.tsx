@@ -316,6 +316,16 @@ export function FlohmarktApp() {
     );
   };
 
+  // Auch von StandListe aufgerufen (siehe deren "Keine Treffer"-Zustand,
+  // unterscheidet dort von "wirklich noch keine Stände angemeldet") -
+  // deshalb als eigene Funktion statt inline im Filter-Panel-Button unten.
+  const resetFilters = () => {
+    setKategorienFilter([]);
+    setZahlungsartenFilter([]);
+    setShowFavoritesOnly(false);
+    setSearchInput("");
+  };
+
   // Freitextsuche statt immer neuer Kategorie-Pillen - findet auch Dinge,
   // für die es keine eigene Kategorie gibt (z.B. "Kinderwagen" nur in der
   // Beschreibung), ohne die Filterleiste weiter zu füllen.
@@ -398,6 +408,8 @@ export function FlohmarktApp() {
               onToggleFavorite={toggleFavorite}
               stands={filteredStands}
               loading={loading}
+              hasActiveFilter={hasActiveFilter}
+              onResetFilters={resetFilters}
             />
           </div>
 
@@ -511,12 +523,7 @@ export function FlohmarktApp() {
                 {hasActiveFilter && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setKategorienFilter([]);
-                      setZahlungsartenFilter([]);
-                      setShowFavoritesOnly(false);
-                      setSearchInput("");
-                    }}
+                    onClick={resetFilters}
                     className="self-start text-xs text-gray-400 underline-offset-2 hover:text-gray-600 hover:underline"
                   >
                     ✕ Alle Filter zurücksetzen
@@ -589,6 +596,8 @@ export function FlohmarktApp() {
                 loading={loading}
                 favoriteIds={favoriteIds}
                 onToggleFavorite={toggleFavorite}
+                hasActiveFilter={hasActiveFilter}
+                onResetFilters={resetFilters}
               />
             </section>
           </div>

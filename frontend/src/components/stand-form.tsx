@@ -3,6 +3,7 @@ import { createStand } from "../api";
 import { ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "../lib/zahlungsarten";
 import type { StandFormData } from "../types";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "../ui";
+import { PORTAL_URL } from "./footer";
 
 export { ZAHLUNGSART_ICON, ZAHLUNGSARTEN } from "../lib/zahlungsarten";
 
@@ -159,6 +160,18 @@ export function StandForm({ onSuccess }: Props) {
             Mit demselben Code kannst du deinen Stand danach auch jederzeit bearbeiten oder
             vollständig löschen. Solltest du die Mail verlieren, kannst du dir über "Mein Stand"
             jederzeit einen neuen Code schicken lassen.
+          </p>
+          <p className="mt-2 text-xs text-gray-400">
+            Schön, dass du dabei bist! Der Garagenflohmarkt ist ein ehrenamtliches Projekt von{" "}
+            <a
+              href={PORTAL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-gray-600"
+            >
+              OpenZirndorf
+            </a>{" "}
+            - wer mag, kann uns auch über eine Fördermitgliedschaft unterstützen.
           </p>
         </CardContent>
       </Card>

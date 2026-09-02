@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PORTAL_URL } from "./footer";
 
 function SectionHeading({ children }: { children: string }) {
   return (
@@ -41,6 +42,16 @@ export function Faq() {
           merkst du dir Stände und findest sie über den Filter wieder. Willst du selbst mitmachen,
           meldest du über „📍 Eigenen Stand anmelden" (oben im Menü oder im grünen Banner) deinen
           eigenen Stand an.
+        </QA>
+        <QA q="Wer steckt hinter OpenZirndorf?">
+          OpenZirndorf ist eine parteiübergreifende, ehrenamtliche Initiative aus mehreren im
+          Zirndorfer Stadtrat vertretenen Parteien (siehe Fußzeile) - der Garagenflohmarkt ist eines
+          von mehreren Projekten für die Stadt. Mehr über die Initiative und wie du sie unterstützen
+          kannst, z.&nbsp;B. als Fördermitglied, gibt's auf{" "}
+          <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
+            portal.openzirndorf.de
+          </a>
+          .
         </QA>
         <QA q="Kann ich die Seite als App installieren?">
           Ja - auf Android/Chrome zeigt ein Banner oben eine „Installieren"-Schaltfläche. Auf dem
@@ -158,7 +169,14 @@ export function Faq() {
         <QA q="Bis wann kann ich meinen Stand anmelden?">
           Anmeldungen sind bis zum Veranstaltungstag möglich, solange die Seite aktiv ist.
         </QA>
-        <QA q="Kostet die Teilnahme etwas?">Nein, die Teilnahme ist kostenlos.</QA>
+        <QA q="Kostet die Teilnahme etwas?">
+          Nein, die Teilnahme ist kostenlos. Wenn du OpenZirndorf trotzdem unterstützen möchtest,
+          gibt es die Möglichkeit einer Fördermitgliedschaft - mehr dazu auf{" "}
+          <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
+            portal.openzirndorf.de
+          </a>
+          .
+        </QA>
         <QA q="Warum muss ich meine E-Mail bestätigen?">
           Die E-Mail-Bestätigung verhindert Spam und stellt sicher, dass du deinen Stand später
           verwalten kannst.
