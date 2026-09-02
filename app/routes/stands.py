@@ -18,7 +18,12 @@ from app.geocode import geocode
 from app.jobs.stands_artifact import regenerate_stands_artifact
 from app.moderation import contains_blocked_content
 from app.nicknames import generate_unique_nickname, is_valid_nickname
-from app.public_fields import PUBLIC_GEOJSON_COLUMNS, PUBLIC_LIST_COLUMNS, rows_to_geojson
+from app.public_fields import (
+    PUBLIC_GEOJSON_COLUMNS,
+    PUBLIC_LIST_COLUMNS,
+    PUBLIC_STANDS_FILTER,
+    rows_to_geojson,
+)
 from app.rate_limit import check_rate_limit
 from app.tokens import (
     LOGIN_REQUEST_TTL,
@@ -57,7 +62,8 @@ _MAX_KATEGORIEN = 5
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
     "id, nickname, adresse, lat, lng, beschreibung, kategorien, zahlungsarten, status, "
-    "created_at, content_locked, content_lock_message, address_consent_at"
+    "created_at, content_locked, content_lock_message, deactivated, deactivation_message, "
+    "address_consent_at"
 )
 
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
@@ -66,7 +72,7 @@ _ADMIN_COLUMNS = (
     "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, zahlungsarten, "
     "status, created_at, login_token_expires_at, session_token_expires_at, "
     "content_locked, content_lock_message, lock_reply_message, lock_reply_created_at, "
-    "address_consent_at"
+    "deactivated, deactivation_message, address_consent_at"
 )
 
 
@@ -129,6 +135,12 @@ class AdminStandPatch(StandPatch):
     # Inhaber kann sich damit nicht selbst sperren oder entsperren.
     content_locked: bool | None = None
     content_lock_message: str | None = None
+    # Nimmt den Stand komplett von Karte/Liste (siehe PUBLIC_STANDS_FILTER),
+    # anders als content_locked (blockiert nur Adresse/Beschreibung-
+    # Bearbeitung, Stand bleibt sichtbar). Nutzt denselben Antwort-
+    # Mechanismus wie die Sperre (lock_reply_message), siehe reply_to_lock.
+    deactivated: bool | None = None
+    deactivation_message: str | None = None
 
 
 class LoginRequestIn(BaseModel):
@@ -152,7 +164,7 @@ async def _nickname_exists(pool, candidate: str) -> bool:
 async def list_stands():
     pool = await get_pool()
     rows = await pool.fetch(
-        f"SELECT {PUBLIC_LIST_COLUMNS} FROM stands WHERE status = 'APPROVED' ORDER BY created_at DESC"
+        f"SELECT {PUBLIC_LIST_COLUMNS} FROM stands WHERE {PUBLIC_STANDS_FILTER} ORDER BY created_at DESC"
     )
     return [dict(r) for r in rows]
 
@@ -163,7 +175,7 @@ async def stands_geojson():
     pool = await get_pool()
     rows = await pool.fetch(
         f"SELECT {PUBLIC_GEOJSON_COLUMNS} FROM stands "
-        "WHERE status = 'APPROVED' AND lat IS NOT NULL AND lng IS NOT NULL"
+        f"WHERE {PUBLIC_STANDS_FILTER} AND lat IS NOT NULL AND lng IS NOT NULL"
     )
     return rows_to_geojson(rows)
 
@@ -429,12 +441,14 @@ class LockReplyIn(BaseModel):
 
 
 # POST /stands/by-session/{session_token}/lock-reply - einzige Möglichkeit
-# für einen gesperrten Inhaber, den Admin zu erreichen (z.B. um die Sperre
-# zu erklären oder ihre Aufhebung zu bitten). Wird sowohl per Mail an den
-# Admin geschickt als auch auf lock_reply_message gespeichert, damit sie
-# im Admin-Panel sichtbar ist - nicht im Audit-Log, das weiterhin nie
-# Inhalte speichert (siehe app/audit.py). Wird beim Entsperren automatisch
-# wieder gelöscht (siehe update_stand_admin).
+# für einen gesperrten ODER deaktivierten Inhaber, den Admin zu erreichen
+# (z.B. um die Sperre/Deaktivierung zu erklären oder ihre Aufhebung zu
+# bitten) - ein gemeinsamer Mechanismus für beide Admin-Aktionen statt
+# zweier separater. Wird sowohl per Mail an den Admin geschickt als auch
+# auf lock_reply_message gespeichert, damit sie im Admin-Panel sichtbar
+# ist - nicht im Audit-Log, das weiterhin nie Inhalte speichert (siehe
+# app/audit.py). Wird beim Entsperren automatisch wieder gelöscht (siehe
+# update_stand_admin).
 @router.post("/by-session/{session_token}/lock-reply")
 async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request):
     message = body.message.strip()
@@ -451,14 +465,18 @@ async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request)
         raise HTTPException(status_code=429, detail="Zu viele Nachrichten. Bitte später erneut versuchen.")
 
     row = await pool.fetchrow(
-        "SELECT id, nickname, content_locked FROM stands "
+        "SELECT id, nickname, content_locked, deactivated FROM stands "
         "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
         hash_token(session_token),
     )
     if not row:
         raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
-    if not row["content_locked"]:
-        raise HTTPException(status_code=400, detail="Dein Stand ist nicht gesperrt")
+    # Derselbe Antwort-Mechanismus für beide Admin-Aktionen (Sperre und
+    # Deaktivierung, siehe AdminStandPatch) statt zwei separater Reply-Wege.
+    if not (row["content_locked"] or row["deactivated"]):
+        raise HTTPException(
+            status_code=400, detail="Dein Stand ist weder gesperrt noch deaktiviert"
+        )
 
     await pool.execute(
         "UPDATE stands SET lock_reply_message = $1, lock_reply_created_at = now() WHERE id = $2",
@@ -622,7 +640,13 @@ async def update_stand_admin(
     )
     if not row:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
-    await log_action(pool, stand_id, "EDITED", "admin")
+    # Eigene Audit-Aktion statt des generischen EDITED, wenn sich gerade die
+    # Sichtbarkeit ändert - klarerer Verlauf im Admin-Panel, analog zur
+    # bestehenden Trennung APPROVED/EDITED/DELETED.
+    if "deactivated" in updates:
+        await log_action(pool, stand_id, "DEACTIVATED" if updates["deactivated"] else "REACTIVATED", "admin")
+    else:
+        await log_action(pool, stand_id, "EDITED", "admin")
     if row["status"] == "APPROVED":
         background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)

@@ -11,6 +11,14 @@ PUBLIC_LIST_COLUMNS = (
 )
 PUBLIC_GEOJSON_COLUMNS = "id, nickname, adresse, lat, lng, beschreibung, kategorien, zahlungsarten"
 
+# Gemeinsamer Sichtbarkeits-Filter für alle vier Stellen, die die
+# öffentliche Karte/Liste beliefern (die zwei Live-Endpunkte in
+# app/routes/stands.py UND die zwei Queries in app/jobs/stands_artifact.py,
+# das das von der Karte tatsächlich gelesene Artefakt erzeugt) - an einer
+# Stelle definiert, damit ein deaktivierter Stand nicht versehentlich nur
+# aus einer der vier Abfragen verschwindet.
+PUBLIC_STANDS_FILTER = "status = 'APPROVED' AND NOT deactivated"
+
 
 def rows_to_geojson(rows) -> dict:
     """Baut eine FeatureCollection aus Zeilen, die mit PUBLIC_GEOJSON_COLUMNS

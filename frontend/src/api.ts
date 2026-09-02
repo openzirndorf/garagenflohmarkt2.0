@@ -65,6 +65,8 @@ export interface AdminStand extends Stand {
   content_lock_message: string | null;
   lock_reply_message: string | null;
   lock_reply_created_at: string | null;
+  deactivated: boolean;
+  deactivation_message: string | null;
   address_consent_at: string;
 }
 
@@ -87,7 +89,15 @@ export async function approveStand(id: number, token: string): Promise<void> {
 export interface AuditLogEntry {
   id: number;
   stand_id: number;
-  action: "CREATED" | "APPROVED" | "EDITED" | "DELETED" | "REPLIED" | "REPORTED";
+  action:
+    | "CREATED"
+    | "APPROVED"
+    | "EDITED"
+    | "DELETED"
+    | "REPLIED"
+    | "REPORTED"
+    | "DEACTIVATED"
+    | "REACTIVATED";
   actor: "owner" | "admin" | "besucher";
   created_at: string;
 }
@@ -105,6 +115,8 @@ export interface OwnStand extends Stand {
   status: string;
   content_locked: boolean;
   content_lock_message: string | null;
+  deactivated: boolean;
+  deactivation_message: string | null;
   address_consent_at: string;
 }
 
@@ -190,6 +202,8 @@ interface StandPatchData {
 interface AdminStandPatchData extends StandPatchData {
   content_locked?: boolean;
   content_lock_message?: string;
+  deactivated?: boolean;
+  deactivation_message?: string;
 }
 
 // Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst

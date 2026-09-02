@@ -53,6 +53,33 @@ async def test_artifact_contains_only_approved_stands_and_public_fields(
     assert "artefakt-a@example.com" not in json.dumps(captured)
 
 
+async def test_artifact_excludes_deactivated_stands(client, api_auth, admin_headers, monkeypatch):
+    monkeypatch.setattr(stands_artifact, "_BUCKET", "test-bucket")
+    captured = {}
+
+    def fake_upload(list_json, geojson, generated_at, stand_count):
+        captured["list"] = json.loads(list_json)
+        captured["geojson"] = json.loads(geojson)
+
+    monkeypatch.setattr(stands_artifact, "_upload", fake_upload)
+
+    resp = await client.post(
+        "/stands/",
+        json={"adresse": "Musterstraße 1, Zirndorf", "email": "deaktiviert@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
+        auth=api_auth,
+    )
+    stand = resp.json()
+    await client.post(f"/stands/{stand['id']}/approve", headers=admin_headers)
+    await client.patch(
+        f"/stands/{stand['id']}", json={"deactivated": True}, headers=admin_headers
+    )
+
+    await stands_artifact.regenerate_stands_artifact()
+
+    assert captured["list"] == []
+    assert captured["geojson"]["features"] == []
+
+
 async def test_approve_triggers_artifact_regeneration(client, api_auth, admin_headers, monkeypatch):
     calls = []
 

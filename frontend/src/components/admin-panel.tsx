@@ -26,8 +26,10 @@ const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   APPROVED: "Freigegeben",
   EDITED: "Bearbeitet",
   DELETED: "Gelöscht",
-  REPLIED: "Antwort auf Sperre",
+  REPLIED: "Antwort erhalten",
   REPORTED: "Gemeldet",
+  DEACTIVATED: "Deaktiviert",
+  REACTIVATED: "Reaktiviert",
 };
 
 const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
@@ -36,6 +38,8 @@ const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
   EDITED: "bg-blue-100 text-blue-700",
   DELETED: "bg-red-100 text-red-700",
   REPLIED: "bg-amber-100 text-amber-700",
+  DEACTIVATED: "bg-red-100 text-red-700",
+  REACTIVATED: "bg-green-100 text-green-700",
   REPORTED: "bg-orange-100 text-orange-700",
 };
 
@@ -59,6 +63,8 @@ export function AdminPanel() {
     zahlungsarten: [] as string[],
     content_locked: false,
     content_lock_message: "",
+    deactivated: false,
+    deactivation_message: "",
   });
 
   // Login per E-Mail + Code, genau wie Standbetreiber unter "Mein Stand" -
@@ -172,6 +178,8 @@ export function AdminPanel() {
       zahlungsarten: s.zahlungsarten ?? [],
       content_locked: s.content_locked,
       content_lock_message: s.content_lock_message ?? "",
+      deactivated: s.deactivated,
+      deactivation_message: s.deactivation_message ?? "",
     });
     setEditingId(s.id);
     setError(null);
@@ -476,6 +484,14 @@ export function AdminPanel() {
                                 🔒
                               </span>
                             )}
+                            {s.deactivated && (
+                              <span
+                                title="Deaktiviert - nicht auf Karte/Liste sichtbar"
+                                className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700"
+                              >
+                                🚫
+                              </span>
+                            )}
                           </p>
                           <p className="text-sm text-gray-600">{s.adresse}</p>
                           {s.kategorien && s.kategorien.length > 0 && (
@@ -507,7 +523,7 @@ export function AdminPanel() {
                           {s.lock_reply_message && (
                             <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-sm text-blue-900">
                               <p className="text-xs font-medium text-blue-700">
-                                Antwort des Inhabers auf die Sperre:
+                                Antwort des Inhabers:
                               </p>
                               <p className="mt-0.5">{s.lock_reply_message}</p>
                             </div>
@@ -588,6 +604,14 @@ export function AdminPanel() {
                               🔒
                             </span>
                           )}
+                          {s.deactivated && (
+                            <span
+                              title="Deaktiviert - nicht auf Karte/Liste sichtbar"
+                              className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700"
+                            >
+                              🚫
+                            </span>
+                          )}
                           <span className="ml-2 text-gray-500">{s.adresse}</span>
                           {s.kategorien && s.kategorien.length > 0 && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
@@ -615,9 +639,7 @@ export function AdminPanel() {
                           )}
                           {s.lock_reply_message && (
                             <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
-                              <p className="font-medium text-blue-700">
-                                Antwort des Inhabers auf die Sperre:
-                              </p>
+                              <p className="font-medium text-blue-700">Antwort des Inhabers:</p>
                               <p className="mt-0.5">{s.lock_reply_message}</p>
                             </div>
                           )}
@@ -803,6 +825,8 @@ interface EditFormState {
   zahlungsarten: string[];
   content_locked: boolean;
   content_lock_message: string;
+  deactivated: boolean;
+  deactivation_message: string;
 }
 
 interface EditFormProps {
@@ -911,6 +935,28 @@ function EditForm({
             placeholder="Nachricht an den Inhaber (z.B. Grund der Sperre)…"
             value={form.content_lock_message}
             onChange={(e) => setForm((f) => ({ ...f, content_lock_message: e.target.value }))}
+          />
+        )}
+      </div>
+      {/* Eigene, stärkere Aktion als die Sperre oben: nimmt den Stand
+          komplett von Karte/Liste statt nur die Bearbeitung zu blockieren
+          (siehe PUBLIC_STANDS_FILTER in app/public_fields.py). Teilt sich
+          dieselbe Antwort-Box mit der Sperre (lock_reply_message unten). */}
+      <div className="flex flex-col gap-1.5 rounded-md border border-red-200 bg-red-50 p-2.5">
+        <label className="flex items-center gap-2 text-xs font-medium text-red-800">
+          <input
+            type="checkbox"
+            checked={form.deactivated}
+            onChange={(e) => setForm((f) => ({ ...f, deactivated: e.target.checked }))}
+          />
+          Stand deaktivieren (von der Karte nehmen)
+        </label>
+        {form.deactivated && (
+          <textarea
+            className="min-h-[40px] resize-y rounded border border-red-300 bg-white px-2 py-1 text-xs"
+            placeholder="Nachricht an den Inhaber (z.B. Grund der Deaktivierung)…"
+            value={form.deactivation_message}
+            onChange={(e) => setForm((f) => ({ ...f, deactivation_message: e.target.value }))}
           />
         )}
       </div>

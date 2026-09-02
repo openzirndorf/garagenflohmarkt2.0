@@ -201,3 +201,87 @@ async def test_lock_reply_message_visible_to_admin_and_cleared_on_unlock(
     entry = next(s for s in admin_view if s["id"] == stand["id"])
     assert entry["lock_reply_message"] is None
     assert entry["lock_reply_created_at"] is None
+
+
+# --- Deaktivierung (nimmt den Stand von Karte/Liste, anders als
+# content_locked, das nur die Bearbeitung blockiert) ---
+
+
+async def test_deactivated_stand_is_removed_from_public_endpoints_but_stays_in_admin_view(
+    client, api_auth, admin_headers
+):
+    stand = (await _register(client, api_auth)).json()
+    await client.post(f"/stands/{stand['id']}/approve", headers=admin_headers)
+
+    assert any(s["id"] == stand["id"] for s in (await client.get("/stands")).json())
+    geo = (await client.get("/stands/geojson")).json()
+    assert any(f["properties"]["id"] == stand["id"] for f in geo["features"])
+
+    await client.patch(
+        f"/stands/{stand['id']}",
+        json={"deactivated": True, "deactivation_message": "Adresse existiert nicht."},
+        headers=admin_headers,
+    )
+
+    assert all(s["id"] != stand["id"] for s in (await client.get("/stands")).json())
+    geo = (await client.get("/stands/geojson")).json()
+    assert all(f["properties"]["id"] != stand["id"] for f in geo["features"])
+
+    admin_view = (await client.get("/stands/admin", headers=admin_headers)).json()
+    entry = next(s for s in admin_view if s["id"] == stand["id"])
+    assert entry["deactivated"] is True
+    assert entry["deactivation_message"] == "Adresse existiert nicht."
+
+
+async def test_owner_view_includes_deactivation_state(client, api_auth, admin_headers, captured_emails):
+    stand = (await _register(client, api_auth)).json()
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    await client.patch(
+        f"/stands/{stand['id']}",
+        json={"deactivated": True, "deactivation_message": "Bitte melde dich beim Team."},
+        headers=admin_headers,
+    )
+
+    owner_view = (await client.get(f"/stands/by-session/{session_token}")).json()
+    assert owner_view["deactivated"] is True
+    assert owner_view["deactivation_message"] == "Bitte melde dich beim Team."
+
+
+async def test_lock_reply_works_for_deactivation_alone(
+    client, api_auth, admin_headers, captured_emails, pool
+):
+    stand = (await _register(client, api_auth)).json()
+    session_token = await _login(client, captured_emails[0]["login_code"])
+    await client.patch(
+        f"/stands/{stand['id']}", json={"deactivated": True}, headers=admin_headers
+    )
+
+    resp = await client.post(
+        f"/stands/by-session/{session_token}/lock-reply",
+        json={"message": "Die Adresse stimmt doch, bitte prüfen."},
+    )
+    assert resp.status_code == 200
+
+    admin_view = (await client.get("/stands/admin", headers=admin_headers)).json()
+    entry = next(s for s in admin_view if s["id"] == stand["id"])
+    assert entry["lock_reply_message"] == "Die Adresse stimmt doch, bitte prüfen."
+
+
+async def test_deactivation_is_audit_logged_distinctly(client, api_auth, admin_headers, pool):
+    stand = (await _register(client, api_auth)).json()
+
+    await client.patch(
+        f"/stands/{stand['id']}", json={"deactivated": True}, headers=admin_headers
+    )
+    await client.patch(
+        f"/stands/{stand['id']}", json={"deactivated": False}, headers=admin_headers
+    )
+
+    entries = await pool.fetch(
+        "SELECT action FROM admin_audit_log WHERE stand_id = $1 ORDER BY created_at", stand["id"]
+    )
+    actions = [r["action"] for r in entries]
+    assert "DEACTIVATED" in actions
+    assert "REACTIVATED" in actions
+    assert "EDITED" not in actions

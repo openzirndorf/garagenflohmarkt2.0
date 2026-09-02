@@ -20,7 +20,12 @@ from datetime import UTC, datetime
 import boto3
 
 from app.database import get_pool
-from app.public_fields import PUBLIC_GEOJSON_COLUMNS, PUBLIC_LIST_COLUMNS, rows_to_geojson
+from app.public_fields import (
+    PUBLIC_GEOJSON_COLUMNS,
+    PUBLIC_LIST_COLUMNS,
+    PUBLIC_STANDS_FILTER,
+    rows_to_geojson,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -119,11 +124,11 @@ async def regenerate_stands_artifact() -> None:
 
     pool = await get_pool()
     list_rows = await pool.fetch(
-        f"SELECT {PUBLIC_LIST_COLUMNS} FROM stands WHERE status = 'APPROVED' ORDER BY created_at DESC"
+        f"SELECT {PUBLIC_LIST_COLUMNS} FROM stands WHERE {PUBLIC_STANDS_FILTER} ORDER BY created_at DESC"
     )
     geo_rows = await pool.fetch(
         f"SELECT {PUBLIC_GEOJSON_COLUMNS} FROM stands "
-        "WHERE status = 'APPROVED' AND lat IS NOT NULL AND lng IS NOT NULL"
+        f"WHERE {PUBLIC_STANDS_FILTER} AND lat IS NOT NULL AND lng IS NOT NULL"
     )
 
     list_json = json.dumps(

@@ -357,23 +357,43 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
         Dein angemeldeter Stand
       </p>
 
+      {/* Deaktivierung nimmt den Stand komplett von Karte/Liste, anders als
+          die Sperre unten (blockiert nur die Bearbeitung, Stand bleibt
+          sichtbar) - deshalb eigenes, deutlicheres Banner, teilt sich aber
+          dieselbe Antwort-Box weiter unten (ein Admin-Anliegen, eine
+          Antwortmöglichkeit, egal welcher der beiden Fälle zutrifft). */}
+      {stand.deactivated && (
+        <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
+          <p>
+            Dein Stand wurde vorübergehend deaktiviert und ist nicht mehr auf der Karte oder in der
+            Liste sichtbar
+            {stand.deactivation_message ? `: ${stand.deactivation_message}` : "."}
+          </p>
+        </div>
+      )}
+
       {stand.content_locked && (
-        <div className="mb-3 flex flex-col gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
           <p>
             Adresse und Beschreibung wurden von einem Admin gesperrt
             {stand.content_lock_message ? `: ${stand.content_lock_message}` : "."}
           </p>
+        </div>
+      )}
+
+      {(stand.content_locked || stand.deactivated) && (
+        <div className="mb-3 flex flex-col gap-1.5 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
           {lockReplyStatus === "sent" ? (
             <p className="text-green-700">{lockReplyMessage}</p>
           ) : (
-            <div className="flex flex-col gap-1.5">
+            <>
               <label htmlFor="lock-reply" className="font-medium">
                 Antwort an das Team schicken
               </label>
               <textarea
                 id="lock-reply"
-                className="min-h-[50px] resize-y rounded-md border border-amber-300 bg-white px-2 py-1 text-xs text-gray-800 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="z.B. wenn du die Sperre für ein Missverständnis hältst…"
+                className="min-h-[50px] resize-y rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="z.B. wenn du das für ein Missverständnis hältst…"
                 value={lockReplyInput}
                 onChange={(e) => setLockReplyInput(e.target.value)}
                 disabled={lockReplyStatus === "loading"}
@@ -382,11 +402,11 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
                 type="button"
                 onClick={handleLockReply}
                 disabled={lockReplyStatus === "loading" || !lockReplyInput.trim()}
-                className="self-start rounded-md bg-amber-600 px-3 py-1 font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                className="self-start rounded-md bg-gray-700 px-3 py-1 font-medium text-white hover:bg-gray-800 disabled:opacity-50"
               >
                 {lockReplyStatus === "loading" ? "…" : "Nachricht senden"}
               </button>
-            </div>
+            </>
           )}
         </div>
       )}
