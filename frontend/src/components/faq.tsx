@@ -49,7 +49,7 @@ export function Faq() {
           von mehreren Projekten für die Stadt. Mehr über die Initiative und wie du sie unterstützen
           kannst, z.&nbsp;B. als Fördermitglied, gibt's auf{" "}
           <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            portal.openzirndorf.de
+            openzirndorf.de
           </a>
           .
         </QA>
@@ -173,7 +173,7 @@ export function Faq() {
           Nein, die Teilnahme ist kostenlos. Wenn du OpenZirndorf trotzdem unterstützen möchtest,
           gibt es die Möglichkeit einer Fördermitgliedschaft - mehr dazu auf{" "}
           <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            portal.openzirndorf.de
+            openzirndorf.de
           </a>
           .
         </QA>

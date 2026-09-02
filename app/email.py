@@ -27,7 +27,7 @@ FRONTEND_URL = os.getenv(
 ADMIN_CONTACT_EMAIL = os.getenv("ADMIN_CONTACT_EMAIL", "team@openzirndorf.de")
 
 # Muss zu PORTAL_URL in frontend/src/components/footer.tsx passen.
-_PORTAL_URL = "https://portal.openzirndorf.de/"
+_PORTAL_URL = "https://openzirndorf.de/"
 
 # Muss zu UNLOCK_PARAM/UNLOCK_VALUE in frontend/src/lib/preview-unlock.ts
 # passen. Vor dem offiziellen Start (siehe /launch-config, app/main.py)

@@ -1,4 +1,4 @@
-export const PORTAL_URL = "https://portal.openzirndorf.de/";
+export const PORTAL_URL = "https://openzirndorf.de/";
 const SITE_URL = "https://openzirndorf.de/";
 const INSTAGRAM_URL = "https://instagram.com/openzirndorf";
 const FACEBOOK_URL = "https://facebook.com/openzirndorf";
