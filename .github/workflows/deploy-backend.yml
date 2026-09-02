@@ -95,7 +95,7 @@ jobs:
       # tatsächlich deployte Image eindeutig identifizierbar (für den
       # Rollback-Schritt unten) statt sich auf das bewegliche :latest zu verlassen.
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
