@@ -234,6 +234,15 @@ function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
             <a href="#datenschutz" className={menuLinkClass(page === "datenschutz")}>
               Datenschutz
             </a>
+            {/* mailto ändert den URL-Hash nicht - der hashchange-Listener
+                oben würde das Menü hier sonst nicht automatisch schließen. */}
+            <a
+              href="mailto:team@openzirndorf.de"
+              onClick={() => setMenuOpen(false)}
+              className={menuLinkClass(false)}
+            >
+              Kontakt
+            </a>
             <div className="my-1 border-t border-gray-100" />
             {/* Bewusst klein/unauffällig statt wie die Einträge oben - kein
                 Nutzer-Feature, aber auch kein Sicherheitsrisiko, hier zu
