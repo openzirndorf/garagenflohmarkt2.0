@@ -5,7 +5,7 @@ import { appShareOptions } from "../lib/share";
 import type { Stand } from "../types";
 import { Datenschutz } from "./datenschutz";
 import { Faq } from "./faq";
-import { Footer, PORTAL_URL } from "./footer";
+import { Footer } from "./footer";
 import { Impressum } from "./impressum";
 import { InstallPrompt } from "./install-prompt";
 import { MapOrList } from "./map-or-list";
@@ -190,9 +190,6 @@ function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
           Garagenflohmarkt <span className="text-[#009a00]">Zirndorf</span>
         </span>
       </button>
-      <a href={PORTAL_URL} className="hidden text-sm text-gray-400 hover:text-gray-600 sm:block">
-        OpenZirndorf ↗
-      </a>
       <div ref={menuRef} className="relative">
         <button
           type="button"
