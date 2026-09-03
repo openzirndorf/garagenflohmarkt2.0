@@ -48,10 +48,14 @@ export function Faq() {
           Zirndorfer Stadtrat vertretenen Parteien (siehe Fußzeile) - der Garagenflohmarkt ist eines
           von mehreren Projekten für die Stadt. Mehr über die Initiative und wie du sie unterstützen
           kannst, z.&nbsp;B. als Fördermitglied, gibt's auf{" "}
-          <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            openzirndorf.de
-          </a>
-          .
+          {/* whitespace-nowrap: Link+Punkt sollen nie an der Zeilenumbruch-
+              Stelle auseinandergerissen werden. */}
+          <span className="whitespace-nowrap">
+            <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
+              openzirndorf.de
+            </a>
+            .
+          </span>
         </QA>
         <QA q="Kann ich die Seite als App installieren?">
           Ja - auf Android/Chrome zeigt ein Banner oben eine „Installieren"-Schaltfläche. Auf dem
@@ -173,10 +177,14 @@ export function Faq() {
         <QA q="Kostet die Teilnahme etwas?">
           Nein, die Teilnahme ist kostenlos. Wenn du OpenZirndorf trotzdem unterstützen möchtest,
           gibt es die Möglichkeit einer Fördermitgliedschaft - mehr dazu auf{" "}
-          <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            openzirndorf.de
-          </a>
-          .
+          {/* whitespace-nowrap: Link+Punkt sollen nie an der Zeilenumbruch-
+              Stelle auseinandergerissen werden. */}
+          <span className="whitespace-nowrap">
+            <a href={PORTAL_URL} target="_blank" rel="noopener noreferrer" className="underline">
+              openzirndorf.de
+            </a>
+            .
+          </span>
         </QA>
         <QA q="Warum muss ich meine E-Mail bestätigen?">
           Die E-Mail-Bestätigung verhindert Spam und stellt sicher, dass du deinen Stand später

@@ -130,6 +130,19 @@ def captured_deactivation_emails(monkeypatch):
 
 
 @pytest.fixture
+def captured_reactivation_emails(monkeypatch):
+    """Wie captured_deactivation_emails oben, fürs Gegenstück: die Mail beim
+    Wieder-Freischalten eines zuvor deaktivierten Standes."""
+    sent: list[dict] = []
+
+    async def _fake_send_reactivation_email(email, stand_id):
+        sent.append({"email": email, "stand_id": stand_id})
+
+    monkeypatch.setattr("app.routes.stands.send_reactivation_email", _fake_send_reactivation_email)
+    return sent
+
+
+@pytest.fixture
 def captured_admin_emails(monkeypatch):
     """Wie captured_emails oben, für den Admin-Login-Flow (app/routes/admins.py)."""
     sent: list[dict] = []

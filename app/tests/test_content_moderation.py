@@ -118,6 +118,42 @@ async def test_deactivating_a_stand_emails_the_owner_with_the_reason(
     assert mail["message"] == "Adresse existiert nicht."
 
 
+async def test_reactivating_a_stand_emails_the_owner(
+    client, api_auth, admin_headers, captured_deactivation_emails, captured_reactivation_emails
+):
+    stand = (await _register(client, api_auth, email="wird-reaktiviert@example.com")).json()
+    await client.patch(f"/stands/{stand['id']}", json={"deactivated": True}, headers=admin_headers)
+
+    resp = await client.patch(
+        f"/stands/{stand['id']}", json={"deactivated": False}, headers=admin_headers
+    )
+    assert resp.status_code == 200
+
+    assert len(captured_reactivation_emails) == 1
+    mail = captured_reactivation_emails[0]
+    assert mail["email"] == "wird-reaktiviert@example.com"
+    assert mail["stand_id"] == stand["id"]
+
+
+async def test_editing_an_already_reactivated_stand_does_not_resend_the_email(
+    client, api_auth, admin_headers, captured_deactivation_emails, captured_reactivation_emails
+):
+    stand = (await _register(client, api_auth)).json()
+    await client.patch(f"/stands/{stand['id']}", json={"deactivated": True}, headers=admin_headers)
+    await client.patch(f"/stands/{stand['id']}", json={"deactivated": False}, headers=admin_headers)
+    assert len(captured_reactivation_emails) == 1
+
+    # Admin-Panel schickt "deactivated" bei jedem Speichern mit - unverändert
+    # False darf keine zweite Reaktivierungs-Mail auslösen.
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"beschreibung": "Korrigierte Beschreibung", "deactivated": False},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert len(captured_reactivation_emails) == 1
+
+
 async def test_editing_an_already_deactivated_stand_does_not_resend_the_email(
     client, api_auth, admin_headers, captured_deactivation_emails
 ):

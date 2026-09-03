@@ -294,6 +294,51 @@ Das Garagenflohmarkt-Team
     await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
 
 
+async def send_reactivation_email(email: str, stand_id: int) -> None:
+    """Benachrichtigt den Standinhaber, wenn ein Admin seinen zuvor
+    deaktivierten Stand wieder freischaltet (siehe app/routes/stands.py
+    update_stand_admin) - Gegenstück zu send_deactivation_email: wer per
+    Mail von der Deaktivierung erfahren hat, soll auch von der Aufhebung
+    aktiv erfahren, nicht nur zufällig beim nächsten eigenen Blick unter
+    "Mein Stand" bemerken."""
+    if not smtp_configured():
+        return
+
+    frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
+    mein_stand_url = f"{frontend_url}/{_PREVIEW_UNLOCK_QUERY}#mein-stand"
+    subject = "Garagenflohmarkt Zirndorf – Dein Stand ist wieder sichtbar"
+
+    body_text = f"""\
+Hallo,
+
+dein Stand beim Garagenflohmarkt Zirndorf wurde wieder freigeschaltet und
+ist ab sofort wieder auf der Karte und in der Liste sichtbar.
+
+Unter "Mein Stand" kannst du ihn jederzeit ansehen oder bearbeiten:
+{mein_stand_url}
+
+Viele Grüße
+Das Garagenflohmarkt-Team
+"""
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
+  <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
+  <p>Hallo,</p>
+  <p>dein Stand wurde wieder freigeschaltet und ist ab sofort wieder auf der
+  Karte und in der Liste sichtbar.</p>
+  <p style="font-size:0.9em;color:#444">
+    Unter <a href="{mein_stand_url}">„Mein Stand"</a> kannst du ihn jederzeit
+    ansehen oder bearbeiten.
+  </p>
+</body>
+</html>
+"""
+    await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
+
+
 async def send_deactivation_reply_email(stand_id: int, nickname: str, message: str) -> None:
     """Leitet die Antwort eines deaktivierten Standinhabers an den
     Admin-Kontakt weiter (siehe app/routes/stands.py reply_to_deactivation).

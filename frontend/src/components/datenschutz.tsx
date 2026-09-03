@@ -106,12 +106,12 @@ export function Datenschutz() {
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">6. Speicherdauer und Löschung</h2>
           <p>
-            Die Karte geht am 7. Oktober 2026 offline; sämtliche Anmeldedaten (Datenbank, generierte
-            Kartendaten) werden automatisiert zu diesem Termin gelöscht - durch einen täglich
-            laufenden, geplanten Job, nicht durch eine manuelle Erinnerung. Automatische
-            Datenbank-Backups sind bewusst auf eine kurze Aufbewahrung begrenzt, damit sie zeitnah
-            nach dem Löschtermin auslaufen. Du kannst deinen Stand auch selbst jederzeit vorher
-            vollständig löschen: unter{" "}
+            Die Karte geht nach Durchführung des Garagenflohmarkts offline: spätestens automatisiert
+            am 7. Oktober 2026. Sämtliche Anmeldedaten (Datenbank, generierte Kartendaten) werden zu
+            diesem Termin gelöscht - durch einen täglich laufenden, geplanten Job, nicht durch eine
+            manuelle Erinnerung. Automatische Datenbank-Backups sind bewusst auf eine kurze
+            Aufbewahrung begrenzt, damit sie zeitnah nach dem Löschtermin auslaufen. Du kannst
+            deinen Stand auch selbst jederzeit vorher vollständig löschen: unter{" "}
             <a href="#mein-stand" className="underline">
               „Mein Stand"
             </a>{" "}

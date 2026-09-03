@@ -16,6 +16,7 @@ from app.email import (
     send_deactivation_email,
     send_deactivation_reply_email,
     send_login_email,
+    send_reactivation_email,
     send_report_email,
     smtp_configured,
     smtp_debug_info,
@@ -735,6 +736,8 @@ async def update_stand_admin(
                 send_deactivation_email,
                 row["email"], stand_id, row["deactivation_message"],
             )
+        else:
+            background_tasks.add_task(send_reactivation_email, row["email"], stand_id)
     else:
         await log_action(pool, stand_id, "EDITED", "admin", admin_email)
     if row["status"] == "APPROVED":
