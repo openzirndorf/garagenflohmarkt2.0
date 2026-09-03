@@ -1,11 +1,15 @@
 import os
 import secrets
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBasic, HTTPBearer
 
 from app.database import get_pool
+from app.rate_limit import check_rate_limit
 from app.tokens import hash_token
+
+_RATE_WINDOW_SECONDS = 3600  # 1 Stunde
+_ADMIN_TOKEN_RATE_MAX = 10  # max. falsche Master-Token-Versuche pro IP pro Zeitfenster
 
 # --- Basic Auth für Frontend-Endpunkte (POST /stands) ---
 
@@ -40,19 +44,39 @@ _bearer = HTTPBearer()
 _ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "")
 
 
-def require_admin_auth(
+async def require_admin_auth(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),  # noqa: B008 - FastAPI-Idiom
 ) -> None:
     """Statischer Master-Token - bewusst nur noch für die Roster-Verwaltung
     (app/routes/admins.py: wer zählt als Admin) verwendet, nicht mehr für
     die alltäglichen Admin-Endpunkte (siehe require_admin_session_auth
     unten). Löst das Henne-Ei-Problem beim allerersten Admin-Eintrag, ohne
-    ein eigenes Bootstrap-Skript zu brauchen."""
-    if not secrets.compare_digest(credentials.credentials.encode(), _ADMIN_TOKEN.encode()):
+    ein eigenes Bootstrap-Skript zu brauchen.
+
+    Das Rate-Limit greift NUR bei falschem Token, NIE davor (siehe
+    handler.js-Lehre aus einem verwandten Projekt: ein Rate-Limit vor der
+    Auth-Prüfung blockiert sonst auch korrekte Zugangsdaten, sobald zuvor
+    irgendein falscher Versuch von derselben - ggf. geteilten/CGNAT - IP
+    kam). Der Token selbst ist mit 63 Zeichen ohnehin praktisch nicht
+    brute-forcebar, das Limit ist zusätzliche Verteidigungstiefe."""
+    if secrets.compare_digest(credentials.credentials.encode(), _ADMIN_TOKEN.encode()):
+        return
+
+    pool = await get_pool()
+    client_ip = request.client.host if request.client else "unknown"
+    allowed = await check_rate_limit(
+        pool, f"admin-token:{client_ip}", _RATE_WINDOW_SECONDS, _ADMIN_TOKEN_RATE_MAX
+    )
+    if not allowed:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Ungültiger Admin-Token",
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Zu viele Versuche. Bitte später erneut versuchen.",
         )
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Ungültiger Admin-Token",
+    )
 
 
 async def require_admin_session_auth(

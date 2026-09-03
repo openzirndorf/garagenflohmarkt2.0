@@ -141,3 +141,32 @@ async def test_get_admins_without_trailing_slash_hits_the_real_endpoint(
     resp = await client.get("/admins", headers=master_admin_headers)
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("application/json")
+
+
+async def test_wrong_master_token_is_rejected(client):
+    resp = await client.get("/admins", headers={"Authorization": "Bearer falsch"})
+    assert resp.status_code == 401
+
+
+async def test_wrong_master_token_is_rate_limited_after_repeated_attempts(client):
+    # _ADMIN_TOKEN_RATE_MAX in app/auth.py = 10 pro Stunde pro IP.
+    for _ in range(10):
+        resp = await client.get("/admins", headers={"Authorization": "Bearer falsch"})
+        assert resp.status_code == 401
+
+    resp = await client.get("/admins", headers={"Authorization": "Bearer falsch"})
+    assert resp.status_code == 429
+
+
+async def test_correct_master_token_still_works_after_rate_limit_was_triggered(
+    client, master_admin_headers
+):
+    # Kritisch: das Rate-Limit darf NIE korrekte Zugangsdaten blockieren,
+    # auch nicht nachdem zuvor viele falsche Versuche von derselben IP
+    # kamen (siehe Kommentar in app/auth.py require_admin_auth - genau
+    # dieser Fehler ist in einem verwandten Projekt einmal live passiert).
+    for _ in range(15):
+        await client.get("/admins", headers={"Authorization": "Bearer falsch"})
+
+    resp = await client.get("/admins", headers=master_admin_headers)
+    assert resp.status_code == 200
