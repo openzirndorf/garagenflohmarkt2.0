@@ -33,6 +33,10 @@ const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   REPORTED: "Gemeldet",
   DEACTIVATED: "Deaktiviert",
   REACTIVATED: "Reaktiviert",
+  SETTINGS_MANUAL_APPROVAL_ON: "Extra Bestätigung aktiviert",
+  SETTINGS_MANUAL_APPROVAL_OFF: "Extra Bestätigung deaktiviert",
+  SETTINGS_BESCHREIBUNG_ON: "Freitextfeld aktiviert",
+  SETTINGS_BESCHREIBUNG_OFF: "Freitextfeld deaktiviert",
 };
 
 const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
@@ -44,6 +48,18 @@ const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
   DEACTIVATED: "bg-red-100 text-red-700",
   REACTIVATED: "bg-green-100 text-green-700",
   REPORTED: "bg-orange-100 text-orange-700",
+  SETTINGS_MANUAL_APPROVAL_ON: "bg-purple-100 text-purple-700",
+  SETTINGS_MANUAL_APPROVAL_OFF: "bg-purple-100 text-purple-700",
+  SETTINGS_BESCHREIBUNG_ON: "bg-purple-100 text-purple-700",
+  SETTINGS_BESCHREIBUNG_OFF: "bg-purple-100 text-purple-700",
+};
+
+// Für den Bestätigungs-Dialog beim Umschalten (siehe handleToggleSetting)
+// - wirkt für das ganze Event, deshalb keine versehentlichen Klicks ohne
+// Rückfrage.
+const SETTING_LABEL: Record<keyof AppSettings, string> = {
+  require_manual_approval: "Freischaltung nur mit extra Bestätigung",
+  beschreibung_enabled: 'Freitextfeld „Was gibt es zu kaufen?" im Anmeldeformular',
 };
 
 export function AdminPanel() {
@@ -150,10 +166,20 @@ export function AdminPanel() {
 
   const handleToggleSetting = async (key: keyof AppSettings) => {
     if (!token || !settings || settingsSaving) return;
+    const turningOn = !settings[key];
+    // Wirkt fürs ganze Event (und bei require_manual_approval auf alle
+    // künftigen Anmeldungen) - extra Rückfrage statt eines versehentlichen
+    // Klicks direkt wirksam werden zu lassen.
+    if (
+      !confirm(`"${SETTING_LABEL[key]}" wirklich ${turningOn ? "aktivieren" : "deaktivieren"}?`)
+    ) {
+      return;
+    }
     setSettingsSaving(true);
     setError(null);
     try {
-      setSettings(await updateSettings(token, { [key]: !settings[key] }));
+      setSettings(await updateSettings(token, { [key]: turningOn }));
+      await load(token);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Einstellung konnte nicht gespeichert werden");
     } finally {
@@ -263,8 +289,10 @@ export function AdminPanel() {
   const dayStats = [...dayCounts.entries()].sort(([a], [b]) => a.localeCompare(b));
   const maxDayCount = Math.max(...dayStats.map(([, count]) => count), 1);
 
-  const nicknameForStand = (standId: number) =>
-    all.find((s) => s.id === standId)?.nickname ?? `Stand #${standId}`;
+  const nicknameForStand = (standId: number | null) =>
+    standId == null
+      ? "Einstellungen"
+      : (all.find((s) => s.id === standId)?.nickname ?? `Stand #${standId}`);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">

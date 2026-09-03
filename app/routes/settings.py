@@ -18,10 +18,21 @@ beschreibung_enabled kennen, BEVOR sich jemand einloggt.
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from app.audit import log_action
 from app.auth import require_admin_session_auth
 from app.database import get_pool
 
 router = APIRouter()
+
+# Ordnet jeder möglichen (Feld, neuer Wert)-Kombination eine eigene
+# Audit-Aktion zu, statt nur eines generischen "SETTINGS_CHANGED" - sonst
+# wäre im Verlauf nicht erkennbar, welcher Schalter wie geändert wurde.
+_AUDIT_ACTION = {
+    ("require_manual_approval", True): "SETTINGS_MANUAL_APPROVAL_ON",
+    ("require_manual_approval", False): "SETTINGS_MANUAL_APPROVAL_OFF",
+    ("beschreibung_enabled", True): "SETTINGS_BESCHREIBUNG_ON",
+    ("beschreibung_enabled", False): "SETTINGS_BESCHREIBUNG_OFF",
+}
 
 
 class SettingsOut(BaseModel):
@@ -49,9 +60,11 @@ async def get_settings():
 
 
 # PATCH /settings - Bearer Token (Admin-Session)
-@router.patch("", dependencies=[Depends(require_admin_session_auth)], response_model=SettingsOut)
-@router.patch("/", dependencies=[Depends(require_admin_session_auth)], response_model=SettingsOut)
-async def update_settings(body: SettingsPatch):
+@router.patch("", response_model=SettingsOut)
+@router.patch("/", response_model=SettingsOut)
+async def update_settings(
+    body: SettingsPatch, admin_email: str = Depends(require_admin_session_auth)
+):
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
@@ -64,4 +77,13 @@ async def update_settings(body: SettingsPatch):
         f"RETURNING require_manual_approval, beschreibung_enabled",
         *values,
     )
+
+    # Kein Stand-Bezug (stand_id bleibt NULL, siehe migrations/0016) - nur
+    # tatsächlich geänderte Felder werden geloggt, kein Eintrag für Felder,
+    # die im Body zwar mitgeschickt wurden, aber unbekannt/nicht gemappt sind.
+    for key, value in updates.items():
+        action = _AUDIT_ACTION.get((key, value))
+        if action:
+            await log_action(pool, None, action, "admin", admin_email)
+
     return dict(row)

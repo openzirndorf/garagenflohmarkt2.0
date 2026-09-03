@@ -9,11 +9,14 @@ datenschutzrechtlich sensiblere Standbetreiber-E-Mail betreffen, nicht die
 ohnehin fürs Admin-Login bekannte. Fehler beim Loggen dürfen die
 eigentliche Aktion nie blockieren, deshalb wird hier nichts geworfen, das
 nicht schon vom Aufruf selbst kommt.
-"""
+
+stand_id ist optional (seit migrations/0016_audit_log_settings_actions.sql)
+- globale Einstellungsänderungen (app/routes/settings.py) gehören zu
+keinem Stand."""
 
 
 async def log_action(
-    pool, stand_id: int, action: str, actor: str, actor_email: str | None = None
+    pool, stand_id: int | None, action: str, actor: str, actor_email: str | None = None
 ) -> None:
     await pool.execute(
         "INSERT INTO admin_audit_log (stand_id, action, actor, actor_email) "

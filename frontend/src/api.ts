@@ -86,7 +86,9 @@ export async function approveStand(id: number, token: string): Promise<void> {
 
 export interface AuditLogEntry {
   id: number;
-  stand_id: number;
+  // null bei globalen Einstellungsänderungen (siehe app/routes/settings.py)
+  // - die gehören zu keinem Stand.
+  stand_id: number | null;
   action:
     | "CREATED"
     | "APPROVED"
@@ -95,7 +97,11 @@ export interface AuditLogEntry {
     | "REPLIED"
     | "REPORTED"
     | "DEACTIVATED"
-    | "REACTIVATED";
+    | "REACTIVATED"
+    | "SETTINGS_MANUAL_APPROVAL_ON"
+    | "SETTINGS_MANUAL_APPROVAL_OFF"
+    | "SETTINGS_BESCHREIBUNG_ON"
+    | "SETTINGS_BESCHREIBUNG_OFF";
   actor: "owner" | "admin" | "besucher";
   actor_email: string | null;
   created_at: string;
