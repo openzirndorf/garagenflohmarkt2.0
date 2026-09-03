@@ -367,6 +367,16 @@ export function AdminPanel() {
               <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
                 <p className="font-medium text-blue-700">Antwort des Inhabers:</p>
                 <p className="mt-0.5">{s.deactivation_reply_message}</p>
+                {s.deactivation_reply_created_at && (
+                  <p className="mt-1 text-blue-400">
+                    {new Date(s.deactivation_reply_created_at).toLocaleString("de-DE", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -624,7 +634,10 @@ export function AdminPanel() {
               </h2>
               <ul className="flex flex-col gap-1.5">
                 {auditLog.slice(0, 30).map((entry) => (
-                  <li key={entry.id} className="flex items-center gap-2 text-sm">
+                  <li
+                    key={entry.id}
+                    className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
+                  >
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_COLOR[entry.action]}`}
                     >
@@ -633,7 +646,10 @@ export function AdminPanel() {
                     <span className="min-w-0 flex-1 truncate text-gray-700">
                       {nicknameForStand(entry.stand_id)}
                     </span>
-                    <span className="shrink-0 text-xs text-gray-400">
+                    {/* max-w statt shrink-0: eine volle Admin-E-Mail sprengte
+                        auf schmalen (Handy-)Bildschirmen sonst die ganze
+                        Zeile, statt zu umbrechen/zu kürzen. */}
+                    <span className="max-w-[45%] shrink truncate text-xs text-gray-400">
                       {entry.actor === "admin" ? (entry.actor_email ?? "Admin") : "Inhaber"}
                     </span>
                     <span className="shrink-0 text-xs text-gray-400">
@@ -810,33 +826,12 @@ export function AdminPanel() {
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">
                 Offene Rückmeldungen ({openReplies.length})
               </h2>
-              <ul className="flex flex-col gap-3">
-                {openReplies.map((s) => (
-                  <li key={s.id} className="rounded-md border border-blue-200 bg-white p-3 text-sm">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="font-medium">{s.nickname}</span>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(s)}
-                        className="shrink-0 text-xs text-blue-600 hover:underline"
-                      >
-                        Bearbeiten
-                      </button>
-                    </div>
-                    <p className="text-gray-700">{s.deactivation_reply_message}</p>
-                    {s.deactivation_reply_created_at && (
-                      <p className="mt-1 text-xs text-gray-400">
-                        {new Date(s.deactivation_reply_created_at).toLocaleString("de-DE", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              {/* Dieselbe Zeilendarstellung wie Freigegeben/Deaktiviert
+                  (inkl. "Bearbeiten") - vorher hatte dieser Abschnitt eine
+                  eigene, nur lesende Darstellung, "Bearbeiten" hier setzte
+                  zwar editingId, aber ohne ein EditForm in DIESER Liste
+                  passierte sichtbar nichts. */}
+              <ul className="flex flex-col gap-2">{openReplies.map(renderStandRow)}</ul>
             </section>
           )}
         </>
