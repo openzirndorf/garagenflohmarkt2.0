@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type AdminRosterEntry,
   type AdminStand,
@@ -75,6 +75,10 @@ export function AdminPanel() {
   // einzutippen (das war das eigentliche Problem am alten, fest
   // eingetippten Master-Token: keine Persistenz).
   const [token, setToken] = useState(() => localStorage.getItem(ADMIN_SESSION_TOKEN_KEY));
+  // Sprungziel für den "Offene Rückmeldungen"-Hinweis oben (siehe unten) -
+  // Rückmeldungen tauchen nur innerhalb der Deaktiviert-Sektion auf, ein
+  // eigener, vollständiger Listenabschnitt dafür wirkte redundant.
+  const deaktiviertRef = useRef<HTMLElement>(null);
   const [stands, setStands] = useState<AdminStand[] | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -501,6 +505,21 @@ export function AdminPanel() {
 
           {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
+          {/* Kurzer Hinweis statt einer eigenen, vollständigen Liste hier
+              oben - Rückmeldungen gehören inhaltlich zu "Deaktiviert" weiter
+              unten (nur dort tauchen sie in der Zeilendarstellung auf), ein
+              zweiter kompletter Abschnitt dafür wirkte redundant. */}
+          {openReplies.length > 0 && (
+            <button
+              type="button"
+              onClick={() => deaktiviertRef.current?.scrollIntoView({ behavior: "smooth" })}
+              className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-left text-sm text-blue-800 hover:bg-blue-100"
+            >
+              💬 {openReplies.length} offene Rückmeldung{openReplies.length === 1 ? "" : "en"} von
+              Standinhabern - bei „Deaktiviert" ansehen ↓
+            </button>
+          )}
+
           {/* Einstellungen */}
           {settings && (
             <section
@@ -569,6 +588,10 @@ export function AdminPanel() {
                 <div>
                   <p className="text-2xl font-bold text-green-700">{approved.length}</p>
                   <p className="text-xs text-gray-500">Freigegeben</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-red-600">{deactivatedStands.length}</p>
+                  <p className="text-xs text-gray-500">Deaktiviert</p>
                 </div>
               </div>
 
@@ -798,7 +821,7 @@ export function AdminPanel() {
             )}
           </section>
 
-          <section>
+          <section ref={deaktiviertRef}>
             <h2
               style={{ fontFamily: "var(--oz-font-heading)" }}
               className="mb-3 text-xl font-bold text-gray-900"
@@ -814,26 +837,6 @@ export function AdminPanel() {
               <ul className="flex flex-col gap-2">{deactivatedStands.map(renderStandRow)}</ul>
             )}
           </section>
-
-          {/* Offene Rückmeldungen - Antworten von Standinhabern auf eine
-              Deaktivierung, gesammelt an einer Stelle statt nur versteckt
-              in der jeweiligen Listenzeile oben. */}
-          {openReplies.length > 0 && (
-            <section
-              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
-              className="border border-blue-200 bg-blue-50 p-5"
-            >
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">
-                Offene Rückmeldungen ({openReplies.length})
-              </h2>
-              {/* Dieselbe Zeilendarstellung wie Freigegeben/Deaktiviert
-                  (inkl. "Bearbeiten") - vorher hatte dieser Abschnitt eine
-                  eigene, nur lesende Darstellung, "Bearbeiten" hier setzte
-                  zwar editingId, aber ohne ein EditForm in DIESER Liste
-                  passierte sichtbar nichts. */}
-              <ul className="flex flex-col gap-2">{openReplies.map(renderStandRow)}</ul>
-            </section>
-          )}
         </>
       )}
 
