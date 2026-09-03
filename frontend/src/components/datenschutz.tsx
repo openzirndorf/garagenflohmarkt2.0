@@ -139,9 +139,18 @@ export function Datenschutz() {
           <p>
             Die App läuft auf Servern von Scaleway (Frankreich) innerhalb der EU. Scaleway
             verarbeitet Daten dabei ausschließlich in unserem Auftrag als Auftragsverarbeiter (Art.
-            28 DSGVO), auf Basis eines Auftragsverarbeitungsvertrags. Unsere Anwendung protokolliert
-            bewusst keine personenbezogenen Daten oder Zugangscodes in ihren Logs. Es werden keine
-            Cookies gesetzt und keine Analyse- oder Trackingdienste eingebunden.
+            28 DSGVO), auf Basis von Scaleways Standard-Auftragsverarbeitungsvertrag (
+            <a
+              href="https://www-uploads.scaleway.com/DPA_2024_ENG_b0abb5cc26.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              Data Processing Agreement
+            </a>
+            ). Unsere Anwendung protokolliert bewusst keine personenbezogenen Daten oder
+            Zugangscodes in ihren Logs. Es werden keine Cookies gesetzt und keine Analyse- oder
+            Trackingdienste eingebunden.
           </p>
         </section>
 
@@ -159,15 +168,6 @@ export function Datenschutz() {
       </div>
 
       <p className="mt-2 text-sm text-gray-500">entwickelt mit ❤️ in Zirndorf</p>
-
-      {/* Bewusst hier statt prominent im Hamburger-Menü - innerhalb einer
-          installierten PWA gibt es keine Adresszeile, iOS kennt außerdem
-          keine Manifest-Shortcuts (siehe vite.config.ts), daher bleibt
-          irgendein Weg zu #admin innerhalb der App nötig, nur eben
-          zurückhaltend platziert. */}
-      <a href="#admin" className="text-xs text-gray-300 hover:text-gray-400">
-        Admin
-      </a>
     </div>
   );
 }

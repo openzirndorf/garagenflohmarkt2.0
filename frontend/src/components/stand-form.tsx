@@ -38,6 +38,9 @@ export const KATEGORIEN = [
 // Muss mit _MAX_KATEGORIEN in app/routes/stands.py übereinstimmen.
 export const MAX_KATEGORIEN = 5;
 
+// Muss mit _MAX_BESCHREIBUNG_LENGTH in app/routes/stands.py übereinstimmen.
+export const MAX_BESCHREIBUNG_LENGTH = 300;
+
 const EMPTY: StandFormData = {
   adresse: "",
   beschreibung: "",
@@ -245,11 +248,15 @@ export function StandForm({ onSuccess }: Props) {
               </label>
               <textarea
                 id="beschreibung"
+                maxLength={MAX_BESCHREIBUNG_LENGTH}
                 className="min-h-[80px] resize-y rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                 value={form.beschreibung}
                 onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
                 disabled={status === "loading"}
               />
+              <p className="text-right text-xs text-gray-400">
+                {form.beschreibung.length}/{MAX_BESCHREIBUNG_LENGTH}
+              </p>
             </div>
           )}
 

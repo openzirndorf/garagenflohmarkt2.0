@@ -17,7 +17,13 @@ import {
   updateSettings,
   updateStandAdmin,
 } from "../api";
-import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
+import {
+  KATEGORIEN,
+  MAX_BESCHREIBUNG_LENGTH,
+  MAX_KATEGORIEN,
+  ZAHLUNGSARTEN,
+  ZAHLUNGSART_ICON,
+} from "./stand-form";
 
 // Wie SESSION_TOKEN_KEY in mein-stand.tsx - eigener Schlüssel, damit sich
 // eine Admin- und eine Standbetreiber-Sitzung im selben Browser nicht
@@ -989,10 +995,14 @@ function EditForm({
         </label>
         <textarea
           id="edit-admin-beschreibung"
+          maxLength={MAX_BESCHREIBUNG_LENGTH}
           className="min-h-[60px] resize-y rounded border px-2 py-1.5 text-sm"
           value={form.beschreibung}
           onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
         />
+        <p className="text-right text-xs text-gray-400">
+          {form.beschreibung.length}/{MAX_BESCHREIBUNG_LENGTH}
+        </p>
       </div>
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-gray-600">

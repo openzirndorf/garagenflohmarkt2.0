@@ -59,6 +59,12 @@ _VALID_ZAHLUNGSARTEN = {"PayPal", "Wero", "Barzahlung"}
 # überall auftauchen).
 _MAX_KATEGORIEN = 5
 
+# Verhindert, dass eine einzelne Beschreibung Standkarte/Popup optisch
+# sprengt (lief zuvor unbegrenzt aus dem Rahmen). Muss mit
+# MAX_BESCHREIBUNG_LENGTH in frontend/src/components/stand-form.tsx
+# übereinstimmen.
+_MAX_BESCHREIBUNG_LENGTH = 300
+
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
@@ -97,6 +103,14 @@ def _reject_if_too_many_kategorien(values: list[str] | None) -> None:
         raise HTTPException(
             status_code=400,
             detail=f"Höchstens {_MAX_KATEGORIEN} Kategorien pro Stand",
+        )
+
+
+def _reject_if_too_long_beschreibung(value: str | None) -> None:
+    if value and len(value) > _MAX_BESCHREIBUNG_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Beschreibung darf höchstens {_MAX_BESCHREIBUNG_LENGTH} Zeichen lang sein",
         )
 
 
@@ -211,6 +225,7 @@ async def create_stand(body: StandIn, request: Request):
     _reject_if_blocked_content(body.adresse, body.beschreibung)
     _reject_if_invalid_zahlungsarten(body.zahlungsarten)
     _reject_if_too_many_kategorien(body.kategorien)
+    _reject_if_too_long_beschreibung(body.beschreibung)
 
     pool = await get_pool()
 
@@ -425,6 +440,8 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
         _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
     if "kategorien" in updates:
         _reject_if_too_many_kategorien(updates["kategorien"])
+    if "beschreibung" in updates:
+        _reject_if_too_long_beschreibung(updates["beschreibung"])
 
     pool = await get_pool()
 
@@ -646,6 +663,8 @@ async def update_stand_admin(
         _reject_if_invalid_zahlungsarten(updates["zahlungsarten"])
     if "kategorien" in updates:
         _reject_if_too_many_kategorien(updates["kategorien"])
+    if "beschreibung" in updates:
+        _reject_if_too_long_beschreibung(updates["beschreibung"])
 
     pool = await get_pool()
 

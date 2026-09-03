@@ -12,7 +12,13 @@ import {
 } from "../api";
 import { standShareOptions } from "../lib/share";
 import { ShareButton } from "./share-button";
-import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
+import {
+  KATEGORIEN,
+  MAX_BESCHREIBUNG_LENGTH,
+  MAX_KATEGORIEN,
+  ZAHLUNGSARTEN,
+  ZAHLUNGSART_ICON,
+} from "./stand-form";
 
 // localStorage statt sessionStorage: das Token soll ein Schließen der
 // Seite/App überstehen (server-seitig ohnehin 45 Tage gültig, siehe
@@ -340,6 +346,16 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
     }
   };
 
+  // Meldet nur dieses Gerät/diesen Browser ab (Token aus localStorage
+  // entfernt) - der Stand selbst bleibt bestehen, anders als handleCancel
+  // unten. Kein confirm() nötig, da nichts gelöscht wird: mit demselben
+  // oder einem neu angeforderten Code kommt man jederzeit wieder rein.
+  const handleLogout = () => {
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+    setSessionToken(null);
+    setStand(null);
+  };
+
   const handleCancel = async () => {
     if (!sessionToken) return;
     if (
@@ -484,10 +500,14 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
             </label>
             <textarea
               id="edit-beschreibung"
+              maxLength={MAX_BESCHREIBUNG_LENGTH}
               className="min-h-[60px] resize-y rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
               value={editForm.beschreibung}
               onChange={(e) => setEditForm((f) => ({ ...f, beschreibung: e.target.value }))}
             />
+            <p className="text-right text-xs text-gray-400">
+              {editForm.beschreibung.length}/{MAX_BESCHREIBUNG_LENGTH}
+            </p>
           </div>
           <div className="flex gap-2">
             <button
@@ -637,6 +657,13 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
               className="text-xs text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-50"
             >
               {exporting ? "…" : "Meine Daten herunterladen"}
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-xs text-gray-400 transition-colors hover:text-gray-600"
+            >
+              Abmelden
             </button>
           </div>
         </div>

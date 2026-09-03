@@ -79,3 +79,11 @@
   background: #f3f4f6;
   color: #1f2937;
 }
+
+/* Beschreibung ist zwar serverseitig auf MAX_BESCHREIBUNG_LENGTH begrenzt
+   (siehe stand-form.tsx), ein einzelnes langes Wort ohne Leerzeichen würde
+   aber trotzdem über die feste Popup-Breite (maxWidth in flohmarkt-map.tsx)
+   hinauslaufen, statt umzubrechen. */
+.maplibregl-popup-content {
+  overflow-wrap: break-word;
+}

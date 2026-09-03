@@ -208,7 +208,9 @@ export function StandListe({
               </div>
             )}
             {s.beschreibung && (
-              <p className="mt-1 text-sm leading-snug text-gray-600">{s.beschreibung}</p>
+              <p className="mt-1 break-words text-sm leading-snug text-gray-600">
+                {s.beschreibung}
+              </p>
             )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5 self-center">
