@@ -1,0 +1,12 @@
+# Bekannte False Positives, die gitleaks bei jedem Lauf erneut in der
+# Git-Historie findet (gitleaks scannt standardmäßig alle Commits, nicht
+# nur den aktuellen Stand) - ein Umschreiben der Historie ist hier bewusst
+# keine Option. Fingerprints stammen direkt aus der CI-Fehlermeldung
+# (gitleaks-Job im Security-Workflow).
+#
+# README.md curl-Beispiele für POST /admins bzw. /stands/test-email:
+# der Wert nach "Authorization: Bearer ..." dort ist ein Platzhalter-Text
+# ("TOKEN"), kein echtes Secret - gitleaks' curl-auth-header-Regel erkennt
+# jeden curl-Aufruf mit Authorization-Header, unabhängig vom Inhalt.
+15dfa1befa4930f9630a442d48f5667c973ff1fc:README.md:curl-auth-header:259
+15dfa1befa4930f9630a442d48f5667c973ff1fc:README.md:curl-auth-header:266

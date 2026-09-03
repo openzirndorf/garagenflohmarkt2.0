@@ -30,11 +30,18 @@ COPY pyproject.toml .
 # bricht setuptools mit "package directory 'app' does not exist" ab.
 COPY app/ ./app/
 COPY scripts/ ./scripts/
-RUN pip install --no-cache-dir --upgrade pip \
+RUN pip install --no-cache-dir --upgrade pip setuptools \
     && pip install --no-cache-dir .
 
 FROM python:3.12-slim AS runner
 WORKDIR /app
+# python:3.12-slim bringt bei jedem Build den OS-Paketstand von irgendwann
+# mit, nicht zwingend die neuesten Debian-Sicherheitsupdates (z.B. einmal
+# beobachtet: openssl/util-linux mit bereits verfügbarem, aber noch nicht
+# eingespieltem Fix laut trivy-image-Scan). apt-get upgrade zieht die zum
+# Build-Zeitpunkt aktuellen Patches, ohne auf ein neues Base-Image warten
+# zu müssen.
+RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 # Abhängigkeiten aus Builder-Stage übernehmen
