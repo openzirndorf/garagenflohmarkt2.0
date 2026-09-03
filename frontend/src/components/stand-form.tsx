@@ -39,7 +39,7 @@ export const KATEGORIEN = [
 export const MAX_KATEGORIEN = 5;
 
 // Muss mit _MAX_BESCHREIBUNG_LENGTH in app/routes/stands.py übereinstimmen.
-export const MAX_BESCHREIBUNG_LENGTH = 300;
+export const MAX_BESCHREIBUNG_LENGTH = 100;
 
 const EMPTY: StandFormData = {
   adresse: "",

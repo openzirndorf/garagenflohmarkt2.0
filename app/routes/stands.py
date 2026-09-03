@@ -63,7 +63,7 @@ _MAX_KATEGORIEN = 5
 # sprengt (lief zuvor unbegrenzt aus dem Rahmen). Muss mit
 # MAX_BESCHREIBUNG_LENGTH in frontend/src/components/stand-form.tsx
 # übereinstimmen.
-_MAX_BESCHREIBUNG_LENGTH = 300
+_MAX_BESCHREIBUNG_LENGTH = 100
 
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.

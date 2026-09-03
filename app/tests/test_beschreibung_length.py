@@ -2,7 +2,7 @@
 app/routes/stands.py), damit eine einzelne Beschreibung nicht optisch aus
 der Standkarte/dem Kartenpopup läuft."""
 
-_MAX = 300  # muss mit _MAX_BESCHREIBUNG_LENGTH in app/routes/stands.py übereinstimmen
+_MAX = 100  # muss mit _MAX_BESCHREIBUNG_LENGTH in app/routes/stands.py übereinstimmen
 
 
 async def _register(client, api_auth, email="beschreibung@example.com", **overrides):

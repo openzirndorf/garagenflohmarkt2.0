@@ -271,9 +271,13 @@ export function AdminPanel() {
     }));
   };
 
-  const pending = stands?.filter((s) => s.status === "PENDING") ?? [];
-  const approved = stands?.filter((s) => s.status === "APPROVED") ?? [];
   const all = stands ?? [];
+  // Deaktivierte Stände bekommen eine eigene Übersicht (siehe unten) statt
+  // nur eines Badges innerhalb von "Freigegeben" - dort tauchen sie deshalb
+  // nicht mehr zusätzlich auf.
+  const pending = all.filter((s) => s.status === "PENDING" && !s.deactivated);
+  const approved = all.filter((s) => s.status === "APPROVED" && !s.deactivated);
+  const deactivatedStands = all.filter((s) => s.deactivated);
 
   // Rechtfertigungen von Standinhabern auf eine Deaktivierung - bisher nur
   // versteckt in der jeweiligen Listenzeile sichtbar, hier zusätzlich
@@ -302,8 +306,107 @@ export function AdminPanel() {
       ? "Einstellungen"
       : (all.find((s) => s.id === standId)?.nickname ?? `Stand #${standId}`);
 
+  // Eine Zeile für einen freigegebenen ODER deaktivierten Stand - beide
+  // Abschnitte unten teilen sich dieselbe Darstellung (inkl. Bearbeiten/
+  // Löschen), nur die Filterung in eine der beiden Listen unterscheidet sie.
+  const renderStandRow = (s: AdminStand) => (
+    <li
+      key={s.id}
+      style={{ borderRadius: "var(--oz-radius-lg)" }}
+      className="border border-gray-100 bg-white"
+    >
+      {editingId === s.id ? (
+        <div className="p-4">
+          <EditForm
+            form={editForm}
+            setForm={setEditForm}
+            onToggleKat={toggleEditKat}
+            onToggleZahlungsart={toggleEditZahlungsart}
+            onSave={() => handleSave(s.id)}
+            onCancel={() => setEditingId(null)}
+            saving={savingId === s.id}
+          />
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 px-4 py-2 text-sm">
+          <span className={s.deactivated ? "text-red-500" : "text-green-600"}>
+            {s.deactivated ? "🚫" : "✓"}
+          </span>
+          <div className="min-w-0 flex-1">
+            <span className="font-medium">{s.nickname}</span>
+            <span className="ml-2 text-gray-500">{s.adresse}</span>
+            {s.email && <span className="ml-2 text-gray-400">· {s.email}</span>}
+            {s.kategorien && s.kategorien.length > 0 && (
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                {s.kategorien.map((k) => (
+                  <span
+                    key={k}
+                    className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
+                  >
+                    {k}
+                  </span>
+                ))}
+              </div>
+            )}
+            {s.zahlungsarten && s.zahlungsarten.length > 0 && (
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                {s.zahlungsarten.map((z) => (
+                  <span
+                    key={z}
+                    className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
+                  >
+                    {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
+                  </span>
+                ))}
+              </div>
+            )}
+            {s.deactivated && s.deactivation_message && (
+              <p className="mt-1 text-xs text-red-700">Grund: {s.deactivation_message}</p>
+            )}
+            {s.deactivation_reply_message && (
+              <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+                <p className="font-medium text-blue-700">Antwort des Inhabers:</p>
+                <p className="mt-0.5">{s.deactivation_reply_message}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={() => startEdit(s)}
+              className="text-xs text-blue-500 hover:text-blue-700"
+            >
+              Bearbeiten
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(s.id, s.nickname)}
+              disabled={deletingId === s.id}
+              className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50"
+            >
+              {deletingId === s.id ? "…" : "Löschen"}
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      {/* Die Admin-Ansicht wird komplett getrennt von FlohmarktApp gerendert
+          (siehe main.tsx, isAdmin-Umschaltung) - hat also NICHT den
+          normalen Header/das Hamburger-Menü mit. Ohne diesen Link gab es
+          keinen Weg zurück außer den Verlauf/die URL manuell zu ändern. */}
+      <button
+        type="button"
+        onClick={() => {
+          window.location.hash = "";
+        }}
+        className="self-start text-sm text-gray-500 hover:text-gray-700"
+      >
+        ← Zur Startseite
+      </button>
       <h1
         style={{ fontFamily: "var(--oz-font-heading)" }}
         className="text-3xl font-extrabold text-gray-900"
@@ -388,47 +491,6 @@ export function AdminPanel() {
 
           {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
 
-          {/* Offene Rückmeldungen - Antworten von Standinhabern auf eine
-              Deaktivierung, gesammelt an einer Stelle statt nur versteckt
-              in der jeweiligen Listenzeile weiter unten. */}
-          {openReplies.length > 0 && (
-            <section
-              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
-              className="border border-blue-200 bg-blue-50 p-5"
-            >
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">
-                Offene Rückmeldungen ({openReplies.length})
-              </h2>
-              <ul className="flex flex-col gap-3">
-                {openReplies.map((s) => (
-                  <li key={s.id} className="rounded-md border border-blue-200 bg-white p-3 text-sm">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <span className="font-medium">{s.nickname}</span>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(s)}
-                        className="shrink-0 text-xs text-blue-600 hover:underline"
-                      >
-                        Bearbeiten
-                      </button>
-                    </div>
-                    <p className="text-gray-700">{s.deactivation_reply_message}</p>
-                    {s.deactivation_reply_created_at && (
-                      <p className="mt-1 text-xs text-gray-400">
-                        {new Date(s.deactivation_reply_created_at).toLocaleString("de-DE", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           {/* Einstellungen */}
           {settings && (
             <section
@@ -508,7 +570,9 @@ export function AdminPanel() {
                       .sort((a, b) => b.count - a.count)
                       .map(({ k, count }) => (
                         <div key={k} className="flex items-center gap-2 text-sm">
-                          <span className="w-20 shrink-0 text-gray-600">{k}</span>
+                          <span className="w-24 shrink-0 truncate text-gray-600" title={k}>
+                            {k}
+                          </span>
                           <div className="flex-1 overflow-hidden rounded-full bg-gray-100">
                             <div
                               className="h-2 rounded-full bg-[#009a00]"
@@ -528,7 +592,7 @@ export function AdminPanel() {
                   <div className="flex flex-col gap-1.5">
                     {dayStats.map(([day, count]) => (
                       <div key={day} className="flex items-center gap-2 text-sm">
-                        <span className="w-20 shrink-0 text-gray-600">
+                        <span className="w-20 shrink-0 truncate text-gray-600">
                           {new Date(day).toLocaleDateString("de-DE", {
                             day: "2-digit",
                             month: "2-digit",
@@ -593,6 +657,10 @@ export function AdminPanel() {
             >
               Ausstehend
             </h2>
+            <p className="-mt-2 mb-3 text-xs text-gray-400">
+              Noch nicht per E-Mail-Code bestätigt, oder bestätigt und wartet auf manuelle Freigabe
+              (siehe Einstellungen).
+            </p>
             {pending.length === 0 ? (
               <p className="text-sm text-gray-500">Keine ausstehenden Stände.</p>
             ) : (
@@ -706,98 +774,71 @@ export function AdminPanel() {
             >
               Freigegeben
             </h2>
+            <p className="-mt-2 mb-3 text-xs text-gray-400">Sichtbar auf Karte und in der Liste.</p>
             {approved.length === 0 ? (
               <p className="text-sm text-gray-500">Noch keine freigegebenen Stände.</p>
             ) : (
-              <ul className="flex flex-col gap-2">
-                {approved.map((s) => (
-                  <li
-                    key={s.id}
-                    style={{ borderRadius: "var(--oz-radius-lg)" }}
-                    className="border border-gray-100 bg-white"
-                  >
-                    {editingId === s.id ? (
-                      <div className="p-4">
-                        <EditForm
-                          form={editForm}
-                          setForm={setEditForm}
-                          onToggleKat={toggleEditKat}
-                          onToggleZahlungsart={toggleEditZahlungsart}
-                          onSave={() => handleSave(s.id)}
-                          onCancel={() => setEditingId(null)}
-                          saving={savingId === s.id}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3 px-4 py-2 text-sm">
-                        <span className="text-green-600">✓</span>
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium">{s.nickname}</span>
-                          {s.deactivated && (
-                            <span
-                              title="Deaktiviert - nicht auf Karte/Liste sichtbar"
-                              className="ml-1.5 rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700"
-                            >
-                              🚫
-                            </span>
-                          )}
-                          <span className="ml-2 text-gray-500">{s.adresse}</span>
-                          {s.email && <span className="ml-2 text-gray-400">· {s.email}</span>}
-                          {s.kategorien && s.kategorien.length > 0 && (
-                            <div className="mt-0.5 flex flex-wrap gap-1">
-                              {s.kategorien.map((k) => (
-                                <span
-                                  key={k}
-                                  className="rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-700"
-                                >
-                                  {k}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {s.zahlungsarten && s.zahlungsarten.length > 0 && (
-                            <div className="mt-0.5 flex flex-wrap gap-1">
-                              {s.zahlungsarten.map((z) => (
-                                <span
-                                  key={z}
-                                  className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
-                                >
-                                  {ZAHLUNGSART_ICON[z] ?? "💳"} {z}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {s.deactivation_reply_message && (
-                            <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
-                              <p className="font-medium text-blue-700">Antwort des Inhabers:</p>
-                              <p className="mt-0.5">{s.deactivation_reply_message}</p>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex shrink-0 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(s)}
-                            className="text-xs text-blue-500 hover:text-blue-700"
-                          >
-                            Bearbeiten
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(s.id, s.nickname)}
-                            disabled={deletingId === s.id}
-                            className="text-xs text-red-400 hover:text-red-600 disabled:opacity-50"
-                          >
-                            {deletingId === s.id ? "…" : "Löschen"}
-                          </button>
-                        </div>
-                      </div>
+              <ul className="flex flex-col gap-2">{approved.map(renderStandRow)}</ul>
+            )}
+          </section>
+
+          <section>
+            <h2
+              style={{ fontFamily: "var(--oz-font-heading)" }}
+              className="mb-3 text-xl font-bold text-gray-900"
+            >
+              Deaktiviert
+            </h2>
+            <p className="-mt-2 mb-3 text-xs text-gray-400">
+              Von Karte/Liste genommen, für den Inhaber aber weiterhin bearbeitbar.
+            </p>
+            {deactivatedStands.length === 0 ? (
+              <p className="text-sm text-gray-500">Kein deaktivierter Stand.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">{deactivatedStands.map(renderStandRow)}</ul>
+            )}
+          </section>
+
+          {/* Offene Rückmeldungen - Antworten von Standinhabern auf eine
+              Deaktivierung, gesammelt an einer Stelle statt nur versteckt
+              in der jeweiligen Listenzeile oben. */}
+          {openReplies.length > 0 && (
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-blue-200 bg-blue-50 p-5"
+            >
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">
+                Offene Rückmeldungen ({openReplies.length})
+              </h2>
+              <ul className="flex flex-col gap-3">
+                {openReplies.map((s) => (
+                  <li key={s.id} className="rounded-md border border-blue-200 bg-white p-3 text-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="font-medium">{s.nickname}</span>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(s)}
+                        className="shrink-0 text-xs text-blue-600 hover:underline"
+                      >
+                        Bearbeiten
+                      </button>
+                    </div>
+                    <p className="text-gray-700">{s.deactivation_reply_message}</p>
+                    {s.deactivation_reply_created_at && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        {new Date(s.deactivation_reply_created_at).toLocaleString("de-DE", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
                     )}
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          )}
         </>
       )}
 
