@@ -91,7 +91,7 @@ def _send_sync(to: str, subject: str, body_text: str, body_html: str) -> None:
             smtp.sendmail(sender, [to], msg.as_string())
 
 
-async def send_login_email(email: str, nickname: str, login_code: str, *, first_time: bool) -> None:
+async def send_login_email(email: str, login_code: str, *, first_time: bool) -> None:
     """Schickt einen eintippbaren Login-Code. Tut nichts wenn SMTP nicht
     konfiguriert.
 
@@ -100,7 +100,10 @@ async def send_login_email(email: str, nickname: str, login_code: str, *, first_
     PWA-Fenster (v.a. iOS Safari kennt das grundsätzlich nicht) - der Code
     wird stattdessen manuell unter "Mein Stand" eingetippt. Beim ersten
     Einlösen wird der Stand automatisch freigeschaltet.
-    """
+
+    Bewusst ohne Anrede mit dem (zufällig vergebenen) Standnamen - "Hallo
+    Goldige Nachbarschatz," wirkte unpersönlich/komisch statt persönlich,
+    da dieser Name nie vom Inhaber selbst gewählt wurde."""
     if not smtp_configured():
         return
 
@@ -121,7 +124,7 @@ async def send_login_email(email: str, nickname: str, login_code: str, *, first_
     validity = "24 Stunden" if first_time else "30 Minuten"
 
     body_text = f"""\
-Hallo {nickname},
+Hallo,
 
 {intro}
 
@@ -149,7 +152,7 @@ Der Garagenflohmarkt ist ein ehrenamtliches Projekt von OpenZirndorf:
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
   <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
-  <p>Hallo <strong>{nickname}</strong>,</p>
+  <p>Hallo,</p>
   <p>{intro}</p>
   <p>{action_text}</p>
   <p style="margin:24px 0;text-align:center">
@@ -237,14 +240,15 @@ Das Garagenflohmarkt-Team
     await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
 
 
-async def send_deactivation_email(
-    email: str, nickname: str, stand_id: int, message: str | None
-) -> None:
+async def send_deactivation_email(email: str, stand_id: int, message: str | None) -> None:
     """Benachrichtigt den Standinhaber, wenn ein Admin seinen Stand
     deaktiviert (siehe app/routes/stands.py update_stand_admin) - vorher
     erfuhr er das nur beim nächsten eigenen Blick unter "Mein Stand" auf
     das dortige Banner. Enthält die Begründung (deactivation_message,
-    falls angegeben) und verweist auf die Antwortmöglichkeit dort."""
+    falls angegeben) und verweist auf die Antwortmöglichkeit dort.
+
+    Bewusst ohne Anrede mit dem (zufällig vergebenen) Standnamen - siehe
+    send_login_email für dieselbe Begründung."""
     if not smtp_configured():
         return
 
@@ -254,7 +258,7 @@ async def send_deactivation_email(
     grund_text = message or "Kein Grund angegeben."
 
     body_text = f"""\
-Hallo {nickname},
+Hallo,
 
 dein Stand beim Garagenflohmarkt Zirndorf wurde von einem Admin deaktiviert
 und ist bis auf Weiteres nicht mehr auf der Karte oder in der Liste sichtbar.
@@ -275,7 +279,7 @@ Das Garagenflohmarkt-Team
 <head><meta charset="utf-8"></head>
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
   <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
-  <p>Hallo <strong>{nickname}</strong>,</p>
+  <p>Hallo,</p>
   <p>dein Stand wurde von einem Admin deaktiviert und ist bis auf Weiteres
   nicht mehr auf der Karte oder in der Liste sichtbar.</p>
   <blockquote style="border-left:3px solid #ef4444;margin:16px 0;padding:8px 16px;

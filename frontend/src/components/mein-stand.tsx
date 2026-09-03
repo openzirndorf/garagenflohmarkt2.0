@@ -27,6 +27,12 @@ const SESSION_TOKEN_KEY = "flohmarkt_session_token";
 interface Props {
   onCancelled: () => void;
   onStandChange?: (stand: OwnStand | null) => void;
+  // true direkt nach einer erfolgreichen Neuanmeldung (siehe StandForm
+  // onSuccess in flohmarkt-app.tsx) - zeigt einen Hinweis, dass noch ein
+  // per Mail verschickter Code eingegeben werden muss. Sonst landete man
+  // nach dem Absenden einfach hier bzw. auf der Startseite, ohne zu
+  // merken, dass die Anmeldung noch nicht abgeschlossen ist.
+  justRegistered?: boolean;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -34,7 +40,7 @@ const STATUS_LABEL: Record<string, string> = {
   APPROVED: "Freigeschaltet ✓",
 };
 
-export function MeinStand({ onCancelled, onStandChange }: Props) {
+export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props) {
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [stand, setStand] = useState<OwnStand | null>(null);
   const [checkedStorage, setCheckedStorage] = useState(false);
@@ -189,6 +195,13 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
         <h1 style={{ fontFamily: "var(--oz-font-heading)" }} className="text-xl font-bold">
           Mein Stand
         </h1>
+
+        {justRegistered && (
+          <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+            Fast geschafft! Wir haben dir eine E-Mail mit einem Bestätigungscode geschickt. Gib ihn
+            unten ein, damit dein Stand auf der Karte erscheint.
+          </p>
+        )}
 
         <div className="flex flex-col gap-2">
           <label htmlFor="login-code" className="text-sm font-medium text-gray-700">

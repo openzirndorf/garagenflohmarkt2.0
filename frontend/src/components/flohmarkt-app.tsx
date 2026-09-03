@@ -263,6 +263,11 @@ export function FlohmarktApp() {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const filterPanelRef = useRef<HTMLDivElement>(null);
   const [hasOwnStand, setHasOwnStand] = useState(false);
+  // Zeigt unter "Mein Stand" einen Hinweis, direkt nach der Einreichung
+  // dorthin geleitet zu werden (siehe StandForm onSuccess unten) - sonst
+  // landete man nach dem Absenden zurück auf der Startseite, ohne zu
+  // merken, dass noch ein per Mail verschickter Code eingegeben werden muss.
+  const [justRegistered, setJustRegistered] = useState(false);
   const { favoriteIds, toggleFavorite } = useFavorites();
 
   const handleStandChange = useCallback((stand: OwnStand | null) => {
@@ -397,7 +402,8 @@ export function FlohmarktApp() {
           <StandForm
             onSuccess={() => {
               loadStands();
-              window.location.hash = "";
+              setJustRegistered(true);
+              window.location.hash = "mein-stand";
             }}
           />
         </main>
@@ -624,7 +630,11 @@ export function FlohmarktApp() {
         style={{ display: page === "mein-stand" ? "block" : "none" }}
       >
         <BackButton />
-        <MeinStand onCancelled={loadStands} onStandChange={handleStandChange} />
+        <MeinStand
+          onCancelled={loadStands}
+          onStandChange={handleStandChange}
+          justRegistered={justRegistered}
+        />
       </main>
 
       <Footer />

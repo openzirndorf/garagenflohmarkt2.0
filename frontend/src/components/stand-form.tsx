@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { createStand, fetchSettings } from "../api";
 import { ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "../lib/zahlungsarten";
 import type { StandFormData } from "../types";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "../ui";
-import { PORTAL_URL } from "./footer";
+import { Button, Card, CardContent, CardHeader, CardTitle, Modal } from "../ui";
+import { Datenschutz } from "./datenschutz";
+import { Faq } from "./faq";
 
 export { ZAHLUNGSART_ICON, ZAHLUNGSARTEN } from "../lib/zahlungsarten";
 
@@ -70,9 +71,8 @@ export function StandForm({ onSuccess }: Props) {
   // ablehnen können müsste. Serverseitig weiterhin zwei getrennte Felder
   // (siehe app/routes/stands.py create_stand) - nur die Checkbox ist eine.
   const [consentOk, setConsentOk] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
-  const [nickname, setNickname] = useState<string | null>(null);
   const mountedAt = useRef(Date.now());
 
   // Default true (Feld sichtbar), damit bei fehlendem Netz oder während
@@ -84,6 +84,11 @@ export function StandForm({ onSuccess }: Props) {
       .then((s) => setBeschreibungEnabled(s.beschreibung_enabled))
       .catch(() => {});
   }, []);
+
+  // FAQ/Datenschutz als Popup statt echter Navigation - sonst würde das
+  // Verlassen der Seite die schon eingetippten Formulardaten verwerfen.
+  const [faqOpen, setFaqOpen] = useState(false);
+  const [datenschutzOpen, setDatenschutzOpen] = useState(false);
 
   const allConfirmed = rulesConfirmed && consentOk;
 
@@ -127,66 +132,25 @@ export function StandForm({ onSuccess }: Props) {
 
     setStatus("loading");
     try {
-      const created = await createStand({
+      await createStand({
         ...form,
         datenschutz_zustimmung: consentOk,
         mindestalter_bestaetigt: consentOk,
       });
-      setNickname(created.nickname);
-      setStatus("success");
       setForm(EMPTY);
       setRulesConfirmed(false);
       setConsentOk(false);
+      // Kein eigener Erfolgs-Screen mehr hier: onSuccess() navigiert sofort
+      // zu "Mein Stand", das dort direkt den Code-Eingabe-Hinweis zeigt
+      // (siehe justRegistered in mein-stand.tsx) - vorher landete man nach
+      // dem Absenden auf der Startseite, ohne zu merken, dass noch ein per
+      // Mail verschickter Code eingegeben werden muss.
       onSuccess();
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : "Unbekannter Fehler");
       setStatus("error");
     }
   };
-
-  if (status === "success") {
-    return (
-      <Card>
-        <CardContent className="flex flex-col gap-3 pt-6">
-          <p role="alert" className="font-medium text-green-700">
-            Dein Stand wurde eingereicht!
-          </p>
-          <p className="text-sm text-gray-700">
-            Wir haben dir eine E-Mail mit einem Bestätigungscode geschickt. Gib ihn unter "Mein
-            Stand" ein - erst danach erscheint dein Stand auf der Karte.
-          </p>
-          <p className="text-sm text-gray-700">
-            Auf der Karte und in der Liste erscheinst du unter deiner Adresse - nie mit deinem
-            echten Namen.
-            {nickname && (
-              <>
-                {" "}
-                Unter „Mein Stand" findest du deinen Stand außerdem unter der internen Kennung{" "}
-                <strong>„{nickname}“</strong> wieder.
-              </>
-            )}
-          </p>
-          <p className="mt-1 text-sm text-gray-600">
-            Mit demselben Code kannst du deinen Stand danach auch jederzeit bearbeiten oder
-            vollständig löschen. Solltest du die Mail verlieren, kannst du dir über "Mein Stand"
-            jederzeit einen neuen Code schicken lassen.
-          </p>
-          <p className="mt-2 text-xs text-gray-400">
-            Schön, dass du dabei bist! Der Garagenflohmarkt ist ein ehrenamtliches Projekt von{" "}
-            <a
-              href={PORTAL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-gray-600"
-            >
-              OpenZirndorf
-            </a>{" "}
-            - wer mag, kann uns auch über eine Fördermitgliedschaft unterstützen.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
@@ -332,9 +296,13 @@ export function StandForm({ onSuccess }: Props) {
             </label>
             <p className="mt-1 text-xs text-amber-700">
               Weitere Infos auf der{" "}
-              <a href="#faq" className="underline hover:text-amber-900">
+              <button
+                type="button"
+                onClick={() => setFaqOpen(true)}
+                className="underline hover:text-amber-900"
+              >
                 Regeln & FAQ-Seite
-              </a>
+              </button>
               .
             </p>
           </div>
@@ -363,9 +331,13 @@ export function StandForm({ onSuccess }: Props) {
                 Hausnummer) öffentlich auf der Karte und in der Liste angezeigt wird. Ich kann diese
                 Einwilligung jederzeit widerrufen, indem ich meinen Stand unter „Mein Stand"
                 vollständig lösche. Mehr dazu in der{" "}
-                <a href="#datenschutz" className="underline hover:text-blue-900">
+                <button
+                  type="button"
+                  onClick={() => setDatenschutzOpen(true)}
+                  className="underline hover:text-blue-900"
+                >
                   Datenschutzerklärung
-                </a>
+                </button>
                 .
               </span>
             </label>
@@ -394,6 +366,16 @@ export function StandForm({ onSuccess }: Props) {
           </Button>
         </div>
       </CardContent>
+      {faqOpen && (
+        <Modal onClose={() => setFaqOpen(false)}>
+          <Faq />
+        </Modal>
+      )}
+      {datenschutzOpen && (
+        <Modal onClose={() => setDatenschutzOpen(false)}>
+          <Datenschutz />
+        </Modal>
+      )}
     </Card>
   );
 }

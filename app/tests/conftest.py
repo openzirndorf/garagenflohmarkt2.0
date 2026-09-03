@@ -103,10 +103,9 @@ def captured_emails(monkeypatch):
     per Mail bekommt, nie über eine API-Antwort)."""
     sent: list[dict] = []
 
-    async def _fake_send_login_email(email, nickname, login_code, *, first_time):
+    async def _fake_send_login_email(email, login_code, *, first_time):
         sent.append({
             "email": email,
-            "nickname": nickname,
             "login_code": login_code,
             "first_time": first_time,
         })
@@ -123,10 +122,8 @@ def captured_deactivation_emails(monkeypatch):
     Tests nicht auf den Background-Task warten müssen)."""
     sent: list[dict] = []
 
-    async def _fake_send_deactivation_email(email, nickname, stand_id, message):
-        sent.append(
-            {"email": email, "nickname": nickname, "stand_id": stand_id, "message": message}
-        )
+    async def _fake_send_deactivation_email(email, stand_id, message):
+        sent.append({"email": email, "stand_id": stand_id, "message": message})
 
     monkeypatch.setattr("app.routes.stands.send_deactivation_email", _fake_send_deactivation_email)
     return sent

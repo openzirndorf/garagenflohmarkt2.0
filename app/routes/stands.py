@@ -262,7 +262,7 @@ async def create_stand(body: StandIn, request: Request):
 
     # Login-Mail versenden (Fehler hier dürfen die Anmeldung nicht blockieren)
     try:
-        await send_login_email(body.email, nickname, login_code, first_time=True)
+        await send_login_email(body.email, login_code, first_time=True)
     except Exception as exc:  # noqa: BLE001 - Mailversand darf Anmeldung nie blockieren
         # Nur Exception-Typ loggen, nie die Nachricht - SMTP-Exceptions
         # betten häufig die Empfängeradresse in ihre Fehlermeldung ein.
@@ -292,7 +292,7 @@ async def request_login(body: LoginRequestIn, request: Request):
             login_token_hash, login_token_expires_at, row["id"],
         )
         try:
-            await send_login_email(body.email, row["nickname"], login_code, first_time=False)
+            await send_login_email(body.email, login_code, first_time=False)
         except Exception as exc:  # noqa: BLE001 - Mailversand darf die Anfrage nie fehlschlagen lassen
             logger.error("Login-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
 
@@ -600,7 +600,7 @@ async def test_email(to: str):
     if not info["configured"]:
         return {"ok": False, "config": info, "error": "SMTP nicht vollständig konfiguriert"}
     try:
-        await send_login_email(to, "Testnutzer", generate_code(), first_time=True)
+        await send_login_email(to, generate_code(), first_time=True)
         return {"ok": True, "config": info}
     except Exception as exc:  # noqa: BLE001 - Admin-Diagnose-Endpunkt, soll jeden SMTP-Fehler anzeigen
         return {"ok": False, "config": info, "error": str(exc)}
@@ -697,7 +697,7 @@ async def update_stand_admin(
         if updates["deactivated"]:
             background_tasks.add_task(
                 send_deactivation_email,
-                row["email"], row["nickname"], stand_id, row["deactivation_message"],
+                row["email"], stand_id, row["deactivation_message"],
             )
     else:
         await log_action(pool, stand_id, "EDITED", "admin", admin_email)
