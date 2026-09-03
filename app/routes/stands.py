@@ -100,6 +100,24 @@ def _reject_if_too_many_kategorien(values: list[str] | None) -> None:
         )
 
 
+# Zirndorfs einzige Postleitzahl - der Garagenflohmarkt findet nur hier statt.
+_ZIRNDORF_POSTCODE = "90513"
+
+
+def _reject_if_outside_zirndorf(postcode: str | None) -> None:
+    # Nur ablehnen, wenn das Geocoding tatsächlich eine PLZ geliefert hat -
+    # ein genereller Geocoding-Fehlschlag (postcode=None, z.B. API-Ausfall
+    # oder unbekannte Adresse) bleibt weiterhin ohne Koordinaten erlaubt,
+    # statt fälschlich als "nicht Zirndorf" geblockt zu werden (siehe
+    # geocode()-Docstring: Geocoding-Fehler dürfen nie blockieren).
+    if postcode is not None and postcode != _ZIRNDORF_POSTCODE:
+        raise HTTPException(
+            status_code=400,
+            detail="Der Garagenflohmarkt findet nur in Zirndorf statt. Diese Adresse liegt laut "
+            f"Geocoding außerhalb (PLZ {postcode}).",
+        )
+
+
 class StandIn(BaseModel):
     adresse: str
     beschreibung: str | None = None
@@ -201,8 +219,15 @@ async def create_stand(body: StandIn, request: Request):
     if not allowed:
         raise HTTPException(status_code=429, detail="Zu viele Einreichungen. Bitte später erneut versuchen.")
 
-    coords = await geocode(body.adresse)
-    lat, lng = (coords[0], coords[1]) if coords else (None, None)
+    geo = await geocode(body.adresse)
+    if geo:
+        _reject_if_outside_zirndorf(geo.postcode)
+    lat, lng = (geo.lat, geo.lng) if geo else (None, None)
+    # Einheitlich formatierte Adresse aus dem Geocoding-Ergebnis statt der
+    # frei getippten Eingabe ("Straße Hausnummer, PLZ Ort") - fällt bei
+    # fehlgeschlagenem Geocoding oder unvollständigen Bestandteilen auf die
+    # Roheingabe zurück (siehe geocode()/_format_adresse).
+    adresse = geo.formatted_adresse if geo and geo.formatted_adresse else body.adresse
 
     # beschreibung_enabled (siehe app/routes/settings.py) blendet das
     # Freitextfeld im Anmeldeformular aus - hier serverseitig noch mal
@@ -220,7 +245,7 @@ async def create_stand(body: StandIn, request: Request):
             "zahlungsarten, login_token_hash, login_token_expires_at, address_consent_at) "
             "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()) "
             f"RETURNING {_OWNER_COLUMNS}",
-            nickname, body.adresse, lat, lng, beschreibung, body.email,
+            nickname, adresse, lat, lng, beschreibung, body.email,
             body.kategorien, body.zahlungsarten, login_token_hash, login_token_expires_at,
         )
     except asyncpg.UniqueViolationError as exc:
@@ -407,8 +432,12 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
         _reject_if_blocked_content(updates.get("adresse"), updates.get("beschreibung"))
 
     if "adresse" in updates:
-        coords = await geocode(updates["adresse"])
-        updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
+        geo = await geocode(updates["adresse"])
+        if geo:
+            _reject_if_outside_zirndorf(geo.postcode)
+        updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
+        if geo and geo.formatted_adresse:
+            updates["adresse"] = geo.formatted_adresse
 
     set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
     values = list(updates.values())
@@ -642,8 +671,12 @@ async def update_stand_admin(
         updates["deactivation_reply_created_at"] = None
 
     if "adresse" in updates:
-        coords = await geocode(updates["adresse"])
-        updates["lat"], updates["lng"] = (coords[0], coords[1]) if coords else (None, None)
+        geo = await geocode(updates["adresse"])
+        if geo:
+            _reject_if_outside_zirndorf(geo.postcode)
+        updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
+        if geo and geo.formatted_adresse:
+            updates["adresse"] = geo.formatted_adresse
 
     set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
     values = list(updates.values())

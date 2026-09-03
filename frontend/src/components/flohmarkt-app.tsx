@@ -234,6 +234,17 @@ function Header({ page, hasOwnStand }: { page: Page; hasOwnStand: boolean }) {
             <a href="#datenschutz" className={menuLinkClass(page === "datenschutz")}>
               Datenschutz
             </a>
+            <div className="my-1 border-t border-gray-100" />
+            {/* Bewusst klein/unauffällig statt wie die Einträge oben - kein
+                Nutzer-Feature, aber auch kein Sicherheitsrisiko, hier zu
+                verlinken: der eigentliche Zugang bleibt durch E-Mail+Code
+                gegen das Admin-Roster geschützt (siehe app/routes/admins.py). */}
+            <a
+              href="#admin"
+              className="block px-4 py-1.5 text-xs text-gray-400 hover:text-gray-600"
+            >
+              Admin
+            </a>
           </div>
         )}
       </div>

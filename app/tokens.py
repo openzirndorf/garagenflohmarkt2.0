@@ -29,8 +29,14 @@ REGISTRATION_LOGIN_TTL = timedelta(hours=24)
 # hier eine aktiv wartende Person den Code typischerweise sofort eintippt.
 LOGIN_REQUEST_TTL = timedelta(minutes=30)
 
-# Session-Token nach dem Login: reicht für eine Bearbeitungssitzung.
-SESSION_TOKEN_TTL = timedelta(minutes=60)
+# Session-Token nach dem Login: großzügig befristet (deutlich über die
+# Zeitspanne zwischen Anmeldung und Event hinaus, bis zur automatischen
+# Löschung am 07.10.2026 durch scripts/deletion_job.py) - wird im Frontend
+# in localStorage abgelegt (siehe mein-stand.tsx), überlebt also ein
+# Schließen der Seite/App. War ursprünglich 60 Minuten, kombiniert mit
+# sessionStorage (pro Tab, weg beim Schließen) führte das dazu, dass sich
+# Standbetreiber quasi bei jedem erneuten Öffnen neu einloggen mussten.
+SESSION_TOKEN_TTL = timedelta(days=45)
 
 
 def generate_token() -> str:

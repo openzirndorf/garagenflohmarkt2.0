@@ -184,10 +184,20 @@ def api_auth():
 
 @pytest_asyncio.fixture(autouse=True)
 def _no_real_geocoding(monkeypatch):
-    """Verhindert echte Geocoding-Aufrufe (OpenCage/Nominatim) in Tests."""
+    """Verhindert echte Geocoding-Aufrufe (OpenCage/Nominatim) in Tests.
+
+    Liefert standardmäßig eine Zirndorfer PLZ, damit bestehende Tests nicht
+    an der Zirndorf-Prüfung (_reject_if_outside_zirndorf) scheitern - Tests,
+    die gezielt eine Adresse außerhalb Zirndorfs simulieren wollen,
+    überschreiben app.routes.stands.geocode lokal noch einmal per eigenem
+    monkeypatch.setattr (wird nach dem Test automatisch zurückgesetzt)."""
+    from app.geocode import GeocodeResult
 
     async def _fake_geocode(adresse: str):
-        return (49.4436, 10.9563)
+        return GeocodeResult(
+            lat=49.4436, lng=10.9563, postcode="90513",
+            formatted_adresse="Musterstraße 1, 90513 Zirndorf",
+        )
 
     monkeypatch.setattr("app.geocode.geocode", _fake_geocode)
     monkeypatch.setattr("app.routes.stands.geocode", _fake_geocode)

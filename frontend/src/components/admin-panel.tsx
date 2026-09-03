@@ -21,7 +21,9 @@ import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./s
 
 // Wie SESSION_TOKEN_KEY in mein-stand.tsx - eigener Schlüssel, damit sich
 // eine Admin- und eine Standbetreiber-Sitzung im selben Browser nicht
-// überschreiben.
+// überschreiben. Auch dieselbe localStorage-Begründung: übersteht ein
+// Schließen der Seite/App (server-seitig 45 Tage gültig, siehe
+// _ADMIN_SESSION_TTL in app/routes/admins.py).
 const ADMIN_SESSION_TOKEN_KEY = "flohmarkt_admin_session_token";
 
 const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
@@ -66,7 +68,7 @@ export function AdminPanel() {
   // Beim Laden vorhandene Sitzung übernehmen, statt bei jedem Öffnen neu
   // einzutippen (das war das eigentliche Problem am alten, fest
   // eingetippten Master-Token: keine Persistenz).
-  const [token, setToken] = useState(() => sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY));
+  const [token, setToken] = useState(() => localStorage.getItem(ADMIN_SESSION_TOKEN_KEY));
   const [stands, setStands] = useState<AdminStand[] | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -111,7 +113,7 @@ export function AdminPanel() {
       setStands(null);
       // Sitzung war ungültig/abgelaufen - nicht als "eingeloggt" stehen
       // lassen, sonst zeigt der Screen dauerhaft nur die Fehlermeldung.
-      sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+      localStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
       setToken(null);
     } finally {
       setLoading(false);
@@ -138,7 +140,7 @@ export function AdminPanel() {
     setLoginError(null);
     try {
       const { session_token } = await redeemAdminCode(loginCode.trim());
-      sessionStorage.setItem(ADMIN_SESSION_TOKEN_KEY, session_token);
+      localStorage.setItem(ADMIN_SESSION_TOKEN_KEY, session_token);
       setToken(session_token);
       await load(session_token);
     } catch (err) {
@@ -149,7 +151,7 @@ export function AdminPanel() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
+    localStorage.removeItem(ADMIN_SESSION_TOKEN_KEY);
     setToken(null);
     setStands(null);
     setLoginEmail("");

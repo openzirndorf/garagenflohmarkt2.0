@@ -14,6 +14,14 @@ import { standShareOptions } from "../lib/share";
 import { ShareButton } from "./share-button";
 import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
 
+// localStorage statt sessionStorage: das Token soll ein Schließen der
+// Seite/App überstehen (server-seitig ohnehin 45 Tage gültig, siehe
+// SESSION_TOKEN_TTL in app/tokens.py) - mit sessionStorage (pro Tab, weg
+// beim Schließen) musste man sich in der Praxis quasi bei jedem erneuten
+// Öffnen neu einloggen. Bewusste Abwägung: bleibt dafür auch auf einem
+// gemeinsam genutzten Gerät bis zum Ablauf bestehen, nicht nur für die
+// aktuelle Sitzung - vertretbar, da der Token nur zur eigenen
+// Stand-Verwaltung berechtigt, nicht zu sensibleren Daten.
 const SESSION_TOKEN_KEY = "flohmarkt_session_token";
 
 interface Props {
@@ -71,7 +79,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [deactivationReplyMessage, setDeactivationReplyMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    setSessionToken(sessionStorage.getItem(SESSION_TOKEN_KEY));
+    setSessionToken(localStorage.getItem(SESSION_TOKEN_KEY));
     setCheckedStorage(true);
   }, []);
 
@@ -80,7 +88,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     try {
       setStand(await fetchMyStand(sessionToken));
     } catch {
-      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(SESSION_TOKEN_KEY);
       setSessionToken(null);
     }
   }, [sessionToken]);
@@ -112,7 +120,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     setRedeemError(null);
     try {
       const result = await redeemCode(codeInput);
-      sessionStorage.setItem(SESSION_TOKEN_KEY, result.session_token);
+      localStorage.setItem(SESSION_TOKEN_KEY, result.session_token);
       setSessionToken(result.session_token);
       setCodeInput("");
     } catch (err) {
@@ -332,7 +340,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     setError(null);
     try {
       await cancelStand(sessionToken);
-      sessionStorage.removeItem(SESSION_TOKEN_KEY);
+      localStorage.removeItem(SESSION_TOKEN_KEY);
       setSessionToken(null);
       setStand(null);
       onCancelled();

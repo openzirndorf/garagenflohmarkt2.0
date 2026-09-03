@@ -1,4 +1,4 @@
-"""Adresse -> Koordinaten.
+"""Adresse -> Koordinaten (+ strukturierte Bestandteile).
 
 Primär OpenCage (https://opencagedata.com) statt der öffentlichen
 Nominatim-Instanz: Nominatims eigene Nutzungsbedingungen
@@ -17,6 +17,7 @@ Entwicklung. In Produktion ohne gesetzten Key lieber gar nicht geocodieren
 als die Nominatim-Policy zu verletzen.
 """
 import os
+from typing import NamedTuple
 
 import httpx
 
@@ -25,7 +26,31 @@ NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 UA = "OpenZirndorf-Flohmarkt/0.1 (kontakt@openzirndorf.de)"
 
 
-async def geocode(adresse: str) -> tuple[float, float] | None:
+class GeocodeResult(NamedTuple):
+    lat: float
+    lng: float
+    # None, wenn das Geocoding keine PLZ geliefert hat - der Aufrufer prüft
+    # damit u.a., ob eine Adresse tatsächlich in Zirndorf liegt (siehe
+    # app/routes/stands.py _reject_if_outside_zirndorf).
+    postcode: str | None
+    # Aus denselben Bestandteilen zusammengesetzte, einheitlich formatierte
+    # Adresse ("Straße Hausnummer, PLZ Ort") - ersetzt bei Erfolg die frei
+    # getippte Nutzereingabe (siehe _format_adresse unten). None, wenn dafür
+    # ein Bestandteil fehlt.
+    formatted_adresse: str | None
+
+
+def _format_adresse(components: dict) -> str | None:
+    road = components.get("road")
+    house_number = components.get("house_number")
+    postcode = components.get("postcode")
+    ort = components.get("city") or components.get("town") or components.get("village")
+    if not (road and house_number and postcode and ort):
+        return None
+    return f"{road} {house_number}, {postcode} {ort}"
+
+
+async def geocode(adresse: str) -> GeocodeResult | None:
     api_key = os.getenv("GEOCODE_API_KEY")
     query = f"{adresse}, Zirndorf, Bayern, Deutschland"
 
@@ -42,12 +67,20 @@ async def geocode(adresse: str) -> tuple[float, float] | None:
                 if not results:
                     return None
                 geo = results[0]["geometry"]
-                return float(geo["lat"]), float(geo["lng"])
+                components = results[0].get("components") or {}
+                return GeocodeResult(
+                    lat=float(geo["lat"]),
+                    lng=float(geo["lng"]),
+                    postcode=components.get("postcode"),
+                    formatted_adresse=_format_adresse(components),
+                )
 
             # Nur für lokale Entwicklung ohne Key - siehe Modul-Docstring.
+            # addressdetails=1 liefert dieselben strukturierten Bestandteile
+            # wie OpenCages components, sonst nur einen freien display_name.
             r = await client.get(
                 NOMINATIM_URL,
-                params={"q": query, "format": "json", "limit": "1"},
+                params={"q": query, "format": "json", "limit": "1", "addressdetails": "1"},
                 headers={"User-Agent": UA},
                 timeout=5,
             )
@@ -55,6 +88,12 @@ async def geocode(adresse: str) -> tuple[float, float] | None:
             data = r.json()
             if not data:
                 return None
-            return float(data[0]["lat"]), float(data[0]["lon"])
+            components = data[0].get("address") or {}
+            return GeocodeResult(
+                lat=float(data[0]["lat"]),
+                lng=float(data[0]["lon"]),
+                postcode=components.get("postcode"),
+                formatted_adresse=_format_adresse(components),
+            )
         except Exception:  # noqa: BLE001 - Geocoding-Fehler sollen nie die Anmeldung blockieren
             return None

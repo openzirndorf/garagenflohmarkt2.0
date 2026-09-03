@@ -22,10 +22,12 @@ _REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
 # Kurz wie stands' LOGIN_REQUEST_TTL - ein Admin, der gerade einen Code
 # anfordert, tippt ihn typischerweise sofort ein.
 _ADMIN_LOGIN_TTL = timedelta(minutes=30)
-# Deutlich länger als stands' SESSION_TOKEN_TTL (60 Min) - ein Admin sitzt
-# am Veranstaltungstag ggf. stundenlang im Panel, anders als eine einzelne
-# Standbearbeitung.
-_ADMIN_SESSION_TTL = timedelta(hours=8)
+# Genauso großzügig wie stands' SESSION_TOKEN_TTL, aus demselben Grund:
+# liegt in localStorage (siehe admin-panel.tsx), übersteht also ein
+# Schließen der Seite/App, statt sich bei jedem erneuten Öffnen neu
+# einloggen zu müssen. War ursprünglich 8 Stunden, kombiniert mit
+# sessionStorage (pro Tab) faktisch trotzdem ein ständiges Neu-Einloggen.
+_ADMIN_SESSION_TTL = timedelta(days=45)
 
 
 class AdminLoginRequestIn(BaseModel):
