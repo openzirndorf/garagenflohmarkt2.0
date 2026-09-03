@@ -171,12 +171,26 @@ Instanz ist `backup_schedule_retention` in `infra/main.tf` explizit gesetzt.
 ---
 
 ### 4. Admin-Token
-**Zweck:** Authentifizierung für Admin-API-Endpunkte. Wird im Admin-Panel eingegeben (`#admin`), nicht ins JS-Bundle gebaut.
+**Zweck:** Master-Token, ausschließlich für die Roster-Verwaltung
+(`GET/POST /admins`, `DELETE /admins/{id}` - wer zählt als Admin) und den
+Diagnose-Endpunkt `POST /stands/test-email`. Die alltäglichen Admin-
+Endpunkte (Standliste, Freigabe, Bearbeiten, Löschen, Audit-Log, Karte
+deaktivieren/reaktivieren) laufen seit dem E-Mail+Code-Login
+(`POST /admins/request-login`, `POST /admins/redeem-code`) über einen
+Admin-Session-Token statt diesem Master-Token - siehe `app/auth.py`
+`require_admin_session_auth` vs. `require_admin_auth`.
 
 | Wo | Variable |
 |----|----------|
 | `infra/terraform.tfvars` | `admin_token` |
 | Container-Env | `ADMIN_TOKEN` (secret, von OpenTofu) |
+
+Ersten Admin anlegen (danach reicht der normale E-Mail+Code-Login):
+```bash
+curl -X POST https://api.openzirndorf.de/admins \
+  -H "Authorization: Bearer TOKEN" -H "Content-Type: application/json" \
+  -d '{"email":"deine@email.de"}'
+```
 
 **Rotieren:**
 ```bash
@@ -426,17 +440,23 @@ gehasht gespeichert.
 | `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
 | `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (inkl. Standname wechseln) |
 | `POST` | `/stands/by-session/{session_token}/nickname-suggestions` | – | 3 alternative Standnamen würfeln |
-| `POST` | `/stands/by-session/{session_token}/lock-reply` | – | Antwort auf eine Inhalts-Sperre an den Admin schicken (nur bei `content_locked`) |
+| `POST` | `/stands/by-session/{session_token}/deactivation-reply` | – | Antwort auf eine Deaktivierung an den Admin schicken (nur wenn `deactivated`) |
 | `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand vollständig löschen |
 | `POST` | `/stands/{id}/report` | – | Stand melden (Besucher, Grund per Mail an den Admin, nie gespeichert) |
-| `GET` | `/stands/admin` | Bearer | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
-| `GET` | `/stands/admin/audit-log` | Bearer | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel, kein Personenbezug) |
-| `POST` | `/stands/{id}/approve` | Bearer | Stand manuell freigeben |
-| `PATCH` | `/stands/{id}` | Bearer | Stand bearbeiten (Admin), inkl. `content_locked`/`content_lock_message` |
-| `DELETE` | `/stands/{id}` | Bearer | Stand löschen (Admin) |
-| `POST` | `/stands/test-email` | Bearer | SMTP-Konfiguration prüfen (Query-Param `to`) |
+| `POST` | `/admins/request-login` | Basic Auth | Admin-Login-Code anfordern (E-Mail im Body) |
+| `POST` | `/admins/redeem-code` | – | Admin-Code einlösen (einmalig), gibt `session_token` zurück |
+| `GET` | `/stands/admin` | Bearer (Admin-Session) | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
+| `GET` | `/stands/admin/audit-log` | Bearer (Admin-Session) | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel, kein Personenbezug) |
+| `POST` | `/stands/{id}/approve` | Bearer (Admin-Session) | Stand manuell freigeben |
+| `PATCH` | `/stands/{id}` | Bearer (Admin-Session) | Stand bearbeiten (Admin), inkl. `deactivated`/`deactivation_message` |
+| `DELETE` | `/stands/{id}` | Bearer (Admin-Session) | Stand löschen (Admin) |
+| `POST` | `/stands/test-email` | Bearer (Master-Token) | SMTP-Konfiguration prüfen (Query-Param `to`) |
+| `GET`/`POST` | `/admins` | Bearer (Master-Token) | Admin-Roster ansehen/erweitern |
+| `DELETE` | `/admins/{id}` | Bearer (Master-Token) | Admin aus dem Roster entfernen |
 
 ```bash
+# TOKEN ist hier jeweils ein Admin-Session-Token (siehe oben), nicht der Master-Token
+
 # Stand freigeben
 curl -X POST -H "Authorization: Bearer TOKEN" https://api.openzirndorf.de/stands/1/approve
 

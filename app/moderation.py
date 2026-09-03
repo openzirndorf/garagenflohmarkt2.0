@@ -11,9 +11,8 @@ dem, was in `adresse` entstünde.
 
 Kein Ersatz für menschliche Moderation - fängt offensichtlichen Missbrauch
 ab, bevor ein Stand automatisch live geht (siehe "erster Login schaltet
-frei" in app/routes/stands.py). Admins können zusätzlich per
-content_locked/content_lock_message einen Stand nach manueller Korrektur
-gegen erneute Bearbeitung durch den Inhaber sperren.
+frei" in app/routes/stands.py). Admins können einen Stand zusätzlich per
+deactivated/deactivation_message manuell von Karte/Liste nehmen.
 """
 
 import re

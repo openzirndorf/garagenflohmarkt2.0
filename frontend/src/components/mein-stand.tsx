@@ -6,7 +6,7 @@ import {
   fetchMyStand,
   redeemCode,
   requestLogin,
-  sendLockReply,
+  sendDeactivationReply,
   suggestNicknames,
   updateStand,
 } from "../api";
@@ -62,11 +62,13 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
   const [nicknameSaving, setNicknameSaving] = useState(false);
   const [nicknameError, setNicknameError] = useState<string | null>(null);
 
-  // Antwort auf eine Inhalts-Sperre - einzige Möglichkeit, den Admin von
-  // hier aus zu erreichen (siehe app/routes/stands.py POST .../lock-reply).
-  const [lockReplyInput, setLockReplyInput] = useState("");
-  const [lockReplyStatus, setLockReplyStatus] = useState<"idle" | "loading" | "sent">("idle");
-  const [lockReplyMessage, setLockReplyMessage] = useState<string | null>(null);
+  // Antwort auf eine Deaktivierung - einzige Möglichkeit, den Admin von
+  // hier aus zu erreichen (siehe app/routes/stands.py POST .../deactivation-reply).
+  const [deactivationReplyInput, setDeactivationReplyInput] = useState("");
+  const [deactivationReplyStatus, setDeactivationReplyStatus] = useState<
+    "idle" | "loading" | "sent"
+  >("idle");
+  const [deactivationReplyMessage, setDeactivationReplyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setSessionToken(sessionStorage.getItem(SESSION_TOKEN_KEY));
@@ -155,16 +157,16 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     }
   };
 
-  const handleLockReply = async () => {
-    if (!sessionToken || !lockReplyInput.trim()) return;
-    setLockReplyStatus("loading");
+  const handleDeactivationReply = async () => {
+    if (!sessionToken || !deactivationReplyInput.trim()) return;
+    setDeactivationReplyStatus("loading");
     try {
-      const res = await sendLockReply(sessionToken, lockReplyInput.trim());
-      setLockReplyMessage(res.message);
-      setLockReplyStatus("sent");
+      const res = await sendDeactivationReply(sessionToken, deactivationReplyInput.trim());
+      setDeactivationReplyMessage(res.message);
+      setDeactivationReplyStatus("sent");
     } catch (err) {
-      setLockReplyMessage(err instanceof Error ? err.message : "Fehler");
-      setLockReplyStatus("idle");
+      setDeactivationReplyMessage(err instanceof Error ? err.message : "Fehler");
+      setDeactivationReplyStatus("idle");
     }
   };
 
@@ -307,14 +309,7 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
     setSaving(true);
     setError(null);
     try {
-      // Bei Sperre adresse/beschreibung gar nicht erst mitschicken - sonst
-      // würde selbst eine reine Kategorien-/Zahlungsarten-Änderung am
-      // Server abgelehnt, weil die (unveränderten) gesperrten Felder im
-      // Patch-Body stehen.
-      const payload = stand.content_locked
-        ? { kategorien: editForm.kategorien, zahlungsarten: editForm.zahlungsarten }
-        : editForm;
-      const updated = await updateStand(sessionToken, payload);
+      const updated = await updateStand(sessionToken, editForm);
       setStand(updated);
       setEditing(false);
     } catch (err) {
@@ -357,11 +352,10 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
         Dein angemeldeter Stand
       </p>
 
-      {/* Deaktivierung nimmt den Stand komplett von Karte/Liste, anders als
-          die Sperre unten (blockiert nur die Bearbeitung, Stand bleibt
-          sichtbar) - deshalb eigenes, deutlicheres Banner, teilt sich aber
-          dieselbe Antwort-Box weiter unten (ein Admin-Anliegen, eine
-          Antwortmöglichkeit, egal welcher der beiden Fälle zutrifft). */}
+      {/* Deaktivierung nimmt den Stand komplett von Karte/Liste - einzige
+          Admin-Aktion dieser Art (die frühere separate "Sperre", die nur
+          die Bearbeitung blockierte, wurde entfernt: fühlte sich neben der
+          Deaktivierung redundant an, ohne einen eigenen Nutzen zu haben). */}
       {stand.deactivated && (
         <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
           <p>
@@ -372,39 +366,30 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
         </div>
       )}
 
-      {stand.content_locked && (
-        <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <p>
-            Adresse und Beschreibung wurden von einem Admin gesperrt
-            {stand.content_lock_message ? `: ${stand.content_lock_message}` : "."}
-          </p>
-        </div>
-      )}
-
-      {(stand.content_locked || stand.deactivated) && (
+      {stand.deactivated && (
         <div className="mb-3 flex flex-col gap-1.5 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
-          {lockReplyStatus === "sent" ? (
-            <p className="text-green-700">{lockReplyMessage}</p>
+          {deactivationReplyStatus === "sent" ? (
+            <p className="text-green-700">{deactivationReplyMessage}</p>
           ) : (
             <>
-              <label htmlFor="lock-reply" className="font-medium">
+              <label htmlFor="deactivation-reply" className="font-medium">
                 Antwort an das Team schicken
               </label>
               <textarea
-                id="lock-reply"
+                id="deactivation-reply"
                 className="min-h-[50px] resize-y rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-gray-800 outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder="z.B. wenn du das für ein Missverständnis hältst…"
-                value={lockReplyInput}
-                onChange={(e) => setLockReplyInput(e.target.value)}
-                disabled={lockReplyStatus === "loading"}
+                value={deactivationReplyInput}
+                onChange={(e) => setDeactivationReplyInput(e.target.value)}
+                disabled={deactivationReplyStatus === "loading"}
               />
               <button
                 type="button"
-                onClick={handleLockReply}
-                disabled={lockReplyStatus === "loading" || !lockReplyInput.trim()}
+                onClick={handleDeactivationReply}
+                disabled={deactivationReplyStatus === "loading" || !deactivationReplyInput.trim()}
                 className="self-start rounded-md bg-gray-700 px-3 py-1 font-medium text-white hover:bg-gray-800 disabled:opacity-50"
               >
-                {lockReplyStatus === "loading" ? "…" : "Nachricht senden"}
+                {deactivationReplyStatus === "loading" ? "…" : "Nachricht senden"}
               </button>
             </>
           )}
@@ -419,7 +404,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
             </label>
             <input
               id="edit-adresse"
-              disabled={stand.content_locked}
               className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
               value={editForm.adresse}
               onChange={(e) => setEditForm((f) => ({ ...f, adresse: e.target.value }))}
@@ -479,7 +463,6 @@ export function MeinStand({ onCancelled, onStandChange }: Props) {
             </label>
             <textarea
               id="edit-beschreibung"
-              disabled={stand.content_locked}
               className="min-h-[60px] resize-y rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
               value={editForm.beschreibung}
               onChange={(e) => setEditForm((f) => ({ ...f, beschreibung: e.target.value }))}

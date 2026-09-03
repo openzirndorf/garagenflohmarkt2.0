@@ -8,9 +8,8 @@ Umgebungsvariablen (werden per Terraform gesetzt):
   SMTP_FROM          – noreply@automail.openzirndorf.de
   BACKEND_URL        – öffentliche Backend-URL
   FRONTEND_URL       – öffentliche Frontend-URL
-  ADMIN_CONTACT_EMAIL – Ziel für Antworten auf eine Admin-Nachricht (Sperre
-                         oder Deaktivierung, Default: derselbe Kontakt wie
-                         in Datenschutz/Impressum)
+  ADMIN_CONTACT_EMAIL – Ziel für Antworten auf eine Deaktivierung (Default:
+                         derselbe Kontakt wie in Datenschutz/Impressum)
 """
 
 import asyncio
@@ -238,22 +237,19 @@ Das Garagenflohmarkt-Team
     await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
 
 
-async def send_lock_reply_email(stand_id: int, nickname: str, message: str) -> None:
-    """Leitet die Antwort eines Standinhabers an den Admin-Kontakt weiter -
-    ausgelöst entweder durch eine Inhalts-Sperre oder eine Deaktivierung
-    (siehe app/routes/stands.py reply_to_lock, teilt sich denselben
-    Mechanismus für beide Fälle, daher hier bewusst neutral formuliert statt
-    "Sperre" fest anzunehmen). Bewusst ohne die E-Mail-Adresse des Inhabers
-    im Mailtext - der Admin kann sie bei Bedarf über das Admin-Panel
-    (Stand-ID) nachschlagen, statt sie hier unnötig ein zweites Mal zu
-    verteilen."""
+async def send_deactivation_reply_email(stand_id: int, nickname: str, message: str) -> None:
+    """Leitet die Antwort eines deaktivierten Standinhabers an den
+    Admin-Kontakt weiter (siehe app/routes/stands.py reply_to_deactivation).
+    Bewusst ohne die E-Mail-Adresse des Inhabers im Mailtext - der Admin
+    kann sie bei Bedarf über das Admin-Panel (Stand-ID) nachschlagen, statt
+    sie hier unnötig ein zweites Mal zu verteilen."""
     if not smtp_configured():
         return
 
     subject = f"Garagenflohmarkt Zirndorf – Antwort von Stand #{stand_id}"
     body_text = f"""\
 Der Inhaber von Stand #{stand_id} ({nickname}) hat auf eine
-Admin-Nachricht geantwortet:
+Deaktivierung geantwortet:
 
   {message}
 
@@ -266,7 +262,7 @@ Zum Bearbeiten: {FRONTEND_URL}/{_PREVIEW_UNLOCK_QUERY}#admin
 <body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
   <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
   <p>Der Inhaber von Stand <strong>#{stand_id}</strong> ({nickname}) hat auf eine
-  Admin-Nachricht geantwortet:</p>
+  Deaktivierung geantwortet:</p>
   <blockquote style="border-left:3px solid #f59e0b;margin:16px 0;padding:8px 16px;
               background:#fffbeb;white-space:pre-wrap">{html.escape(message)}</blockquote>
   <p><a href="{FRONTEND_URL}/{_PREVIEW_UNLOCK_QUERY}#admin">Zum Admin-Panel</a></p>

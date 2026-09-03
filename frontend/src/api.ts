@@ -61,12 +61,10 @@ export interface AdminStand extends Stand {
   status: string;
   login_token_expires_at: string | null;
   session_token_expires_at: string | null;
-  content_locked: boolean;
-  content_lock_message: string | null;
-  lock_reply_message: string | null;
-  lock_reply_created_at: string | null;
   deactivated: boolean;
   deactivation_message: string | null;
+  deactivation_reply_message: string | null;
+  deactivation_reply_created_at: string | null;
   address_consent_at: string;
 }
 
@@ -113,8 +111,6 @@ export async function fetchAuditLog(token: string): Promise<AuditLogEntry[]> {
 // Eigene Sicht (per session_token) - nie mit E-Mail oder einem Token.
 export interface OwnStand extends Stand {
   status: string;
-  content_locked: boolean;
-  content_lock_message: string | null;
   deactivated: boolean;
   deactivation_message: string | null;
   address_consent_at: string;
@@ -200,8 +196,6 @@ interface StandPatchData {
 }
 
 interface AdminStandPatchData extends StandPatchData {
-  content_locked?: boolean;
-  content_lock_message?: string;
   deactivated?: boolean;
   deactivation_message?: string;
 }
@@ -217,13 +211,13 @@ export async function suggestNicknames(sessionToken: string): Promise<string[]> 
   return data.suggestions;
 }
 
-// Einzige Möglichkeit für einen gesperrten Standinhaber, den Admin zu
-// erreichen - wird nur per Mail weitergeleitet, nie gespeichert.
-export async function sendLockReply(
+// Einzige Möglichkeit für einen deaktivierten Standinhaber, den Admin zu
+// erreichen - wird per Mail weitergeleitet und im Admin-Panel angezeigt.
+export async function sendDeactivationReply(
   sessionToken: string,
   message: string,
 ): Promise<{ message: string }> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}/lock-reply`, {
+  const res = await fetch(`${API}/stands/by-session/${sessionToken}/deactivation-reply`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),

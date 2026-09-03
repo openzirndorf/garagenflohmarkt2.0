@@ -49,23 +49,6 @@ async def test_owner_update_rejects_unknown_zahlungsart(client, api_auth, captur
     assert resp.status_code == 400
 
 
-async def test_owner_can_update_zahlungsarten_while_content_locked(
-    client, api_auth, admin_headers, captured_emails
-):
-    stand = (await _register(client, api_auth)).json()
-    session_token = await _login(client, captured_emails[0]["login_code"])
-    await client.patch(
-        f"/stands/{stand['id']}", json={"content_locked": True}, headers=admin_headers
-    )
-
-    # Zahlungsarten sind nicht Teil der Inhaltssperre (die betrifft nur
-    # adresse/beschreibung) - müssen also weiterhin änderbar sein.
-    resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"zahlungsarten": ["Wero"]}
-    )
-    assert resp.status_code == 200
-    assert resp.json()["zahlungsarten"] == ["Wero"]
-
 
 async def test_admin_update_rejects_unknown_zahlungsart(client, api_auth, admin_headers):
     stand = (await _register(client, api_auth)).json()

@@ -61,8 +61,6 @@ export function AdminPanel() {
     beschreibung: "",
     kategorien: [] as string[],
     zahlungsarten: [] as string[],
-    content_locked: false,
-    content_lock_message: "",
     deactivated: false,
     deactivation_message: "",
   });
@@ -176,8 +174,6 @@ export function AdminPanel() {
       beschreibung: s.beschreibung ?? "",
       kategorien: s.kategorien ?? [],
       zahlungsarten: s.zahlungsarten ?? [],
-      content_locked: s.content_locked,
-      content_lock_message: s.content_lock_message ?? "",
       deactivated: s.deactivated,
       deactivation_message: s.deactivation_message ?? "",
     });
@@ -476,14 +472,6 @@ export function AdminPanel() {
                         <div>
                           <p className="flex items-center gap-1.5 font-semibold">
                             {s.nickname}
-                            {s.content_locked && (
-                              <span
-                                title="Adresse/Beschreibung gesperrt"
-                                className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700"
-                              >
-                                🔒
-                              </span>
-                            )}
                             {s.deactivated && (
                               <span
                                 title="Deaktiviert - nicht auf Karte/Liste sichtbar"
@@ -520,12 +508,12 @@ export function AdminPanel() {
                           )}
                           {s.beschreibung && <p className="mt-1 text-sm">{s.beschreibung}</p>}
                           {s.email && <p className="mt-1 text-sm text-gray-500">{s.email}</p>}
-                          {s.lock_reply_message && (
+                          {s.deactivation_reply_message && (
                             <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-sm text-blue-900">
                               <p className="text-xs font-medium text-blue-700">
                                 Antwort des Inhabers:
                               </p>
-                              <p className="mt-0.5">{s.lock_reply_message}</p>
+                              <p className="mt-0.5">{s.deactivation_reply_message}</p>
                             </div>
                           )}
                         </div>
@@ -596,14 +584,6 @@ export function AdminPanel() {
                         <span className="text-green-600">✓</span>
                         <div className="flex-1 min-w-0">
                           <span className="font-medium">{s.nickname}</span>
-                          {s.content_locked && (
-                            <span
-                              title="Adresse/Beschreibung gesperrt"
-                              className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700"
-                            >
-                              🔒
-                            </span>
-                          )}
                           {s.deactivated && (
                             <span
                               title="Deaktiviert - nicht auf Karte/Liste sichtbar"
@@ -637,10 +617,10 @@ export function AdminPanel() {
                               ))}
                             </div>
                           )}
-                          {s.lock_reply_message && (
+                          {s.deactivation_reply_message && (
                             <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
                               <p className="font-medium text-blue-700">Antwort des Inhabers:</p>
-                              <p className="mt-0.5">{s.lock_reply_message}</p>
+                              <p className="mt-0.5">{s.deactivation_reply_message}</p>
                             </div>
                           )}
                         </div>
@@ -823,8 +803,6 @@ interface EditFormState {
   beschreibung: string;
   kategorien: string[];
   zahlungsarten: string[];
-  content_locked: boolean;
-  content_lock_message: string;
   deactivated: boolean;
   deactivation_message: string;
 }
@@ -920,28 +898,11 @@ function EditForm({
           })}
         </div>
       </div>
-      <div className="flex flex-col gap-1.5 rounded-md border border-amber-200 bg-amber-50 p-2.5">
-        <label className="flex items-center gap-2 text-xs font-medium text-amber-800">
-          <input
-            type="checkbox"
-            checked={form.content_locked}
-            onChange={(e) => setForm((f) => ({ ...f, content_locked: e.target.checked }))}
-          />
-          Adresse & Beschreibung für den Inhaber sperren
-        </label>
-        {form.content_locked && (
-          <textarea
-            className="min-h-[40px] resize-y rounded border border-amber-300 bg-white px-2 py-1 text-xs"
-            placeholder="Nachricht an den Inhaber (z.B. Grund der Sperre)…"
-            value={form.content_lock_message}
-            onChange={(e) => setForm((f) => ({ ...f, content_lock_message: e.target.value }))}
-          />
-        )}
-      </div>
-      {/* Eigene, stärkere Aktion als die Sperre oben: nimmt den Stand
-          komplett von Karte/Liste statt nur die Bearbeitung zu blockieren
-          (siehe PUBLIC_STANDS_FILTER in app/public_fields.py). Teilt sich
-          dieselbe Antwort-Box mit der Sperre (lock_reply_message unten). */}
+      {/* Nimmt den Stand komplett von Karte/Liste (siehe
+          PUBLIC_STANDS_FILTER in app/public_fields.py) - einzige
+          Moderationsaktion dieser Art (die frühere separate "Sperre", die
+          nur die Bearbeitung blockierte, wurde entfernt: fühlte sich neben
+          der Deaktivierung redundant an). */}
       <div className="flex flex-col gap-1.5 rounded-md border border-red-200 bg-red-50 p-2.5">
         <label className="flex items-center gap-2 text-xs font-medium text-red-800">
           <input

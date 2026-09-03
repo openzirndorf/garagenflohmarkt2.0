@@ -8,7 +8,7 @@ from app.audit import log_action
 from app.auth import require_admin_auth, require_admin_session_auth, require_api_auth
 from app.database import get_pool
 from app.email import (
-    send_lock_reply_email,
+    send_deactivation_reply_email,
     send_login_email,
     send_report_email,
     smtp_configured,
@@ -43,7 +43,7 @@ _RATE_WINDOW_SECONDS = 3600  # 1 Stunde
 _RATE_MAX = 3  # max. Einreichungen pro IP pro Zeitfenster
 _LOGIN_REQUEST_RATE_MAX = 5  # max. "Zugang anfordern"-Versuche pro IP pro Zeitfenster
 _REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
-_LOCK_REPLY_RATE_MAX = 5  # max. Sperr-Antworten pro IP pro Zeitfenster
+_DEACTIVATION_REPLY_RATE_MAX = 5  # max. Antworten auf eine Deaktivierung pro IP pro Zeitfenster
 _REPORT_RATE_MAX = 5  # max. Meldungen pro IP pro Zeitfenster
 
 # Feste Werteliste statt Freitext - anders als kategorien (rein deko) hat ein
@@ -62,8 +62,7 @@ _MAX_KATEGORIEN = 5
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
     "id, nickname, adresse, lat, lng, beschreibung, kategorien, zahlungsarten, status, "
-    "created_at, content_locked, content_lock_message, deactivated, deactivation_message, "
-    "address_consent_at"
+    "created_at, deactivated, deactivation_message, address_consent_at"
 )
 
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
@@ -71,8 +70,8 @@ _OWNER_COLUMNS = (
 _ADMIN_COLUMNS = (
     "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, zahlungsarten, "
     "status, created_at, login_token_expires_at, session_token_expires_at, "
-    "content_locked, content_lock_message, lock_reply_message, lock_reply_created_at, "
-    "deactivated, deactivation_message, address_consent_at"
+    "deactivated, deactivation_message, deactivation_reply_message, "
+    "deactivation_reply_created_at, address_consent_at"
 )
 
 
@@ -132,13 +131,8 @@ class StandPatch(BaseModel):
 
 class AdminStandPatch(StandPatch):
     # Nur über den Admin-Endpunkt setzbar (siehe update_stand_admin) - der
-    # Inhaber kann sich damit nicht selbst sperren oder entsperren.
-    content_locked: bool | None = None
-    content_lock_message: str | None = None
-    # Nimmt den Stand komplett von Karte/Liste (siehe PUBLIC_STANDS_FILTER),
-    # anders als content_locked (blockiert nur Adresse/Beschreibung-
-    # Bearbeitung, Stand bleibt sichtbar). Nutzt denselben Antwort-
-    # Mechanismus wie die Sperre (lock_reply_message), siehe reply_to_lock.
+    # Inhaber kann sich damit nicht selbst deaktivieren/reaktivieren. Nimmt
+    # den Stand komplett von Karte/Liste (siehe PUBLIC_STANDS_FILTER).
     deactivated: bool | None = None
     deactivation_message: str | None = None
 
@@ -390,22 +384,6 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
 
     if "adresse" in updates or "beschreibung" in updates:
         _reject_if_blocked_content(updates.get("adresse"), updates.get("beschreibung"))
-        # Separate Prüfung statt Teil der UPDATE-Klausel, weil eine Sperre
-        # überhaupt nur diese beiden Felder betrifft - Standname/Kategorien
-        # bleiben trotz Sperre änderbar.
-        lock_row = await pool.fetchrow(
-            "SELECT content_locked, content_lock_message FROM stands "
-            "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
-            hash_token(session_token),
-        )
-        if not lock_row:
-            raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
-        if lock_row["content_locked"]:
-            raise HTTPException(
-                status_code=403,
-                detail=lock_row["content_lock_message"]
-                or "Adresse und Beschreibung wurden von einem Admin gesperrt.",
-            )
 
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])
@@ -436,21 +414,20 @@ async def update_stand(session_token: str, body: StandPatch, background_tasks: B
     return dict(row)
 
 
-class LockReplyIn(BaseModel):
+class DeactivationReplyIn(BaseModel):
     message: str
 
 
-# POST /stands/by-session/{session_token}/lock-reply - einzige Möglichkeit
-# für einen gesperrten ODER deaktivierten Inhaber, den Admin zu erreichen
-# (z.B. um die Sperre/Deaktivierung zu erklären oder ihre Aufhebung zu
-# bitten) - ein gemeinsamer Mechanismus für beide Admin-Aktionen statt
-# zweier separater. Wird sowohl per Mail an den Admin geschickt als auch
-# auf lock_reply_message gespeichert, damit sie im Admin-Panel sichtbar
+# POST /stands/by-session/{session_token}/deactivation-reply - einzige
+# Möglichkeit für einen deaktivierten Inhaber, den Admin zu erreichen (z.B.
+# um die Deaktivierung zu erklären oder ihre Aufhebung zu bitten). Wird
+# sowohl per Mail an den Admin geschickt als auch auf
+# deactivation_reply_message gespeichert, damit sie im Admin-Panel sichtbar
 # ist - nicht im Audit-Log, das weiterhin nie Inhalte speichert (siehe
-# app/audit.py). Wird beim Entsperren automatisch wieder gelöscht (siehe
+# app/audit.py). Wird beim Reaktivieren automatisch wieder gelöscht (siehe
 # update_stand_admin).
-@router.post("/by-session/{session_token}/lock-reply")
-async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request):
+@router.post("/by-session/{session_token}/deactivation-reply")
+async def reply_to_deactivation(session_token: str, body: DeactivationReplyIn, request: Request):
     message = body.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="Nachricht darf nicht leer sein")
@@ -459,34 +436,31 @@ async def reply_to_lock(session_token: str, body: LockReplyIn, request: Request)
 
     client_ip = request.client.host if request.client else "unknown"
     allowed = await check_rate_limit(
-        pool, f"lock-reply:{client_ip}", _RATE_WINDOW_SECONDS, _LOCK_REPLY_RATE_MAX
+        pool, f"deactivation-reply:{client_ip}", _RATE_WINDOW_SECONDS, _DEACTIVATION_REPLY_RATE_MAX
     )
     if not allowed:
         raise HTTPException(status_code=429, detail="Zu viele Nachrichten. Bitte später erneut versuchen.")
 
     row = await pool.fetchrow(
-        "SELECT id, nickname, content_locked, deactivated FROM stands "
+        "SELECT id, nickname, deactivated FROM stands "
         "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
         hash_token(session_token),
     )
     if not row:
         raise HTTPException(status_code=404, detail="Sitzung abgelaufen oder ungültig")
-    # Derselbe Antwort-Mechanismus für beide Admin-Aktionen (Sperre und
-    # Deaktivierung, siehe AdminStandPatch) statt zwei separater Reply-Wege.
-    if not (row["content_locked"] or row["deactivated"]):
-        raise HTTPException(
-            status_code=400, detail="Dein Stand ist weder gesperrt noch deaktiviert"
-        )
+    if not row["deactivated"]:
+        raise HTTPException(status_code=400, detail="Dein Stand ist nicht deaktiviert")
 
     await pool.execute(
-        "UPDATE stands SET lock_reply_message = $1, lock_reply_created_at = now() WHERE id = $2",
+        "UPDATE stands SET deactivation_reply_message = $1, deactivation_reply_created_at = now() "
+        "WHERE id = $2",
         message, row["id"],
     )
 
     try:
-        await send_lock_reply_email(row["id"], row["nickname"], message)
+        await send_deactivation_reply_email(row["id"], row["nickname"], message)
     except Exception as exc:  # noqa: BLE001 - Mailversand darf die Anfrage nie fehlschlagen lassen
-        logger.error("Sperr-Antwort-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
+        logger.error("Deaktivierungs-Antwort-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
 
     await log_action(pool, row["id"], "REPLIED", "owner")
     return {"message": "Deine Nachricht wurde an das Team geschickt."}
@@ -541,7 +515,7 @@ class ReportStandIn(BaseModel):
 # oder fremde Einträge). Grund ist Pflicht (serverseitig erzwungen, nicht
 # nur im Frontend) - eine grundlose Meldung wäre für den Admin nicht
 # einordenbar. Bewusst kein neuer Kontaktweg mit sichtbarer E-Mail-Adresse
-# zum Abschöpfen durch Bots - stattdessen wie bei lock-reply nur eine Mail
+# zum Abschöpfen durch Bots - stattdessen wie bei deactivation-reply nur eine Mail
 # an den Admin-Kontakt, der Grund wird nicht gespeichert, nur die Aktion
 # selbst (kein Freitext im Audit-Log).
 @router.post("/{stand_id}/report")
@@ -602,8 +576,8 @@ async def admin_audit_log():
 
 
 # PATCH /stands/{id} - Bearer Token (Admin bearbeitet Stand). Nutzt
-# AdminStandPatch statt StandPatch: nur der Admin darf content_locked
-# setzen, und ist selbst von der Blockliste ausgenommen (muss z.B. einen
+# AdminStandPatch statt StandPatch: nur der Admin darf deactivated setzen,
+# und ist selbst von der Blockliste ausgenommen (muss z.B. einen
 # problematischen Text sehen/korrigieren können, statt selbst geblockt zu
 # werden).
 @router.patch("/{stand_id}", dependencies=[Depends(require_admin_session_auth)])
@@ -618,12 +592,11 @@ async def update_stand_admin(
     if "kategorien" in updates:
         _reject_if_too_many_kategorien(updates["kategorien"])
 
-    # Entsperren gilt als "Antwort gelesen/erledigt" - räumt die
-    # gespeicherte Sperr-Antwort mit auf, statt sie unbegrenzt stehen zu
-    # lassen.
-    if updates.get("content_locked") is False:
-        updates["lock_reply_message"] = None
-        updates["lock_reply_created_at"] = None
+    # Reaktivieren gilt als "Antwort gelesen/erledigt" - räumt die
+    # gespeicherte Antwort mit auf, statt sie unbegrenzt stehen zu lassen.
+    if updates.get("deactivated") is False:
+        updates["deactivation_reply_message"] = None
+        updates["deactivation_reply_created_at"] = None
 
     if "adresse" in updates:
         coords = await geocode(updates["adresse"])
