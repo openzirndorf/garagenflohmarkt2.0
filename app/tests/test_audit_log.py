@@ -79,7 +79,7 @@ async def test_audit_log_endpoint_requires_admin_auth(client, api_auth):
     assert resp.status_code in (401, 403)
 
 
-async def test_audit_log_endpoint_never_contains_nickname_or_email(
+async def test_audit_log_endpoint_never_contains_stand_owner_email(
     client, api_auth, admin_headers, captured_emails
 ):
     await _register(client, api_auth, email="darf-nicht-im-log@example.com")
@@ -90,4 +90,34 @@ async def test_audit_log_endpoint_never_contains_nickname_or_email(
     body = resp.text
     assert "darf-nicht-im-log@example.com" not in body
     for entry in resp.json():
-        assert set(entry.keys()) == {"id", "stand_id", "action", "actor", "created_at"}
+        assert set(entry.keys()) == {
+            "id", "stand_id", "action", "actor", "actor_email", "created_at",
+        }
+
+
+async def test_admin_actions_record_the_acting_admins_email(
+    client, api_auth, admin_headers, pool
+):
+    # admin_headers-Fixture (conftest.py) legt den Roster-Eintrag mit dieser
+    # Adresse an.
+    stand = await _register(client, api_auth)
+
+    await client.post(f"/stands/{stand['id']}/approve", headers=admin_headers)
+
+    entries = await pool.fetch(
+        "SELECT action, actor, actor_email FROM admin_audit_log WHERE stand_id = $1", stand["id"]
+    )
+    approved = next(r for r in entries if r["action"] == "APPROVED")
+    assert approved["actor_email"] == "test-admin@example.com"
+
+
+async def test_owner_and_besucher_actions_never_get_an_actor_email(
+    client, api_auth, captured_emails, pool
+):
+    stand = await _register(client, api_auth)
+    await _login(client, captured_emails[0]["login_code"])
+
+    entries = await pool.fetch(
+        "SELECT actor_email FROM admin_audit_log WHERE stand_id = $1", stand["id"]
+    )
+    assert all(r["actor_email"] is None for r in entries)

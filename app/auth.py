@@ -57,21 +57,27 @@ def require_admin_auth(
 
 async def require_admin_session_auth(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer),  # noqa: B008 - FastAPI-Idiom
-) -> None:
+) -> str:
     """Für die alltäglichen Admin-Endpunkte (Standliste, Freigabe,
     Bearbeiten, Löschen, Audit-Log) - Bearer-Token ist hier ein per E-Mail-
     Code eingelöster Session-Token (siehe app/routes/admins.py), keine
     statische Env-Var mehr. Gleicher Transportweg wie bisher
     (Authorization: Bearer ...), damit sich am Frontend nur der Token-WERT
-    ändert, nicht die Art der Übertragung."""
+    ändert, nicht die Art der Übertragung.
+
+    Gibt die E-Mail-Adresse des eingeloggten Admins zurück (statt nur zu
+    validieren) - Routen, die eine Änderung vornehmen, reichen sie ans
+    Audit-Log durch (app/audit.py), damit dort nachvollziehbar ist, welcher
+    Admin konkret gehandelt hat."""
     pool = await get_pool()
-    valid = await pool.fetchval(
-        "SELECT EXISTS(SELECT 1 FROM admins "
-        "WHERE session_token_hash = $1 AND session_token_expires_at > now())",
+    row = await pool.fetchrow(
+        "SELECT email FROM admins "
+        "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
         hash_token(credentials.credentials),
     )
-    if not valid:
+    if not row:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Sitzung abgelaufen oder ungültig",
         )
+    return row["email"]

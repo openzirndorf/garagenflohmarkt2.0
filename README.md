@@ -446,7 +446,7 @@ gehasht gespeichert.
 | `POST` | `/admins/request-login` | Basic Auth | Admin-Login-Code anfordern (E-Mail im Body) |
 | `POST` | `/admins/redeem-code` | – | Admin-Code einlösen (einmalig), gibt `session_token` zurück |
 | `GET` | `/stands/admin` | Bearer (Admin-Session) | Alle Stände inkl. PENDING (nie Tokens/Hashes) |
-| `GET` | `/stands/admin/audit-log` | Bearer (Admin-Session) | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel, kein Personenbezug) |
+| `GET` | `/stands/admin/audit-log` | Bearer (Admin-Session) | Aktionsverlauf (Aktion + Stand-ID + Zeitstempel; bei Admin-Aktionen zusätzlich dessen E-Mail, sonst kein Personenbezug) |
 | `POST` | `/stands/{id}/approve` | Bearer (Admin-Session) | Stand manuell freigeben |
 | `PATCH` | `/stands/{id}` | Bearer (Admin-Session) | Stand bearbeiten (Admin), inkl. `deactivated`/`deactivation_message` |
 | `DELETE` | `/stands/{id}` | Bearer (Admin-Session) | Stand löschen (Admin) |

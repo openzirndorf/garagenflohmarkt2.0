@@ -421,7 +421,7 @@ export function AdminPanel() {
                       {nicknameForStand(entry.stand_id)}
                     </span>
                     <span className="shrink-0 text-xs text-gray-400">
-                      {entry.actor === "admin" ? "Admin" : "Inhaber"}
+                      {entry.actor === "admin" ? (entry.actor_email ?? "Admin") : "Inhaber"}
                     </span>
                     <span className="shrink-0 text-xs text-gray-400">
                       {new Date(entry.created_at).toLocaleString("de-DE", {

@@ -564,12 +564,14 @@ async def admin_list():
     return [dict(r) for r in rows]
 
 
-# GET /stands/admin/audit-log - Bearer Token, letzte Aktionen (kein Personenbezug)
+# GET /stands/admin/audit-log - Bearer Token, letzte Aktionen (actor_email
+# nur bei actor="admin" gesetzt, siehe app/audit.py - kein Personenbezug
+# zum Standinhaber/Besucher)
 @router.get("/admin/audit-log", dependencies=[Depends(require_admin_session_auth)])
 async def admin_audit_log():
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT id, stand_id, action, actor, created_at FROM admin_audit_log "
+        "SELECT id, stand_id, action, actor, actor_email, created_at FROM admin_audit_log "
         "ORDER BY created_at DESC LIMIT 200"
     )
     return [dict(r) for r in rows]
@@ -580,9 +582,12 @@ async def admin_audit_log():
 # und ist selbst von der Blockliste ausgenommen (muss z.B. einen
 # problematischen Text sehen/korrigieren können, statt selbst geblockt zu
 # werden).
-@router.patch("/{stand_id}", dependencies=[Depends(require_admin_session_auth)])
+@router.patch("/{stand_id}")
 async def update_stand_admin(
-    stand_id: int, body: AdminStandPatch, background_tasks: BackgroundTasks
+    stand_id: int,
+    body: AdminStandPatch,
+    background_tasks: BackgroundTasks,
+    admin_email: str = Depends(require_admin_session_auth),
 ):
     updates = body.model_dump(exclude_unset=True)
     if not updates:
@@ -617,29 +622,38 @@ async def update_stand_admin(
     # Sichtbarkeit ändert - klarerer Verlauf im Admin-Panel, analog zur
     # bestehenden Trennung APPROVED/EDITED/DELETED.
     if "deactivated" in updates:
-        await log_action(pool, stand_id, "DEACTIVATED" if updates["deactivated"] else "REACTIVATED", "admin")
+        action = "DEACTIVATED" if updates["deactivated"] else "REACTIVATED"
+        await log_action(pool, stand_id, action, "admin", admin_email)
     else:
-        await log_action(pool, stand_id, "EDITED", "admin")
+        await log_action(pool, stand_id, "EDITED", "admin", admin_email)
     if row["status"] == "APPROVED":
         background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)
 
 
 # DELETE /stands/{id} - Bearer Token (Admin löscht Stand)
-@router.delete("/{stand_id}", status_code=204, dependencies=[Depends(require_admin_session_auth)])
-async def delete_stand_admin(stand_id: int, background_tasks: BackgroundTasks):
+@router.delete("/{stand_id}", status_code=204)
+async def delete_stand_admin(
+    stand_id: int,
+    background_tasks: BackgroundTasks,
+    admin_email: str = Depends(require_admin_session_auth),
+):
     pool = await get_pool()
     result = await pool.execute("DELETE FROM stands WHERE id = $1", stand_id)
     if result == "DELETE 0":
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
-    await log_action(pool, stand_id, "DELETED", "admin")
+    await log_action(pool, stand_id, "DELETED", "admin", admin_email)
     background_tasks.add_task(regenerate_stands_artifact)
 
 
 # POST /stands/{id}/approve - Bearer Token (manuelle Freigabe, z.B. falls die
 # Login-Mail nie ankommt und Admin und Person sich direkt abstimmen)
-@router.post("/{stand_id}/approve", dependencies=[Depends(require_admin_session_auth)])
-async def approve_stand(stand_id: int, background_tasks: BackgroundTasks):
+@router.post("/{stand_id}/approve")
+async def approve_stand(
+    stand_id: int,
+    background_tasks: BackgroundTasks,
+    admin_email: str = Depends(require_admin_session_auth),
+):
     pool = await get_pool()
     row = await pool.fetchrow(
         "UPDATE stands SET status = 'APPROVED' WHERE id = $1 RETURNING id, nickname, status",
@@ -647,6 +661,6 @@ async def approve_stand(stand_id: int, background_tasks: BackgroundTasks):
     )
     if not row:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
-    await log_action(pool, stand_id, "APPROVED", "admin")
+    await log_action(pool, stand_id, "APPROVED", "admin", admin_email)
     background_tasks.add_task(regenerate_stands_artifact)
     return dict(row)

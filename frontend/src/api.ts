@@ -97,6 +97,7 @@ export interface AuditLogEntry {
     | "DEACTIVATED"
     | "REACTIVATED";
   actor: "owner" | "admin" | "besucher";
+  actor_email: string | null;
   created_at: string;
 }
 
