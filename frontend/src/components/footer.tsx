@@ -27,34 +27,12 @@ export function Footer() {
         </a>
       </p>
       <p className="mb-3 text-gray-400">Unterstützt von {UNTERSTUETZER.join(", ")}</p>
-      <div className="flex flex-wrap justify-center gap-4">
-        <a
-          href="mailto:team@openzirndorf.de"
-          className="font-semibold hover:underline"
-          style={linkStyle}
-        >
-          Kontakt
-        </a>
-        <a href="#impressum" className="font-semibold hover:underline" style={linkStyle}>
-          Impressum
-        </a>
-        <a href="#datenschutz" className="font-semibold hover:underline" style={linkStyle}>
-          Datenschutz
-        </a>
-        <a href="#faq" className="font-semibold hover:underline" style={linkStyle}>
-          FAQ
-        </a>
-        <a
-          href={PORTAL_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-semibold hover:underline"
-          style={linkStyle}
-        >
-          OpenZirndorf unterstützen
-        </a>
-      </div>
-      <div className="mt-2 flex flex-wrap justify-center gap-3 text-gray-400">
+      {/* Kontakt, Impressum, Datenschutz und FAQ standen hier zusätzlich als
+          eigene Link-Zeile - alle vier bleiben über das Hamburger-Menü
+          (bzw. innerhalb von Impressum/Datenschutz die Kontakt-Mail)
+          weiterhin erreichbar, der Footer wirkte dadurch aber überladen. */}
+      <p className="mb-2 text-gray-400">entwickelt mit ❤️ in Zirndorf</p>
+      <div className="flex flex-wrap justify-center gap-3 text-gray-400">
         <a
           href={SITE_URL}
           target="_blank"
