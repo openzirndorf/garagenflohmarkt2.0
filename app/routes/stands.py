@@ -5,7 +5,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, EmailStr
 
 from app.audit import log_action
-from app.auth import require_admin_auth, require_admin_session_auth, require_api_auth
+from app.auth import (
+    get_owner_session_token,
+    require_admin_auth,
+    require_admin_session_auth,
+    require_api_auth,
+)
 from app.database import get_pool
 from app.email import (
     send_deactivation_email,
@@ -399,9 +404,11 @@ async def redeem_code(body: RedeemCodeIn, request: Request, background_tasks: Ba
     }
 
 
-# GET /stands/by-session/{session_token} - eigenen Stand abrufen
-@router.get("/by-session/{session_token}")
-async def get_stand_by_session(session_token: str):
+# GET /stands/by-session - eigenen Stand abrufen. Session-Token im
+# Authorization-Header statt im URL-Pfad (siehe get_owner_session_token) -
+# landet dadurch nicht in Logs/Browser-History/Referrer-Headern.
+@router.get("/by-session")
+async def get_stand_by_session(session_token: str = Depends(get_owner_session_token)):
     pool = await get_pool()
     row = await pool.fetchrow(
         f"SELECT {_OWNER_COLUMNS} FROM stands "
@@ -413,9 +420,9 @@ async def get_stand_by_session(session_token: str):
     return dict(row)
 
 
-# GET /stands/by-session/{session_token}/export - Art. 15 DSGVO Auskunft
-@router.get("/by-session/{session_token}/export")
-async def export_stand_by_session(session_token: str):
+# GET /stands/by-session/export - Art. 15 DSGVO Auskunft
+@router.get("/by-session/export")
+async def export_stand_by_session(session_token: str = Depends(get_owner_session_token)):
     pool = await get_pool()
     row = await pool.fetchrow(
         f"SELECT {_OWNER_COLUMNS}, email FROM stands "
@@ -427,9 +434,13 @@ async def export_stand_by_session(session_token: str):
     return dict(row)
 
 
-# PATCH /stands/by-session/{session_token} - eigenen Stand bearbeiten
-@router.patch("/by-session/{session_token}")
-async def update_stand(session_token: str, body: StandPatch, background_tasks: BackgroundTasks):
+# PATCH /stands/by-session - eigenen Stand bearbeiten
+@router.patch("/by-session")
+async def update_stand(
+    body: StandPatch,
+    background_tasks: BackgroundTasks,
+    session_token: str = Depends(get_owner_session_token),
+):
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise HTTPException(status_code=400, detail="Keine Änderungen angegeben")
@@ -485,7 +496,7 @@ class DeactivationReplyIn(BaseModel):
     message: str
 
 
-# POST /stands/by-session/{session_token}/deactivation-reply - einzige
+# POST /stands/by-session/deactivation-reply - einzige
 # Möglichkeit für einen deaktivierten Inhaber, den Admin zu erreichen (z.B.
 # um die Deaktivierung zu erklären oder ihre Aufhebung zu bitten). Wird
 # sowohl per Mail an den Admin geschickt als auch auf
@@ -493,8 +504,12 @@ class DeactivationReplyIn(BaseModel):
 # ist - nicht im Audit-Log, das weiterhin nie Inhalte speichert (siehe
 # app/audit.py). Wird beim Reaktivieren automatisch wieder gelöscht (siehe
 # update_stand_admin).
-@router.post("/by-session/{session_token}/deactivation-reply")
-async def reply_to_deactivation(session_token: str, body: DeactivationReplyIn, request: Request):
+@router.post("/by-session/deactivation-reply")
+async def reply_to_deactivation(
+    body: DeactivationReplyIn,
+    request: Request,
+    session_token: str = Depends(get_owner_session_token),
+):
     message = body.message.strip()
     if not message:
         raise HTTPException(status_code=400, detail="Nachricht darf nicht leer sein")
@@ -533,11 +548,11 @@ async def reply_to_deactivation(session_token: str, body: DeactivationReplyIn, r
     return {"message": "Deine Nachricht wurde an das Team geschickt."}
 
 
-# POST /stands/by-session/{session_token}/nickname-suggestions - würfelt
+# POST /stands/by-session/nickname-suggestions - würfelt
 # 3 alternative Standnamen zur Auswahl, ohne sie zu reservieren (reine
 # Vorschau; erst PATCH mit dem gewählten Namen schreibt in die DB).
-@router.post("/by-session/{session_token}/nickname-suggestions")
-async def suggest_nicknames(session_token: str):
+@router.post("/by-session/nickname-suggestions")
+async def suggest_nicknames(session_token: str = Depends(get_owner_session_token)):
     pool = await get_pool()
     session_valid = await pool.fetchval(
         "SELECT EXISTS(SELECT 1 FROM stands "
@@ -559,9 +574,11 @@ async def suggest_nicknames(session_token: str):
     return {"suggestions": sorted(batch)}
 
 
-# DELETE /stands/by-session/{session_token} - eigenen Stand vollständig löschen
-@router.delete("/by-session/{session_token}", status_code=204)
-async def cancel_stand(session_token: str, background_tasks: BackgroundTasks):
+# DELETE /stands/by-session - eigenen Stand vollständig löschen
+@router.delete("/by-session", status_code=204)
+async def cancel_stand(
+    background_tasks: BackgroundTasks, session_token: str = Depends(get_owner_session_token)
+):
     pool = await get_pool()
     row = await pool.fetchrow(
         "DELETE FROM stands WHERE session_token_hash = $1 AND session_token_expires_at > now() "

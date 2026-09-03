@@ -30,7 +30,7 @@ async def test_owner_edit_rejects_blocked_beschreibung(client, api_auth, capture
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"beschreibung": "88 grüße"}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"beschreibung": "88 grüße"}
     )
     assert resp.status_code == 400
     assert reg.status_code == 201  # nur zur Klarheit genutzt
@@ -40,7 +40,7 @@ async def test_owner_edit_of_other_fields_unaffected_by_blocklist(client, api_au
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    resp = await client.patch(f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
+    resp = await client.patch("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
     assert resp.status_code == 200
 
 
@@ -94,7 +94,7 @@ async def test_owner_edit_still_works_while_deactivated(client, api_auth, admin_
     # Anders als die frühere Sperre blockiert die Deaktivierung nicht die
     # Bearbeitung - nur die Sichtbarkeit ändert sich.
     resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"beschreibung": "Neue Beschreibung"}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"beschreibung": "Neue Beschreibung"}
     )
     assert resp.status_code == 200
 
@@ -171,7 +171,7 @@ async def test_owner_view_includes_deactivation_state(client, api_auth, admin_he
         headers=admin_headers,
     )
 
-    owner_view = (await client.get(f"/stands/by-session/{session_token}")).json()
+    owner_view = (await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})).json()
     assert owner_view["deactivated"] is True
     assert owner_view["deactivation_message"] == "Bitte melde dich beim Team."
 
@@ -181,7 +181,7 @@ async def test_deactivation_reply_requires_the_stand_to_be_deactivated(client, a
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.post(
-        f"/stands/by-session/{session_token}/deactivation-reply",
+        "/stands/by-session/deactivation-reply", headers={"Authorization": f"Bearer {session_token}"},
         json={"message": "Warum deaktiviert?"},
     )
     assert resp.status_code == 400
@@ -198,7 +198,7 @@ async def test_deactivation_reply_succeeds_and_is_audit_logged(
     )
 
     resp = await client.post(
-        f"/stands/by-session/{session_token}/deactivation-reply",
+        "/stands/by-session/deactivation-reply", headers={"Authorization": f"Bearer {session_token}"},
         json={"message": "Bitte um Überprüfung, das war ein Missverständnis."},
     )
     assert resp.status_code == 200
@@ -217,7 +217,7 @@ async def test_deactivation_reply_rejects_empty_message(client, api_auth, admin_
     )
 
     resp = await client.post(
-        f"/stands/by-session/{session_token}/deactivation-reply", json={"message": "   "}
+        "/stands/by-session/deactivation-reply", headers={"Authorization": f"Bearer {session_token}"}, json={"message": "   "}
     )
     assert resp.status_code == 400
 
@@ -233,7 +233,7 @@ async def test_deactivation_reply_message_not_stored_in_audit_log(
 
     secret_message = "darf-nicht-im-audit-log-landen"
     await client.post(
-        f"/stands/by-session/{session_token}/deactivation-reply", json={"message": secret_message}
+        "/stands/by-session/deactivation-reply", headers={"Authorization": f"Bearer {session_token}"}, json={"message": secret_message}
     )
 
     row = await pool.fetchrow(
@@ -255,7 +255,7 @@ async def test_deactivation_reply_visible_to_admin_and_cleared_on_reactivation(
 
     reply_message = "Bitte um Überprüfung, das war ein Missverständnis."
     await client.post(
-        f"/stands/by-session/{session_token}/deactivation-reply", json={"message": reply_message}
+        "/stands/by-session/deactivation-reply", headers={"Authorization": f"Bearer {session_token}"}, json={"message": reply_message}
     )
 
     admin_view = (await client.get("/stands/admin", headers=admin_headers)).json()

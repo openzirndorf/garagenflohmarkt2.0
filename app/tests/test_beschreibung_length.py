@@ -33,7 +33,7 @@ async def test_owner_update_rejects_too_long_beschreibung(client, api_auth, capt
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"beschreibung": "x" * (_MAX + 1)}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"beschreibung": "x" * (_MAX + 1)}
     )
     assert resp.status_code == 400
 

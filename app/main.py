@@ -33,6 +33,51 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Reduziert die XSS-Angriffsfläche fürs SPA (relevant u.a. für die Admin-
+# Session, die in localStorage liegt, siehe frontend/src/components/admin-
+# panel.tsx) - ohne dangerouslySetInnerHTML im Code ist das Risiko gering,
+# aber nicht null (z.B. über eine verwundbare Abhängigkeit). Domains sind
+# bewusst auf das beschränkt, was die App tatsächlich lädt:
+# - tiles.openfreemap.org: Kartenkacheln/Glyphen/Sprites (siehe
+#   flohmarkt-map.tsx)
+# - garagenflohmarkt-stands.s3.fr-par.scw.cloud: Stands-Artefakt (siehe
+#   infra/outputs.tf, VITE_STATIC_BASE_URL)
+# - openzirndorf.de: Logo/Maskottchen-Bilder, Favicon
+# 'unsafe-inline' bei style-src ist nötig, weil sowohl Tailwind als auch
+# etliche Komponenten style={{...}} (echte inline style-Attribute) nutzen
+# - eine Umstellung auf CSS-Klassen dafür wäre ein eigener, großer Umbau.
+# worker-src blob: ist für maplibre-gl nötig (Standard-Build erzeugt seinen
+# Worker per Blob-URL statt einer eigenen Datei, siehe maplibre-gl-csp.js
+# als CSP-fähige Alternative, die hier nicht verwendet wird).
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data: https://openzirndorf.de https://tiles.openfreemap.org; "
+    "font-src 'self'; "
+    "connect-src 'self' https://tiles.openfreemap.org "
+    "https://garagenflohmarkt-stands.s3.fr-par.scw.cloud; "
+    "worker-src 'self' blob:; "
+    "child-src 'self' blob:; "
+    "manifest-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "frame-ancestors 'none'"
+)
+
+
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = _CSP
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Redundant zu frame-ancestors 'none' oben, aber ältere Browser ohne
+    # CSP3-Unterstützung kennen nur diesen Header gegen Clickjacking.
+    response.headers["X-Frame-Options"] = "DENY"
+    return response
+
+
 @app.get("/health")
 def health():
     return {"ok": True}

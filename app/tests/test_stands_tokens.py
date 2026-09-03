@@ -93,8 +93,8 @@ async def test_session_token_survives_multiple_requests(client, api_auth, captur
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    first = await client.get(f"/stands/by-session/{session_token}")
-    second = await client.get(f"/stands/by-session/{session_token}")
+    first = await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
+    second = await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert first.status_code == 200
     assert second.status_code == 200
 
@@ -105,7 +105,7 @@ async def test_expired_session_token_is_rejected(client, api_auth, captured_emai
 
     await pool.execute("UPDATE stands SET session_token_expires_at = now() - interval '1 hour'")
 
-    resp = await client.get(f"/stands/by-session/{session_token}")
+    resp = await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert resp.status_code == 404
 
 
@@ -114,15 +114,15 @@ async def test_owner_can_update_and_delete_own_stand(client, api_auth, captured_
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
-        f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]}
     )
     assert patched.status_code == 200
     assert patched.json()["kategorien"] == ["Bücher"]
 
-    deleted = await client.delete(f"/stands/by-session/{session_token}")
+    deleted = await client.delete("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert deleted.status_code == 204
 
-    gone = await client.get(f"/stands/by-session/{session_token}")
+    gone = await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert gone.status_code == 404
 
 
@@ -130,10 +130,10 @@ async def test_gdpr_export_includes_email_but_owner_view_does_not(client, api_au
     await _register(client, api_auth, email="auskunft@example.com")
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    owner_view = await client.get(f"/stands/by-session/{session_token}")
+    owner_view = await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert "email" not in owner_view.json()
 
-    export = await client.get(f"/stands/by-session/{session_token}/export")
+    export = await client.get("/stands/by-session/export", headers={"Authorization": f"Bearer {session_token}"})
     assert export.status_code == 200
     assert export.json()["email"] == "auskunft@example.com"
 
@@ -170,7 +170,7 @@ async def test_request_login_sends_code_for_existing_email(client, api_auth, cap
     assert captured_emails[0]["first_time"] is False
 
     session_token = await _login(client, captured_emails[0]["login_code"])
-    resp2 = await client.get(f"/stands/by-session/{session_token}")
+    resp2 = await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert resp2.status_code == 200
 
 
@@ -197,7 +197,7 @@ async def test_nickname_suggestions_returns_three_distinct_valid_names(client, a
     await _register(client, api_auth)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
-    resp = await client.post(f"/stands/by-session/{session_token}/nickname-suggestions")
+    resp = await client.post("/stands/by-session/nickname-suggestions", headers={"Authorization": f"Bearer {session_token}"})
     assert resp.status_code == 200
     suggestions = resp.json()["suggestions"]
     assert len(suggestions) == 3
@@ -210,11 +210,11 @@ async def test_owner_can_change_nickname_to_a_valid_suggestion(client, api_auth,
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     suggestions = (
-        await client.post(f"/stands/by-session/{session_token}/nickname-suggestions")
+        await client.post("/stands/by-session/nickname-suggestions", headers={"Authorization": f"Bearer {session_token}"})
     ).json()["suggestions"]
     chosen = suggestions[0]
 
-    patched = await client.patch(f"/stands/by-session/{session_token}", json={"nickname": chosen})
+    patched = await client.patch("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"nickname": chosen})
     assert patched.status_code == 200
     assert patched.json()["nickname"] == chosen
 
@@ -224,7 +224,7 @@ async def test_nickname_change_rejects_freetext(client, api_auth, captured_email
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
-        f"/stands/by-session/{session_token}", json={"nickname": "Max Mustermann"}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"nickname": "Max Mustermann"}
     )
     assert patched.status_code == 400
 
@@ -232,14 +232,14 @@ async def test_nickname_change_rejects_freetext(client, api_auth, captured_email
 async def test_nickname_change_rejects_collision_with_other_stand(client, api_auth, captured_emails):
     await _register(client, api_auth, email="erster@example.com")
     first_session = await _login(client, captured_emails[0]["login_code"])
-    first_nickname = (await client.get(f"/stands/by-session/{first_session}")).json()["nickname"]
+    first_nickname = (await client.get("/stands/by-session", headers={"Authorization": f"Bearer {first_session}"})).json()["nickname"]
     captured_emails.clear()
 
     await _register(client, api_auth, email="zweiter@example.com")
     second_session = await _login(client, captured_emails[0]["login_code"])
 
     patched = await client.patch(
-        f"/stands/by-session/{second_session}", json={"nickname": first_nickname}
+        "/stands/by-session", headers={"Authorization": f"Bearer {second_session}"}, json={"nickname": first_nickname}
     )
     assert patched.status_code == 409
 

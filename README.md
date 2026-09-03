@@ -436,12 +436,12 @@ gehasht gespeichert.
 | `POST` | `/stands/` | Basic Auth | Stand einreichen, löst Code-Mail aus |
 | `POST` | `/stands/request-login` | Basic Auth | Neuen Login-Code anfordern (E-Mail im Body) |
 | `POST` | `/stands/redeem-code` | – | Code einlösen (einmalig), gibt `session_token` zurück |
-| `GET` | `/stands/by-session/{session_token}` | – | Eigenen Stand abrufen |
-| `GET` | `/stands/by-session/{session_token}/export` | – | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
-| `PATCH` | `/stands/by-session/{session_token}` | – | Eigenen Stand bearbeiten (inkl. Standname wechseln) |
-| `POST` | `/stands/by-session/{session_token}/nickname-suggestions` | – | 3 alternative Standnamen würfeln |
-| `POST` | `/stands/by-session/{session_token}/deactivation-reply` | – | Antwort auf eine Deaktivierung an den Admin schicken (nur wenn `deactivated`) |
-| `DELETE` | `/stands/by-session/{session_token}` | – | Eigenen Stand vollständig löschen |
+| `GET` | `/stands/by-session` | Bearer (Standbetreiber-Session) | Eigenen Stand abrufen |
+| `GET` | `/stands/by-session/export` | Bearer (Standbetreiber-Session) | Art. 15 DSGVO Selbstauskunft (inkl. E-Mail) |
+| `PATCH` | `/stands/by-session` | Bearer (Standbetreiber-Session) | Eigenen Stand bearbeiten (inkl. Standname wechseln) |
+| `POST` | `/stands/by-session/nickname-suggestions` | Bearer (Standbetreiber-Session) | 3 alternative Standnamen würfeln |
+| `POST` | `/stands/by-session/deactivation-reply` | Bearer (Standbetreiber-Session) | Antwort auf eine Deaktivierung an den Admin schicken (nur wenn `deactivated`) |
+| `DELETE` | `/stands/by-session` | Bearer (Standbetreiber-Session) | Eigenen Stand vollständig löschen |
 | `POST` | `/stands/{id}/report` | – | Stand melden (Besucher, Grund per Mail an den Admin, nie gespeichert) |
 | `POST` | `/admins/request-login` | Basic Auth | Admin-Login-Code anfordern (E-Mail im Body) |
 | `POST` | `/admins/redeem-code` | – | Admin-Code einlösen (einmalig), gibt `session_token` zurück |

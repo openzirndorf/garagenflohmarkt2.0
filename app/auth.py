@@ -81,3 +81,17 @@ async def require_admin_session_auth(
             detail="Sitzung abgelaufen oder ungültig",
         )
     return row["email"]
+
+
+def get_owner_session_token(
+    credentials: HTTPAuthorizationCredentials = Depends(_bearer),  # noqa: B008 - FastAPI-Idiom
+) -> str:
+    """Liest den Standbetreiber-Session-Token aus dem Authorization-Header
+    statt, wie vorher, aus dem URL-Pfad (.../by-session/{session_token}) -
+    Tokens in Pfaden landen leichter in Logs/Browser-History/Referrer-
+    Headern als in einem Header. Reine Extraktion ohne Validierung: die
+    bestehende Prüfung bleibt unverändert in jedem einzelnen Handler
+    (kombiniert mit der eigentlichen Operation für Atomarität, z.B.
+    UPDATE ... WHERE session_token_hash = $1 AND session_token_expires_at
+    > now()), nur die Quelle des Tokens ändert sich."""
+    return credentials.credentials

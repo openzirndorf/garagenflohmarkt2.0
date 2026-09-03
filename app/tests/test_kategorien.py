@@ -37,7 +37,7 @@ async def test_owner_update_rejects_too_many_kategorien(client, api_auth, captur
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.patch(
-        f"/stands/by-session/{session_token}",
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"},
         json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["a", "b", "c", "d", "e", "f"]},
     )
     assert resp.status_code == 400

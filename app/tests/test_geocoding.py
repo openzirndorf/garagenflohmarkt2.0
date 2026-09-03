@@ -91,7 +91,7 @@ async def test_owner_edit_rejects_address_outside_zirndorf(
         ),
     )
     resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"adresse": "Hauptmarkt 1, Nürnberg"}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"adresse": "Hauptmarkt 1, Nürnberg"}
     )
     assert resp.status_code == 400
     assert "Zirndorf" in resp.json()["detail"]

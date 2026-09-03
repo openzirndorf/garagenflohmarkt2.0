@@ -177,7 +177,9 @@ export async function redeemCode(code: string): Promise<RedeemCodeResult> {
 }
 
 export async function fetchMyStand(sessionToken: string): Promise<OwnStand> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}`);
+  const res = await fetch(`${API}/stands/by-session`, {
+    headers: { Authorization: `Bearer ${sessionToken}` },
+  });
   if (!res.ok) throw new Error("Sitzung abgelaufen oder ungültig");
   return res.json();
 }
@@ -189,7 +191,9 @@ export interface StandExport extends OwnStand {
 }
 
 export async function exportMyStandData(sessionToken: string): Promise<StandExport> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}/export`);
+  const res = await fetch(`${API}/stands/by-session/export`, {
+    headers: { Authorization: `Bearer ${sessionToken}` },
+  });
   if (!res.ok) throw new Error("Daten konnten nicht geladen werden");
   return res.json();
 }
@@ -210,8 +214,9 @@ interface AdminStandPatchData extends StandPatchData {
 // Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst
 // updateStand() mit dem gewählten Namen schreibt in die DB.
 export async function suggestNicknames(sessionToken: string): Promise<string[]> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}/nickname-suggestions`, {
+  const res = await fetch(`${API}/stands/by-session/nickname-suggestions`, {
     method: "POST",
+    headers: { Authorization: `Bearer ${sessionToken}` },
   });
   if (!res.ok) throw new Error("Vorschläge konnten nicht geladen werden");
   const data = await res.json();
@@ -224,9 +229,12 @@ export async function sendDeactivationReply(
   sessionToken: string,
   message: string,
 ): Promise<{ message: string }> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}/deactivation-reply`, {
+  const res = await fetch(`${API}/stands/by-session/deactivation-reply`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${sessionToken}`,
+    },
     body: JSON.stringify({ message }),
   });
   if (!res.ok) {
@@ -262,9 +270,12 @@ export async function deleteStandAdmin(id: number, token: string): Promise<void>
 }
 
 export async function updateStand(sessionToken: string, data: StandPatchData): Promise<OwnStand> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}`, {
+  const res = await fetch(`${API}/stands/by-session`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${sessionToken}`,
+    },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -275,8 +286,9 @@ export async function updateStand(sessionToken: string, data: StandPatchData): P
 }
 
 export async function cancelStand(sessionToken: string): Promise<void> {
-  const res = await fetch(`${API}/stands/by-session/${sessionToken}`, {
+  const res = await fetch(`${API}/stands/by-session`, {
     method: "DELETE",
+    headers: { Authorization: `Bearer ${sessionToken}` },
   });
   if (!res.ok) throw new Error("Stand konnte nicht gelöscht werden");
 }

@@ -118,5 +118,5 @@ async def test_owner_delete_triggers_artifact_regeneration(client, api_auth, cap
     session_token = login_resp.json()["session_token"]
     calls.clear()  # der Login selbst hat schon einmal ausgelöst (PENDING→APPROVED)
 
-    await client.delete(f"/stands/by-session/{session_token}")
+    await client.delete("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
     assert calls == [True]

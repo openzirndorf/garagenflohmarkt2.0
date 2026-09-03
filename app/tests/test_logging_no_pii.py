@@ -28,10 +28,10 @@ async def test_no_pii_in_application_logs_across_full_cycle(
     login_resp = await client.post("/stands/redeem-code", json={"code": login_code})
     session_token = login_resp.json()["session_token"]
 
-    await client.get(f"/stands/by-session/{session_token}")
-    await client.patch(f"/stands/by-session/{session_token}", json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
+    await client.get("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
+    await client.patch("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": ["Bücher"]})
     await client.get("/stands/admin", headers=admin_headers)
-    await client.delete(f"/stands/by-session/{session_token}")
+    await client.delete("/stands/by-session", headers={"Authorization": f"Bearer {session_token}"})
 
     # Nur die Logger unserer eigenen App betrachten - httpx (der Test-Client
     # selbst) loggt die aufgerufene URL client-seitig zu Debug-Zwecken, das

@@ -33,7 +33,7 @@ async def test_owner_can_update_zahlungsarten(client, api_auth, captured_emails)
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"zahlungsarten": ["PayPal"]}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"zahlungsarten": ["PayPal"]}
     )
     assert resp.status_code == 200
     assert resp.json()["zahlungsarten"] == ["PayPal"]
@@ -44,7 +44,7 @@ async def test_owner_update_rejects_unknown_zahlungsart(client, api_auth, captur
     session_token = await _login(client, captured_emails[0]["login_code"])
 
     resp = await client.patch(
-        f"/stands/by-session/{session_token}", json={"zahlungsarten": ["Bargeld"]}
+        "/stands/by-session", headers={"Authorization": f"Bearer {session_token}"}, json={"zahlungsarten": ["Bargeld"]}
     )
     assert resp.status_code == 400
 
