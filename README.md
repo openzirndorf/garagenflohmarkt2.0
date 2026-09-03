@@ -453,6 +453,8 @@ gehasht gespeichert.
 | `POST` | `/stands/test-email` | Bearer (Master-Token) | SMTP-Konfiguration prüfen (Query-Param `to`) |
 | `GET`/`POST` | `/admins` | Bearer (Master-Token) | Admin-Roster ansehen/erweitern |
 | `DELETE` | `/admins/{id}` | Bearer (Master-Token) | Admin aus dem Roster entfernen |
+| `GET` | `/settings` | – | Globale Schalter lesen (`require_manual_approval`, `beschreibung_enabled`) - öffentlich, das Anmeldeformular braucht `beschreibung_enabled` schon vor jedem Login |
+| `PATCH` | `/settings` | Bearer (Admin-Session) | Globale Schalter ändern |
 
 ```bash
 # TOKEN ist hier jeweils ein Admin-Session-Token (siehe oben), nicht der Master-Token

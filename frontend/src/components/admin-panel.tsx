@@ -2,16 +2,19 @@ import { useCallback, useEffect, useState } from "react";
 import {
   type AdminRosterEntry,
   type AdminStand,
+  type AppSettings,
   type AuditLogEntry,
   addAdmin,
   approveStand,
   deleteStandAdmin,
   fetchAdminStands,
   fetchAuditLog,
+  fetchSettings,
   listAdmins,
   redeemAdminCode,
   removeAdmin,
   requestAdminLogin,
+  updateSettings,
   updateStandAdmin,
 } from "../api";
 import { KATEGORIEN, MAX_KATEGORIEN, ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "./stand-form";
@@ -50,6 +53,8 @@ export function AdminPanel() {
   const [token, setToken] = useState(() => sessionStorage.getItem(ADMIN_SESSION_TOKEN_KEY));
   const [stands, setStands] = useState<AdminStand[] | null>(null);
   const [auditLog, setAuditLog] = useState<AuditLogEntry[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
@@ -77,12 +82,14 @@ export function AdminPanel() {
     setLoading(true);
     setError(null);
     try {
-      const [standsResult, auditResult] = await Promise.all([
+      const [standsResult, auditResult, settingsResult] = await Promise.all([
         fetchAdminStands(t),
         fetchAuditLog(t).catch(() => []),
+        fetchSettings().catch(() => null),
       ]);
       setStands(standsResult);
       setAuditLog(auditResult);
+      setSettings(settingsResult);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Fehler");
       setStands(null);
@@ -140,6 +147,19 @@ export function AdminPanel() {
   useEffect(() => {
     if (token) load(token);
   }, []);
+
+  const handleToggleSetting = async (key: keyof AppSettings) => {
+    if (!token || !settings || settingsSaving) return;
+    setSettingsSaving(true);
+    setError(null);
+    try {
+      setSettings(await updateSettings(token, { [key]: !settings[key] }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Einstellung konnte nicht gespeichert werden");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
 
   const handleApprove = async (id: number) => {
     if (!token) return;
@@ -220,6 +240,11 @@ export function AdminPanel() {
   const pending = stands?.filter((s) => s.status === "PENDING") ?? [];
   const approved = stands?.filter((s) => s.status === "APPROVED") ?? [];
   const all = stands ?? [];
+
+  // Rechtfertigungen von Standinhabern auf eine Deaktivierung - bisher nur
+  // versteckt in der jeweiligen Listenzeile sichtbar, hier zusätzlich
+  // gesammelt an prominenter Stelle, damit keine übersehen wird.
+  const openReplies = all.filter((s) => s.deactivation_reply_message);
 
   // Statistiken
   const catStats = KATEGORIEN.map((k) => ({
@@ -326,6 +351,94 @@ export function AdminPanel() {
           </div>
 
           {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+
+          {/* Offene Rückmeldungen - Antworten von Standinhabern auf eine
+              Deaktivierung, gesammelt an einer Stelle statt nur versteckt
+              in der jeweiligen Listenzeile weiter unten. */}
+          {openReplies.length > 0 && (
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-blue-200 bg-blue-50 p-5"
+            >
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">
+                Offene Rückmeldungen ({openReplies.length})
+              </h2>
+              <ul className="flex flex-col gap-3">
+                {openReplies.map((s) => (
+                  <li key={s.id} className="rounded-md border border-blue-200 bg-white p-3 text-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <span className="font-medium">{s.nickname}</span>
+                      <button
+                        type="button"
+                        onClick={() => startEdit(s)}
+                        className="shrink-0 text-xs text-blue-600 hover:underline"
+                      >
+                        Bearbeiten
+                      </button>
+                    </div>
+                    <p className="text-gray-700">{s.deactivation_reply_message}</p>
+                    {s.deactivation_reply_created_at && (
+                      <p className="mt-1 text-xs text-gray-400">
+                        {new Date(s.deactivation_reply_created_at).toLocaleString("de-DE", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Einstellungen */}
+          {settings && (
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-gray-100 bg-white p-5"
+            >
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+                Einstellungen
+              </h2>
+              <div className="flex flex-col gap-3 text-sm">
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={settings.require_manual_approval}
+                    disabled={settingsSaving}
+                    onChange={() => handleToggleSetting("require_manual_approval")}
+                  />
+                  <span>
+                    Freischaltung nur mit extra Bestätigung
+                    <span className="block text-xs text-gray-500">
+                      Ein per Mail bestätigter Stand wird nicht mehr automatisch freigeschaltet,
+                      sondern bleibt „ausstehend", bis ein Admin ihn manuell freigibt. Gilt nur für
+                      künftige Anmeldungen, nicht rückwirkend.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={settings.beschreibung_enabled}
+                    disabled={settingsSaving}
+                    onChange={() => handleToggleSetting("beschreibung_enabled")}
+                  />
+                  <span>
+                    Freitextfeld „Was gibt es zu kaufen?" im Anmeldeformular
+                    <span className="block text-xs text-gray-500">
+                      Ausgeschaltet blendet das Anmeldeformular das Feld aus - für neue Anmeldungen
+                      wird dann keine Beschreibung mehr gespeichert.
+                    </span>
+                  </span>
+                </label>
+              </div>
+            </section>
+          )}
 
           {/* Statistiken */}
           {all.length > 0 && (

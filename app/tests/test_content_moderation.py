@@ -99,6 +99,68 @@ async def test_owner_edit_still_works_while_deactivated(client, api_auth, admin_
     assert resp.status_code == 200
 
 
+async def test_deactivating_a_stand_emails_the_owner_with_the_reason(
+    client, api_auth, admin_headers, captured_deactivation_emails
+):
+    stand = (await _register(client, api_auth, email="wird-deaktiviert@example.com")).json()
+
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"deactivated": True, "deactivation_message": "Adresse existiert nicht."},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+
+    assert len(captured_deactivation_emails) == 1
+    mail = captured_deactivation_emails[0]
+    assert mail["email"] == "wird-deaktiviert@example.com"
+    assert mail["stand_id"] == stand["id"]
+    assert mail["message"] == "Adresse existiert nicht."
+
+
+async def test_editing_an_already_deactivated_stand_does_not_resend_the_email(
+    client, api_auth, admin_headers, captured_deactivation_emails
+):
+    stand = (await _register(client, api_auth)).json()
+    await client.patch(f"/stands/{stand['id']}", json={"deactivated": True}, headers=admin_headers)
+    assert len(captured_deactivation_emails) == 1
+
+    # Admin-Panel schickt "deactivated" bei jedem Speichern mit (siehe
+    # admin-panel.tsx EditFormState) - unverändert True darf keine zweite
+    # Mail und keinen zweiten DEACTIVATED-Eintrag auslösen.
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"beschreibung": "Korrigierte Beschreibung", "deactivated": True},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert len(captured_deactivation_emails) == 1
+
+
+async def test_unrelated_edit_with_unchanged_deactivated_false_is_logged_as_edited(
+    client, api_auth, admin_headers, pool, captured_deactivation_emails
+):
+    stand = (await _register(client, api_auth)).json()
+
+    # Simuliert exakt, was das Admin-Panel bei jedem "Speichern" schickt:
+    # deactivated=False ist immer Teil des Formulars, auch wenn der Stand
+    # nie deaktiviert war.
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"beschreibung": "Korrigierte Beschreibung", "deactivated": False},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+
+    entries = await pool.fetch(
+        "SELECT action FROM admin_audit_log WHERE stand_id = $1", stand["id"]
+    )
+    actions = [r["action"] for r in entries]
+    assert "EDITED" in actions
+    assert "REACTIVATED" not in actions
+    assert not captured_deactivation_emails
+
+
 async def test_owner_view_includes_deactivation_state(client, api_auth, admin_headers, captured_emails):
     stand = (await _register(client, api_auth)).json()
     session_token = await _login(client, captured_emails[0]["login_code"])

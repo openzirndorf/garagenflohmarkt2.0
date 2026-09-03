@@ -8,6 +8,7 @@ from app.audit import log_action
 from app.auth import require_admin_auth, require_admin_session_auth, require_api_auth
 from app.database import get_pool
 from app.email import (
+    send_deactivation_email,
     send_deactivation_reply_email,
     send_login_email,
     send_report_email,
@@ -203,6 +204,13 @@ async def create_stand(body: StandIn, request: Request):
     coords = await geocode(body.adresse)
     lat, lng = (coords[0], coords[1]) if coords else (None, None)
 
+    # beschreibung_enabled (siehe app/routes/settings.py) blendet das
+    # Freitextfeld im Anmeldeformular aus - hier serverseitig noch mal
+    # durchgesetzt, statt dem Frontend allein zu vertrauen, falls jemand
+    # trotzdem direkt gegen die API postet.
+    settings_row = await pool.fetchrow("SELECT beschreibung_enabled FROM app_settings")
+    beschreibung = body.beschreibung if (not settings_row or settings_row["beschreibung_enabled"]) else None
+
     nickname = await generate_unique_nickname(lambda c: _nickname_exists(pool, c))
     login_code, login_token_hash, login_token_expires_at = new_login_code(REGISTRATION_LOGIN_TTL)
 
@@ -212,7 +220,7 @@ async def create_stand(body: StandIn, request: Request):
             "zahlungsarten, login_token_hash, login_token_expires_at, address_consent_at) "
             "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()) "
             f"RETURNING {_OWNER_COLUMNS}",
-            nickname, body.adresse, lat, lng, body.beschreibung, body.email,
+            nickname, body.adresse, lat, lng, beschreibung, body.email,
             body.kategorien, body.zahlungsarten, login_token_hash, login_token_expires_at,
         )
     except asyncpg.UniqueViolationError as exc:
@@ -294,11 +302,24 @@ async def redeem_code(body: RedeemCodeIn, request: Request, background_tasks: Ba
     token_hash = hash_token(normalize_code(body.code))
     session_token, session_token_hash, session_token_expires_at = new_session_token()
 
+    # require_manual_approval (siehe app/routes/settings.py): wenn an,
+    # bleibt ein frisch bestätigter Stand PENDING statt automatisch
+    # freigeschaltet zu werden - der Login selbst (Token einlösen,
+    # Session ausstellen) funktioniert unverändert, nur der Status wechselt
+    # dann nicht mehr von selbst.
+    settings_row = await pool.fetchrow("SELECT require_manual_approval FROM app_settings")
+    require_manual_approval = bool(settings_row and settings_row["require_manual_approval"])
+    new_status_sql = (
+        "old.status"
+        if require_manual_approval
+        else "CASE WHEN old.status = 'PENDING' THEN 'APPROVED' ELSE old.status END"
+    )
+
     # `old.status` erfasst den Stand VOR dem Update - nur so lässt sich
     # unterscheiden, ob dieser Login gerade erst PENDING→APPROVED
     # freigeschaltet hat, oder ob es ein Wiederkehrer-Login war.
     row = await pool.fetchrow(
-        """
+        f"""
         WITH old AS (
             SELECT id, status FROM stands
             WHERE login_token_hash = $1 AND login_token_expires_at > now()
@@ -306,7 +327,7 @@ async def redeem_code(body: RedeemCodeIn, request: Request, background_tasks: Ba
         UPDATE stands SET
             login_token_hash = NULL, login_token_expires_at = NULL,
             session_token_hash = $2, session_token_expires_at = $3,
-            status = CASE WHEN old.status = 'PENDING' THEN 'APPROVED' ELSE old.status END
+            status = {new_status_sql}
         FROM old
         WHERE stands.id = old.id
         RETURNING stands.id, stands.nickname, old.status AS previous_status
@@ -326,7 +347,7 @@ async def redeem_code(body: RedeemCodeIn, request: Request, background_tasks: Ba
         )
 
     was_pending = row["previous_status"] == "PENDING"
-    if was_pending:
+    if was_pending and not require_manual_approval:
         # Stand ist gerade erst öffentlich geworden (PENDING→APPROVED).
         background_tasks.add_task(regenerate_stands_artifact)
         await log_action(pool, row["id"], "APPROVED", "owner")
@@ -597,9 +618,26 @@ async def update_stand_admin(
     if "kategorien" in updates:
         _reject_if_too_many_kategorien(updates["kategorien"])
 
+    pool = await get_pool()
+
+    # Das Admin-Panel schickt "deactivated" bei JEDEM Speichern mit (Teil
+    # des EditForm-Zustands, siehe admin-panel.tsx), auch wenn nur z.B. die
+    # Adresse geändert wurde. Ohne diesen Vergleich mit dem aktuellen Wert
+    # würde JEDE Bearbeitung fälschlich als DEACTIVATED/REACTIVATED statt
+    # EDITED geloggt und bei einem bereits deaktivierten Stand bei jeder
+    # Bearbeitung erneut eine Deaktivierungs-Mail auslösen.
+    previous_deactivated = await pool.fetchval(
+        "SELECT deactivated FROM stands WHERE id = $1", stand_id
+    )
+    if previous_deactivated is None:
+        raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    deactivation_changed = (
+        "deactivated" in updates and updates["deactivated"] != previous_deactivated
+    )
+
     # Reaktivieren gilt als "Antwort gelesen/erledigt" - räumt die
     # gespeicherte Antwort mit auf, statt sie unbegrenzt stehen zu lassen.
-    if updates.get("deactivated") is False:
+    if deactivation_changed and updates["deactivated"] is False:
         updates["deactivation_reply_message"] = None
         updates["deactivation_reply_created_at"] = None
 
@@ -610,7 +648,6 @@ async def update_stand_admin(
     set_clause = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
     values = list(updates.values())
 
-    pool = await get_pool()
     row = await pool.fetchrow(
         f"UPDATE stands SET {set_clause} WHERE id = $1 "
         f"RETURNING {_ADMIN_COLUMNS}",
@@ -618,12 +655,17 @@ async def update_stand_admin(
     )
     if not row:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
-    # Eigene Audit-Aktion statt des generischen EDITED, wenn sich gerade die
-    # Sichtbarkeit ändert - klarerer Verlauf im Admin-Panel, analog zur
-    # bestehenden Trennung APPROVED/EDITED/DELETED.
-    if "deactivated" in updates:
+    # Eigene Audit-Aktion statt des generischen EDITED, wenn sich die
+    # Sichtbarkeit tatsächlich ändert - klarerer Verlauf im Admin-Panel,
+    # analog zur bestehenden Trennung APPROVED/EDITED/DELETED.
+    if deactivation_changed:
         action = "DEACTIVATED" if updates["deactivated"] else "REACTIVATED"
         await log_action(pool, stand_id, action, "admin", admin_email)
+        if updates["deactivated"]:
+            background_tasks.add_task(
+                send_deactivation_email,
+                row["email"], row["nickname"], stand_id, row["deactivation_message"],
+            )
     else:
         await log_action(pool, stand_id, "EDITED", "admin", admin_email)
     if row["status"] == "APPROVED":

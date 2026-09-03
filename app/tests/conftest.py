@@ -69,6 +69,13 @@ async def _clean_tables(_migrated_db):
         if tables:
             names = ", ".join(r["tablename"] for r in tables)
             await conn.execute(f"TRUNCATE {names} RESTART IDENTITY CASCADE")
+        # app_settings ist eine Singleton-Zeile (siehe migrations/0015) -
+        # TRUNCATE würde sie löschen und die CHECK-Constraint verletzen,
+        # deshalb hier stattdessen auf die Default-Werte zurücksetzen, statt
+        # ihn wie die Tabellen oben aufzulisten.
+        await conn.execute(
+            "UPDATE app_settings SET require_manual_approval = false, beschreibung_enabled = true"
+        )
 
 
 @pytest_asyncio.fixture
@@ -105,6 +112,23 @@ def captured_emails(monkeypatch):
         })
 
     monkeypatch.setattr("app.routes.stands.send_login_email", _fake_send_login_email)
+    return sent
+
+
+@pytest.fixture
+def captured_deactivation_emails(monkeypatch):
+    """Wie captured_emails oben, für die Deaktivierungs-Mail an den
+    Standinhaber (app/routes/stands.py update_stand_admin, Versand läuft
+    über BackgroundTasks - direkt awaiten statt nur zu registrieren, damit
+    Tests nicht auf den Background-Task warten müssen)."""
+    sent: list[dict] = []
+
+    async def _fake_send_deactivation_email(email, nickname, stand_id, message):
+        sent.append(
+            {"email": email, "nickname": nickname, "stand_id": stand_id, "message": message}
+        )
+
+    monkeypatch.setattr("app.routes.stands.send_deactivation_email", _fake_send_deactivation_email)
     return sent
 
 

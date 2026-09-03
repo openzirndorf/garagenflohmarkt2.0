@@ -237,6 +237,59 @@ Das Garagenflohmarkt-Team
     await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
 
 
+async def send_deactivation_email(
+    email: str, nickname: str, stand_id: int, message: str | None
+) -> None:
+    """Benachrichtigt den Standinhaber, wenn ein Admin seinen Stand
+    deaktiviert (siehe app/routes/stands.py update_stand_admin) - vorher
+    erfuhr er das nur beim nächsten eigenen Blick unter "Mein Stand" auf
+    das dortige Banner. Enthält die Begründung (deactivation_message,
+    falls angegeben) und verweist auf die Antwortmöglichkeit dort."""
+    if not smtp_configured():
+        return
+
+    frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL).rstrip("/")
+    mein_stand_url = f"{frontend_url}/{_PREVIEW_UNLOCK_QUERY}#mein-stand"
+    subject = "Garagenflohmarkt Zirndorf – Dein Stand wurde deaktiviert"
+    grund_text = message or "Kein Grund angegeben."
+
+    body_text = f"""\
+Hallo {nickname},
+
+dein Stand beim Garagenflohmarkt Zirndorf wurde von einem Admin deaktiviert
+und ist bis auf Weiteres nicht mehr auf der Karte oder in der Liste sichtbar.
+
+Begründung:
+
+  {grund_text}
+
+Falls du das für ein Missverständnis hältst, kannst du unter "Mein Stand"
+einmalig darauf antworten: {mein_stand_url}
+
+Viele Grüße
+Das Garagenflohmarkt-Team
+"""
+    body_html = f"""\
+<!DOCTYPE html>
+<html lang="de">
+<head><meta charset="utf-8"></head>
+<body style="font-family:sans-serif;max-width:600px;margin:auto;color:#222">
+  <h2 style="color:#009a00">Garagenflohmarkt Zirndorf</h2>
+  <p>Hallo <strong>{nickname}</strong>,</p>
+  <p>dein Stand wurde von einem Admin deaktiviert und ist bis auf Weiteres
+  nicht mehr auf der Karte oder in der Liste sichtbar.</p>
+  <blockquote style="border-left:3px solid #ef4444;margin:16px 0;padding:8px 16px;
+              background:#fef2f2;white-space:pre-wrap">{html.escape(grund_text)}</blockquote>
+  <p style="font-size:0.9em;color:#444">
+    Falls du das für ein Missverständnis hältst, kannst du unter
+    <a href="{mein_stand_url}">„Mein Stand"</a> einmalig darauf antworten.
+  </p>
+</body>
+</html>
+"""
+    await asyncio.to_thread(_send_sync, email, subject, body_text, body_html)
+
+
 async def send_deactivation_reply_email(stand_id: int, nickname: str, message: str) -> None:
     """Leitet die Antwort eines deaktivierten Standinhabers an den
     Admin-Kontakt weiter (siehe app/routes/stands.py reply_to_deactivation).

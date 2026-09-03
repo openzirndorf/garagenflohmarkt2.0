@@ -364,3 +364,30 @@ export async function removeAdmin(masterToken: string, id: number): Promise<void
   });
   if (!res.ok) throw new Error("Admin konnte nicht entfernt werden");
 }
+
+// Zwei globale Schalter (siehe app/routes/settings.py) - GET ist bewusst
+// öffentlich, das Anmeldeformular braucht beschreibung_enabled schon vor
+// jedem Login.
+export interface AppSettings {
+  require_manual_approval: boolean;
+  beschreibung_enabled: boolean;
+}
+
+export async function fetchSettings(): Promise<AppSettings> {
+  const res = await fetch(`${API}/settings`);
+  if (!res.ok) throw new Error("Einstellungen konnten nicht geladen werden");
+  return res.json();
+}
+
+export async function updateSettings(
+  token: string,
+  data: Partial<AppSettings>,
+): Promise<AppSettings> {
+  const res = await fetch(`${API}/settings`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Einstellungen konnten nicht gespeichert werden");
+  return res.json();
+}

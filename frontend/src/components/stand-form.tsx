@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { createStand } from "../api";
+import { useEffect, useRef, useState } from "react";
+import { createStand, fetchSettings } from "../api";
 import { ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "../lib/zahlungsarten";
 import type { StandFormData } from "../types";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "../ui";
@@ -74,6 +74,16 @@ export function StandForm({ onSuccess }: Props) {
   const [errorMsg, setErrorMsg] = useState("");
   const [nickname, setNickname] = useState<string | null>(null);
   const mountedAt = useRef(Date.now());
+
+  // Default true (Feld sichtbar), damit bei fehlendem Netz oder während
+  // die Anfrage noch läuft nichts blockiert wird - fällt nur zu, wenn
+  // ein Admin es aktiv über die Einstellungen ausgeschaltet hat.
+  const [beschreibungEnabled, setBeschreibungEnabled] = useState(true);
+  useEffect(() => {
+    fetchSettings()
+      .then((s) => setBeschreibungEnabled(s.beschreibung_enabled))
+      .catch(() => {});
+  }, []);
 
   const allConfirmed = rulesConfirmed && consentOk;
 
@@ -264,18 +274,20 @@ export function StandForm({ onSuccess }: Props) {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="beschreibung" className="text-sm font-medium">
-              Was gibt es zu kaufen?
-            </label>
-            <textarea
-              id="beschreibung"
-              className="min-h-[80px] resize-y rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              value={form.beschreibung}
-              onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
-              disabled={status === "loading"}
-            />
-          </div>
+          {beschreibungEnabled && (
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="beschreibung" className="text-sm font-medium">
+                Was gibt es zu kaufen?
+              </label>
+              <textarea
+                id="beschreibung"
+                className="min-h-[80px] resize-y rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                value={form.beschreibung}
+                onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
+                disabled={status === "loading"}
+              />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">
