@@ -40,7 +40,8 @@ export function Datenschutz() {
             DSGVO) für die öffentliche Anzeige deiner Adresse - Details dazu in Abschnitt 4. Eine
             automatische Wortfilter-Prüfung auf unzulässige Inhalte läuft bei jeder Einreichung; das
             ersetzt keine inhaltliche Vorab-Prüfung durch einen Menschen, wir können Stände aber
-            jederzeit nachträglich bearbeiten, sperren oder löschen (siehe{" "}
+            jederzeit nachträglich bearbeiten, deaktivieren (von Karte/Liste nehmen) oder löschen
+            (siehe{" "}
             <a href="#faq" className="underline">
               Teilnahmebedingungen
             </a>
@@ -51,12 +52,13 @@ export function Datenschutz() {
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">3. Welche Daten wir erheben</h2>
           <p>
-            Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien
-            sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein Namensfeld - ein echter
-            Name kann technisch gar nicht erst ins System gelangen. Stattdessen vergeben wir intern
-            eine automatisch ausgewürfelte Fantasie-Kennung (z.&nbsp;B. „Gscheide Kellerkönig"), die
-            aber nirgends öffentlich angezeigt wird - siehe Abschnitt 4. Zusätzlich bestätigst du
-            bei der Anmeldung aktiv, dass du mindestens 16 Jahre alt bist (Art. 8 DSGVO).
+            Bei der Anmeldung eines Standes werden Adresse, eine optionale Beschreibung, Kategorien,
+            akzeptierte Zahlungsarten sowie deine E-Mail-Adresse gespeichert. Es gibt bewusst kein
+            Namensfeld - ein echter Name kann technisch gar nicht erst ins System gelangen.
+            Stattdessen vergeben wir intern eine automatisch ausgewürfelte Fantasie-Kennung
+            (z.&nbsp;B. „Gscheide Kellerkönig"), die aber nirgends öffentlich angezeigt wird - siehe
+            Abschnitt 4. Zusätzlich bestätigst du bei der Anmeldung aktiv, dass du mindestens 16
+            Jahre alt bist (Art. 8 DSGVO).
           </p>
         </section>
 
@@ -66,10 +68,10 @@ export function Datenschutz() {
           </h2>
           <p>
             Nur folgende Angaben sind öffentlich auf der Karte und in der Liste sichtbar: Straße und
-            Hausnummer sowie die Beschreibung - dort erscheinst du unter deiner Adresse, nicht unter
-            der internen Fantasie-Kennung aus Abschnitt 3. Deine E-Mail-Adresse und dein echter Name
-            (den wir ohnehin nicht erfassen) erreichen die öffentliche Ausgabe unter keinen
-            Umständen.
+            Hausnummer, die Beschreibung, Kategorien und akzeptierte Zahlungsarten - dort erscheinst
+            du unter deiner Adresse, nicht unter der internen Fantasie-Kennung aus Abschnitt 3.
+            Deine E-Mail-Adresse und dein echter Name (den wir ohnehin nicht erfassen) erreichen die
+            öffentliche Ausgabe unter keinen Umständen.
           </p>
           <p className="mt-2">
             Weil dabei eine Privatadresse öffentlich sichtbar wird, stützen wir das bewusst nicht
@@ -166,8 +168,6 @@ export function Datenschutz() {
           </p>
         </section>
       </div>
-
-      <p className="mt-2 text-sm text-gray-500">entwickelt mit ❤️ in Zirndorf</p>
     </div>
   );
 }
