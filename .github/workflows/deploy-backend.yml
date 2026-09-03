@@ -127,7 +127,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: opentofu/setup-opentofu@v1
+      - uses: opentofu/setup-opentofu@v2
 
       - name: DATABASE_URL aus Terraform-State lesen
         working-directory: infra
