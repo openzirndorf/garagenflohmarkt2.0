@@ -59,20 +59,6 @@ export function Faq() {
           Danach startet die App wie eine normale App vom Homescreen, schneller und ohne
           Adressleiste.
         </QA>
-        <p className="text-gray-700">
-          Jeder Teilnehmer trägt <strong>selbst die volle Verantwortung</strong> für seinen Stand
-          bzw. seinen Einkauf. OpenZirndorf vermittelt nur die Standanmeldung und Kartendarstellung
-          (siehe{" "}
-          <a href="#datenschutz" className="underline">
-            Datenschutz
-          </a>
-          ), ist an keinem Verkauf, keiner Zahlung und keiner Vor-Ort-Absprache beteiligt und
-          übernimmt keine Haftung für Schäden, Vorfälle, Betrug oder Streitigkeiten zwischen
-          Standbetreiber und Besucher. Versicherungstechnische Fragen kläre bitte direkt mit dem
-          Eigentümer oder der Hausverwaltung des Grundstücks. Wir behalten uns vor, Einträge ohne
-          Angabe von Gründen zu bearbeiten oder zu löschen, z.&nbsp;B. bei Verstößen gegen diese
-          Bedingungen oder gemeldeten Problemen.
-        </p>
       </section>
 
       {/* Für Standbetreiber */}
@@ -166,6 +152,21 @@ export function Faq() {
           </ul>
         </div>
 
+        <p className="text-gray-700">
+          Jeder Teilnehmer trägt <strong>selbst die volle Verantwortung</strong> für seinen Stand
+          bzw. seinen Einkauf. OpenZirndorf vermittelt nur die Standanmeldung und Kartendarstellung
+          (siehe{" "}
+          <a href="#datenschutz" className="underline">
+            Datenschutz
+          </a>
+          ), ist an keinem Verkauf, keiner Zahlung und keiner Vor-Ort-Absprache beteiligt und
+          übernimmt keine Haftung für Schäden, Vorfälle, Betrug oder Streitigkeiten zwischen
+          Standbetreiber und Besucher. Versicherungstechnische Fragen kläre bitte direkt mit dem
+          Eigentümer oder der Hausverwaltung des Grundstücks. Wir behalten uns vor, Einträge ohne
+          Angabe von Gründen zu bearbeiten, zu deaktivieren oder zu löschen, z.&nbsp;B. bei
+          Verstößen gegen diese Bedingungen oder gemeldeten Problemen.
+        </p>
+
         <QA q="Bis wann kann ich meinen Stand anmelden?">
           Anmeldungen sind bis zum Veranstaltungstag möglich, solange die Seite aktiv ist.
         </QA>
@@ -237,6 +238,11 @@ export function Faq() {
           bezahlst, ähnlich unkompliziert wie PayPal - in den App Stores unter „Wero" zu finden. Die
           Zahlung selbst läuft in jedem Fall direkt zwischen dir und dem Standbetreiber vor Ort;
           diese Seite ist daran nicht beteiligt und wickelt keine Zahlungen ab.
+        </QA>
+        <QA q="Ein Stand wirkt falsch, nicht mehr aktuell oder unpassend - was tue ich?">
+          Bei jedem Stand gibt es neben „Navigieren" und „★ Favoriten" auch einen „🚩 Melden"-Button
+          - kurz einen Grund eintragen, schon geht die Meldung ans Team. Wir schauen uns das dann an
+          und bearbeiten, deaktivieren oder löschen den Stand bei Bedarf.
         </QA>
       </section>
     </div>
