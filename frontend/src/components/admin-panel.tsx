@@ -593,6 +593,7 @@ export function AdminPanel() {
                             </span>
                           )}
                           <span className="ml-2 text-gray-500">{s.adresse}</span>
+                          {s.email && <span className="ml-2 text-gray-400">· {s.email}</span>}
                           {s.kategorien && s.kategorien.length > 0 && (
                             <div className="mt-0.5 flex flex-wrap gap-1">
                               {s.kategorien.map((k) => (
