@@ -75,6 +75,16 @@ async def add_security_headers(request, call_next):
     # Redundant zu frame-ancestors 'none' oben, aber ältere Browser ohne
     # CSP3-Unterstützung kennen nur diesen Header gegen Clickjacking.
     response.headers["X-Frame-Options"] = "DENY"
+    # Bewusst OHNE includeSubDomains: api.openzirndorf.de und
+    # garagenflohmarkt.openzirndorf.de sind nur zwei von mehreren
+    # Subdomains unter openzirndorf.de (andere Projekte laufen auf
+    # eigenen Subdomains) - includeSubDomains würde HSTS im Browser für
+    # die GESAMTE Domain erzwingen, auch für Subdomains, die dieser
+    # Container gar nicht kontrolliert und deren HTTPS-Konfiguration hier
+    # nicht geprüft wurde. Auch bewusst ohne "preload": das landet in
+    # einer von Browsern ausgelieferten Liste und lässt sich praktisch
+    # nicht mehr zurücknehmen.
+    response.headers["Strict-Transport-Security"] = "max-age=31536000"
     return response
 
 

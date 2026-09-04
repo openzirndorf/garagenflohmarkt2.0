@@ -41,13 +41,23 @@ class GeocodeResult(NamedTuple):
 
 
 def _format_adresse(components: dict) -> str | None:
+    # Ursprünglich zusätzlich postcode/city aus den Geocoding-Bestandteilen
+    # verlangt - das schlug live in der großen Mehrheit der Fälle fehl
+    # (21 von 24 bestehenden Ständen ohne PLZ in der Liste), weil OpenCage/
+    # Nominatim bei vielen Treffern gar keine postcode-Komponente liefern
+    # (_reject_if_outside_zirndorf in app/routes/stands.py lässt das
+    # bewusst durch, statt die Anmeldung deswegen abzulehnen) oder city/
+    # town/village für Außenorte anders klassifizieren. Da diese App
+    # ohnehin ausschließlich Zirndorf-Adressen akzeptiert (Zirndorf hat nur
+    # eine PLZ fürs ganze Gemeindegebiet inkl. Außenorte), braucht die
+    # Formatierung selbst weder postcode noch city vom Geocoder - "PLZ Ort"
+    # ist immer "90513 Zirndorf". Muss mit _ZIRNDORF_POSTCODE in
+    # app/routes/stands.py übereinstimmen.
     road = components.get("road")
     house_number = components.get("house_number")
-    postcode = components.get("postcode")
-    ort = components.get("city") or components.get("town") or components.get("village")
-    if not (road and house_number and postcode and ort):
+    if not (road and house_number):
         return None
-    return f"{road} {house_number}, {postcode} {ort}"
+    return f"{road} {house_number}, 90513 Zirndorf"
 
 
 async def geocode(adresse: str) -> GeocodeResult | None:

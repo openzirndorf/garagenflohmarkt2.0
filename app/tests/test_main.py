@@ -4,6 +4,16 @@ async def test_health(client):
     assert resp.json() == {"ok": True}
 
 
+async def test_security_headers_are_set_on_every_response(client):
+    resp = await client.get("/health")
+    assert resp.headers["Content-Security-Policy"]
+    assert resp.headers["X-Content-Type-Options"] == "nosniff"
+    assert resp.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert resp.headers["X-Frame-Options"] == "DENY"
+    # Bewusst ohne includeSubDomains/preload, siehe Kommentar in main.py.
+    assert resp.headers["Strict-Transport-Security"] == "max-age=31536000"
+
+
 async def test_launch_config_defaults_to_null(client, monkeypatch):
     # LAUNCH_AT ist nicht gesetzt (siehe conftest.py) - "Datum steht noch
     # nicht fest", Frontend zeigt dann den allgemeinen Platzhalter statt

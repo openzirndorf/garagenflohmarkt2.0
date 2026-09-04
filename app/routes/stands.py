@@ -47,7 +47,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _RATE_WINDOW_SECONDS = 3600  # 1 Stunde
-_RATE_MAX = 3  # max. Einreichungen pro IP pro Zeitfenster
+# War ursprünglich 3 - zu knapp: Nachbar*innen im selben Straßenzug/Haus
+# teilen sich beim Mobilfunk oft dieselbe IPv4 (Carrier-Grade-NAT), mehrere
+# echte Anmeldungen aus derselben Nachbarschaft kurz hintereinander wären
+# damit ab der vierten Person fälschlich blockiert worden. Inhaltliche
+# Prüfung (_reject_if_blocked_content) und die optionale manuelle
+# Freischaltung (Einstellungen) fangen Missbrauch ohnehin schon ab, das
+# Rate-Limit muss also nicht die einzige Bremse sein.
+_RATE_MAX = 10  # max. Einreichungen pro IP pro Zeitfenster
 _LOGIN_REQUEST_RATE_MAX = 5  # max. "Zugang anfordern"-Versuche pro IP pro Zeitfenster
 _REDEEM_CODE_RATE_MAX = 10  # max. Code-Einlöseversuche pro IP pro Zeitfenster
 _DEACTIVATION_REPLY_RATE_MAX = 5  # max. Antworten auf eine Deaktivierung pro IP pro Zeitfenster

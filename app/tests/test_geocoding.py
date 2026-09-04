@@ -1,4 +1,34 @@
-from app.geocode import GeocodeResult
+from app.geocode import GeocodeResult, _format_adresse
+
+
+# _format_adresse direkt statt nur über die HTTP-Route getestet, weil sie
+# eine reine Funktion ohne I/O ist und hier live der eigentliche Fehler saß:
+# 21 von 24 bestehenden Ständen fehlte die PLZ in der Listenanzeige, weil
+# OpenCage/Nominatim für die meisten Treffer keine postcode-Komponente
+# liefern (siehe Kommentar in app/geocode.py).
+def test_format_adresse_works_without_postcode_or_city_component():
+    assert (
+        _format_adresse({"road": "Musterstraße", "house_number": "1"})
+        == "Musterstraße 1, 90513 Zirndorf"
+    )
+
+
+def test_format_adresse_ignores_postcode_and_city_from_geocoder():
+    # PLZ/Ort kommen bewusst nicht mehr vom Geocoder (siehe Kommentar in
+    # app/geocode.py) - selbst ein widersprüchlicher Wert hätte keinen
+    # Effekt, da diese App ohnehin nur Zirndorf-Adressen akzeptiert.
+    result = _format_adresse(
+        {"road": "Musterstraße", "house_number": "1", "postcode": "12345", "city": "Nirgendwo"}
+    )
+    assert result == "Musterstraße 1, 90513 Zirndorf"
+
+
+def test_format_adresse_returns_none_without_house_number():
+    assert _format_adresse({"road": "Musterstraße"}) is None
+
+
+def test_format_adresse_returns_none_without_road():
+    assert _format_adresse({"house_number": "1"}) is None
 
 
 async def _register(client, api_auth, email="geo@example.com", **overrides):

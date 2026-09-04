@@ -35,7 +35,10 @@ async def test_rate_limit_survives_concurrent_requests(pool):
 
 
 async def test_create_stand_endpoint_is_rate_limited(client, api_auth):
-    for i in range(3):
+    # _RATE_MAX in app/routes/stands.py - 10, nicht mehr das ursprüngliche 3
+    # (zu knapp für mehrere echte Anmeldungen aus derselben Nachbarschaft
+    # hinter einer gemeinsamen Mobilfunk-IP, siehe Kommentar dort).
+    for i in range(10):
         resp = await client.post(
             "/stands/",
             json={"adresse": f"Straße {i}, Zirndorf", "email": f"limit{i}@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
@@ -43,9 +46,9 @@ async def test_create_stand_endpoint_is_rate_limited(client, api_auth):
         )
         assert resp.status_code == 201
 
-    fourth = await client.post(
+    eleventh = await client.post(
         "/stands/",
-        json={"adresse": "Straße 4, Zirndorf", "email": "limit4@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
+        json={"adresse": "Straße 11, Zirndorf", "email": "limit11@example.com", "datenschutz_zustimmung": True, "mindestalter_bestaetigt": True, "kategorien": []},
         auth=api_auth,
     )
-    assert fourth.status_code == 429
+    assert eleventh.status_code == 429

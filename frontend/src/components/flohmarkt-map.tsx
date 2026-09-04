@@ -105,6 +105,29 @@ export function FlohmarktMap({
             "circle-stroke-color": "#fff",
           },
         });
+
+        // Zeigt initial alle angemeldeten Stände, nicht nur CENTER/ZOOM
+        // (Zirndorfer Kernstadt) - Stände in Außenorten (weiter vom
+        // Zentrum, aber weiterhin innerhalb der zulässigen PLZ 90513,
+        // siehe _reject_if_outside_zirndorf in app/routes/stands.py) waren
+        // sonst erst nach manuellem Rauszoomen sichtbar. Bewusst aus den
+        // echten Standdaten berechnet statt einer fest eingetragenen
+        // Zirndorf-Gemeindegrenze - passt sich automatisch an, sobald
+        // irgendwo (auch in einem bisher leeren Ortsteil) ein Stand dazu
+        // kommt, ohne dass hier Koordinaten gepflegt werden müssten. Bei
+        // 0 oder nur einem Stand bleibt es faktisch bei CENTER/ZOOM
+        // (maxZoom verhindert sinnloses Heranzoomen auf einen einzelnen
+        // Punkt), duration: 0 vermeidet eine sichtbare Schwenk-Animation
+        // direkt nach dem ersten Laden.
+        const bounds = new maplibregl.LngLatBounds();
+        for (const f of geojson.features) {
+          if (f.geometry.type === "Point") {
+            bounds.extend(f.geometry.coordinates as [number, number]);
+          }
+        }
+        if (!bounds.isEmpty()) {
+          map.fitBounds(bounds, { padding: 50, maxZoom: ZOOM, duration: 0 });
+        }
         map.on("click", "stands-pins", (e) => {
           const feature = e.features?.[0];
           if (!feature) return;
