@@ -58,18 +58,28 @@ async def test_report_stand_succeeds_and_is_audit_logged(client, api_auth, admin
     assert any(r["action"] == "REPORTED" and r["actor"] == "besucher" for r in entries)
 
 
-async def test_report_stand_never_stores_reason_content(client, api_auth, pool):
+async def test_report_stand_stores_reason_in_audit_log(client, api_auth, pool):
+    # Ursprünglich bewusst NICHT gespeichert (siehe migrations/0017_audit_log
+    # _report_detail.sql) - damit Admins den Meldegrund im Panel nachlesen
+    # können statt nur in der Benachrichtigungs-Mail, wurde das rückgängig
+    # gemacht.
     stand = (await client.post("/stands/", json=_base_body(), auth=api_auth)).json()
 
-    secret_reason = "darf-nicht-im-audit-log-landen"
-    await client.post(f"/stands/{stand['id']}/report", json={"grund": secret_reason})
+    reason = "Stand existiert an dieser Adresse gar nicht"
+    await client.post(f"/stands/{stand['id']}/report", json={"grund": reason})
 
     row = await pool.fetchrow(
-        "SELECT action, actor, stand_id FROM admin_audit_log WHERE stand_id = $1 "
-        "AND action = 'REPORTED'",
+        "SELECT detail FROM admin_audit_log WHERE stand_id = $1 AND action = 'REPORTED'",
         stand["id"],
     )
-    assert secret_reason not in str(dict(row))
+    assert row["detail"] == reason
+
+
+async def test_report_stand_rejects_reason_over_80_chars(client, api_auth):
+    stand = (await client.post("/stands/", json=_base_body(), auth=api_auth)).json()
+
+    resp = await client.post(f"/stands/{stand['id']}/report", json={"grund": "x" * 81})
+    assert resp.status_code == 400
 
 
 async def test_report_stand_requires_a_reason(client, api_auth):

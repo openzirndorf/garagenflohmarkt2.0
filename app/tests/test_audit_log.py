@@ -91,7 +91,7 @@ async def test_audit_log_endpoint_never_contains_stand_owner_email(
     assert "darf-nicht-im-log@example.com" not in body
     for entry in resp.json():
         assert set(entry.keys()) == {
-            "id", "stand_id", "action", "actor", "actor_email", "created_at",
+            "id", "stand_id", "action", "actor", "actor_email", "detail", "created_at",
         }
 
 

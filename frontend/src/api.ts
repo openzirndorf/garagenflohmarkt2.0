@@ -104,6 +104,9 @@ export interface AuditLogEntry {
     | "SETTINGS_BESCHREIBUNG_OFF";
   actor: "owner" | "admin" | "besucher";
   actor_email: string | null;
+  // Nur bei action === "REPORTED" gesetzt: der (auf 80 Zeichen begrenzte)
+  // Meldegrund, siehe app/audit.py.
+  detail: string | null;
   created_at: string;
 }
 

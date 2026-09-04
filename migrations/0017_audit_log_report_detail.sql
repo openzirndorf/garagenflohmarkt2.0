@@ -1,0 +1,14 @@
+-- Ergänzt admin_audit_log um ein optionales Freitextfeld für den Grund
+-- einer Besucher-Meldung (POST /stands/{id}/report, siehe
+-- app/routes/stands.py report_stand) - bisher landete der Grund bewusst
+-- NICHT hier (siehe migrations/0005, ursprünglich
+-- test_report_stand_never_stores_reason_content), nur die Tatsache "es gab
+-- eine Meldung" wurde geloggt, der Grund stand ausschließlich in der Mail
+-- ans Team. Admins konnten den Grund im Panel dadurch nicht nachlesen -
+-- diese Entscheidung ist damit bewusst rückgängig gemacht. Serverseitig
+-- auf 80 Zeichen begrenzt (siehe ReportStandIn in app/routes/stands.py),
+-- deshalb hier unbegrenztes TEXT statt einer eigenen Längen-Constraint.
+-- Bleibt für alle anderen Aktionen NULL: kein allgemeines Freitextfeld für
+-- owner/admin-Aktionen, actor_email (migrations/0014) deckt den
+-- Admin-Anwendungsfall bereits ab.
+ALTER TABLE admin_audit_log ADD COLUMN detail TEXT;

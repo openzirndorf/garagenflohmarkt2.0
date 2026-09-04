@@ -17,6 +17,12 @@ interface Props {
   onResetFilters?: () => void;
 }
 
+// Muss mit _MAX_REPORT_GRUND_LENGTH in app/routes/stands.py übereinstimmen.
+// Landet seit migrations/0017_audit_log_report_detail.sql im Audit-Log und
+// wird im Admin-Panel angezeigt (siehe admin-panel.tsx) - deshalb bewusst
+// kurz gehalten, kein längerer Fließtext wie bei der Standbeschreibung.
+const MAX_GRUND_LENGTH = 80;
+
 // Eigener, zum Rest der App passender Dialog statt eines nackten
 // window.prompt() - der Grund ist Pflicht (siehe POST /stands/{id}/report),
 // "Melden" bleibt bis zu einer Eingabe deaktiviert. Klick auf den
@@ -60,6 +66,7 @@ function ReportDialog({
           // biome-ignore lint/a11y/noAutofocus: Dialog öffnet sich erst per Klick, Fokus direkt aufs einzige Eingabefeld ist hier gewollt.
           autoFocus
           rows={3}
+          maxLength={MAX_GRUND_LENGTH}
           value={grund}
           onChange={(e) => {
             setGrund(e.target.value);
@@ -68,6 +75,9 @@ function ReportDialog({
           placeholder="Grund (Pflichtfeld)"
           className="resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
+        <p className="-mt-1.5 text-right text-xs text-gray-400">
+          {grund.length}/{MAX_GRUND_LENGTH}
+        </p>
         {showError && <p className="text-xs text-red-600">Bitte einen Grund angeben.</p>}
         <div className="flex justify-end gap-2">
           <button

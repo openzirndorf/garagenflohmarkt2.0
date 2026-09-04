@@ -71,6 +71,14 @@ _MAX_KATEGORIEN = 5
 # übereinstimmen.
 _MAX_BESCHREIBUNG_LENGTH = 100
 
+# Begrenzt den Meldegrund (POST /stands/{id}/report) auf eine kurze Zeile,
+# damit er im Admin-Panel (🚩-Badge/Verlauf, siehe admin-panel.tsx) nicht
+# ausufert - anders als bei der Beschreibung oben soll hier kein längerer
+# Fließtext möglich sein, nur eine knappe Angabe des Problems. Muss mit
+# MAX_REPORT_GRUND_LENGTH in frontend/src/components/stand-liste.tsx
+# übereinstimmen.
+_MAX_REPORT_GRUND_LENGTH = 80
+
 # Felder, die der Stand-Inhaber über seine Session zu sehen bekommt.
 # Bewusst ohne E-Mail und ohne irgendein Token.
 _OWNER_COLUMNS = (
@@ -596,17 +604,30 @@ class ReportStandIn(BaseModel):
     grund: str
 
 
+def _reject_if_too_long_report_grund(value: str) -> None:
+    if len(value) > _MAX_REPORT_GRUND_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Meldegrund darf höchstens {_MAX_REPORT_GRUND_LENGTH} Zeichen lang sein",
+        )
+
+
 # POST /stands/{id}/report - öffentlich, Meldefunktion für Besucher (falsche
 # oder fremde Einträge). Grund ist Pflicht (serverseitig erzwungen, nicht
 # nur im Frontend) - eine grundlose Meldung wäre für den Admin nicht
 # einordenbar. Bewusst kein neuer Kontaktweg mit sichtbarer E-Mail-Adresse
-# zum Abschöpfen durch Bots - stattdessen wie bei deactivation-reply nur eine Mail
-# an den Admin-Kontakt, der Grund wird nicht gespeichert, nur die Aktion
-# selbst (kein Freitext im Audit-Log).
+# zum Abschöpfen durch Bots - stattdessen wie bei deactivation-reply nur eine
+# Mail an den Admin-Kontakt. Der Grund landet zusätzlich (auf
+# _MAX_REPORT_GRUND_LENGTH begrenzt) im Audit-Log-Eintrag selbst (siehe
+# app/audit.py, migrations/0017_audit_log_report_detail.sql) - ursprünglich
+# bewusst nicht, damit Admins den Grund im Panel nachlesen können, statt nur
+# in der Benachrichtigungs-Mail.
 @router.post("/{stand_id}/report")
 async def report_stand(stand_id: int, body: ReportStandIn, request: Request):
-    if not body.grund.strip():
+    grund = body.grund.strip()
+    if not grund:
         raise HTTPException(status_code=400, detail="Bitte gib einen Grund für die Meldung an.")
+    _reject_if_too_long_report_grund(grund)
 
     pool = await get_pool()
 
@@ -620,11 +641,11 @@ async def report_stand(stand_id: int, body: ReportStandIn, request: Request):
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
 
     try:
-        await send_report_email(row["id"], row["nickname"], body.grund.strip())
+        await send_report_email(row["id"], row["nickname"], grund)
     except Exception as exc:  # noqa: BLE001 - Mailversand darf die Meldung nie fehlschlagen lassen
         logger.error("Melde-Mail fehlgeschlagen für Stand %s (%s)", row["id"], type(exc).__name__)
 
-    await log_action(pool, row["id"], "REPORTED", "besucher")
+    await log_action(pool, row["id"], "REPORTED", "besucher", detail=grund)
     return {"message": "Danke, wir haben die Meldung erhalten."}
 
 
@@ -650,13 +671,13 @@ async def admin_list():
 
 
 # GET /stands/admin/audit-log - Bearer Token, letzte Aktionen (actor_email
-# nur bei actor="admin" gesetzt, siehe app/audit.py - kein Personenbezug
-# zum Standinhaber/Besucher)
+# nur bei actor="admin" gesetzt, detail nur bei REPORTED gesetzt - beides
+# siehe app/audit.py, kein Personenbezug zum Standinhaber/Besucher)
 @router.get("/admin/audit-log", dependencies=[Depends(require_admin_session_auth)])
 async def admin_audit_log():
     pool = await get_pool()
     rows = await pool.fetch(
-        "SELECT id, stand_id, action, actor, actor_email, created_at FROM admin_audit_log "
+        "SELECT id, stand_id, action, actor, actor_email, detail, created_at FROM admin_audit_log "
         "ORDER BY created_at DESC LIMIT 200"
     )
     return [dict(r) for r in rows]

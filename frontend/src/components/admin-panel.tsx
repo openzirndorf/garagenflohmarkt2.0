@@ -289,20 +289,31 @@ export function AdminPanel() {
   const openReplies = all.filter((s) => s.deactivation_reply_message);
 
   // Meldungen von Besuchern (🚩 "Melden"-Feature, POST /stands/{id}/report)
-  // - bewusst kein eigenes Feld auf dem Stand (siehe app/routes/stands.py
-  // report_stand: der Grund landet nur in der Mail an den Admin, nicht in
-  // der DB), deshalb hier aus den letzten 200 Audit-Log-Einträgen
-  // abgeleitet statt wie deactivation_reply_message direkt vom Stand zu
-  // kommen. Bisher nur als einzelne, leicht übersehene Zeile im Verlauf
-  // weiter unten sichtbar gewesen - jetzt zusätzlich als eigener Abschnitt
-  // oben (siehe unten) und als Badge in den jeweiligen Listenzeilen.
+  // - kein eigenes Feld auf dem Stand (der Grund landet seit
+  // migrations/0017_audit_log_report_detail.sql zwar im Audit-Log, aber
+  // nicht auf dem Stand-Datensatz selbst), deshalb hier aus den letzten 200
+  // Audit-Log-Einträgen abgeleitet statt wie deactivation_reply_message
+  // direkt vom Stand zu kommen. Bisher nur als einzelne, leicht übersehene
+  // Zeile im Verlauf weiter unten sichtbar gewesen - jetzt zusätzlich als
+  // eigener Abschnitt oben (siehe unten) und als Badge in den jeweiligen
+  // Listenzeilen. reportReasons sammelt alle Gründe (neuester zuerst, da
+  // auditLog schon absteigend sortiert ankommt) - meist nur einer, aber bei
+  // mehreren Meldungen für denselben Stand sollen nicht ältere überschrieben
+  // werden.
   const reportCounts = new Map<number, number>();
   const lastReportAt = new Map<number, string>();
+  const reportReasons = new Map<number, string[]>();
   for (const entry of auditLog) {
     if (entry.action !== "REPORTED" || entry.stand_id == null) continue;
     reportCounts.set(entry.stand_id, (reportCounts.get(entry.stand_id) ?? 0) + 1);
     const prev = lastReportAt.get(entry.stand_id);
     if (!prev || entry.created_at > prev) lastReportAt.set(entry.stand_id, entry.created_at);
+    if (entry.detail) {
+      reportReasons.set(entry.stand_id, [
+        ...(reportReasons.get(entry.stand_id) ?? []),
+        entry.detail,
+      ]);
+    }
   }
   const reportedStands = all.filter((s) => reportCounts.has(s.id));
 
@@ -392,6 +403,16 @@ export function AdminPanel() {
             )}
             {s.deactivated && s.deactivation_message && (
               <p className="mt-1 text-xs text-red-700">Grund: {s.deactivation_message}</p>
+            )}
+            {reportReasons.has(s.id) && (
+              <ul className="mt-1 flex flex-col gap-0.5">
+                {reportReasons.get(s.id)?.map((reason, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: reportReasons enthält nur Freitext ohne stabile ID, Reihenfolge ändert sich nie nach dem Rendern.
+                  <li key={i} className="text-xs text-orange-700">
+                    🚩 „{reason}"
+                  </li>
+                ))}
+              </ul>
             )}
             {s.deactivation_reply_message && (
               <div className="mt-1 rounded-md border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
@@ -706,32 +727,34 @@ export function AdminPanel() {
               </h2>
               <ul className="flex flex-col gap-1.5">
                 {auditLog.slice(0, 30).map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
-                  >
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_COLOR[entry.action]}`}
-                    >
-                      {ACTION_LABEL[entry.action]}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-gray-700">
-                      {nicknameForStand(entry.stand_id)}
-                    </span>
-                    {/* max-w statt shrink-0: eine volle Admin-E-Mail sprengte
-                        auf schmalen (Handy-)Bildschirmen sonst die ganze
-                        Zeile, statt zu umbrechen/zu kürzen. */}
-                    <span className="max-w-[45%] shrink truncate text-xs text-gray-400">
-                      {entry.actor === "admin" ? (entry.actor_email ?? "Admin") : "Inhaber"}
-                    </span>
-                    <span className="shrink-0 text-xs text-gray-400">
-                      {new Date(entry.created_at).toLocaleString("de-DE", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+                  <li key={entry.id} className="flex flex-col gap-0.5">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                      <span
+                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ACTION_COLOR[entry.action]}`}
+                      >
+                        {ACTION_LABEL[entry.action]}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-gray-700">
+                        {nicknameForStand(entry.stand_id)}
+                      </span>
+                      {/* max-w statt shrink-0: eine volle Admin-E-Mail sprengte
+                          auf schmalen (Handy-)Bildschirmen sonst die ganze
+                          Zeile, statt zu umbrechen/zu kürzen. */}
+                      <span className="max-w-[45%] shrink truncate text-xs text-gray-400">
+                        {entry.actor === "admin" ? (entry.actor_email ?? "Admin") : "Inhaber"}
+                      </span>
+                      <span className="shrink-0 text-xs text-gray-400">
+                        {new Date(entry.created_at).toLocaleString("de-DE", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    {entry.detail && (
+                      <p className="pl-1 text-xs text-orange-700">🚩 „{entry.detail}"</p>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -821,6 +844,16 @@ export function AdminPanel() {
                           )}
                           {s.beschreibung && <p className="mt-1 text-sm">{s.beschreibung}</p>}
                           {s.email && <p className="mt-1 text-sm text-gray-500">{s.email}</p>}
+                          {reportReasons.has(s.id) && (
+                            <ul className="mt-1 flex flex-col gap-0.5">
+                              {reportReasons.get(s.id)?.map((reason, i) => (
+                                // biome-ignore lint/suspicious/noArrayIndexKey: reportReasons enthält nur Freitext ohne stabile ID, Reihenfolge ändert sich nie nach dem Rendern.
+                                <li key={i} className="text-sm text-orange-700">
+                                  🚩 „{reason}"
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                           {s.deactivation_reply_message && (
                             <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 p-2 text-sm text-blue-900">
                               <p className="text-xs font-medium text-blue-700">
