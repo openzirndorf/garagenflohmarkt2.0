@@ -8,6 +8,23 @@ import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-
 const CENTER: [number, number] = [10.9557, 49.4467];
 const ZOOM = 13;
 
+// Setzt isFavorite pro Feature neu, statt die Original-Objekte aus
+// allGeoJSON zu mutieren (die werden auch beim nächsten Filterdurchlauf
+// wiederverwendet). MapLibre liest diese Eigenschaft über die
+// circle-color-Paint-Expression (siehe map.addLayer unten).
+function withFavoriteFlag(
+  collection: GeoJSON.FeatureCollection,
+  favoriteIds: Set<number>,
+): GeoJSON.FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: collection.features.map((f) => ({
+      ...f,
+      properties: { ...f.properties, isFavorite: favoriteIds.has(f.properties?.id as number) },
+    })),
+  };
+}
+
 interface Props {
   kategorienFilter?: string[];
   zahlungsartenFilter?: string[];
@@ -93,14 +110,31 @@ export function FlohmarktMap({
       try {
         const geojson = await fetchGeoJSON();
         setAllGeoJSON(geojson);
-        map.addSource("stands", { type: "geojson", data: geojson });
+        // isFavorite schon hier setzen (mit dem zum Ladezeitpunkt aktuellen
+        // Stand, siehe favoriteIdsRef) statt auf den Filter-Effekt unten zu
+        // warten - sonst blitzen eigene Favoriten beim ersten Laden kurz
+        // grün auf, bevor sie gelb werden.
+        map.addSource("stands", {
+          type: "geojson",
+          data: withFavoriteFlag(geojson, favoriteIdsRef.current),
+        });
         map.addLayer({
           id: "stands-pins",
           type: "circle",
           source: "stands",
           paint: {
             "circle-radius": 10,
-            "circle-color": "#009A00",
+            // Eigene Favoriten (siehe favoriteIds-Prop, per localStorage in
+            // flohmarkt-app.tsx) gelb statt grün - Farbe kommt aus der
+            // isFavorite-Eigenschaft, die withFavoriteFlag() pro Feature
+            // setzt (favoriteIds selbst ist Laufzeit-Zustand, keine
+            // GeoJSON-Eigenschaft, kann MapLibre also nicht direkt lesen).
+            "circle-color": [
+              "case",
+              ["boolean", ["get", "isFavorite"], false],
+              "#facc15",
+              "#009A00",
+            ],
             "circle-stroke-width": 2,
             "circle-stroke-color": "#fff",
           },
@@ -202,7 +236,7 @@ export function FlohmarktMap({
     };
 
     const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
-    source?.setData(filtered);
+    source?.setData(withFavoriteFlag(filtered, favoriteIds));
   }, [
     kategorienFilter,
     zahlungsartenFilter,
