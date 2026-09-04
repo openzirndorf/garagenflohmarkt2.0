@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://garagenflohmarkt.openzirndorf.de/sitemap.xml

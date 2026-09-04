@@ -47,3 +47,20 @@ async def test_get_stands_without_trailing_slash_hits_the_real_endpoint(client):
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("application/json")
     assert isinstance(resp.json(), list)
+
+
+# robots.txt/sitemap.xml liegen in frontend/public/ (von Vite unverändert
+# nach dist/ kopiert) - landeten vorher live als 200 OK, aber mit dem HTML
+# der SPA statt echtem Inhalt, weil sie sonst nirgends passten und deshalb
+# in der Catch-all-Route oben endeten (die bei fehlendem candidate.is_file()
+# auf index.html zurückfällt). Google/andere Crawler bekamen dadurch keine
+# echte robots.txt/sitemap.xml zu sehen - siehe Konversation. _DIST_DIR
+# hier gemockt, da lokal (anders als im Docker-Build) kein dist/ existiert.
+async def test_robots_txt_is_served_as_a_real_static_file(client, monkeypatch, tmp_path):
+    (tmp_path / "robots.txt").write_text("User-agent: *\nAllow: /\n")
+    monkeypatch.setattr("app.main._DIST_DIR", tmp_path)
+
+    resp = await client.get("/robots.txt")
+    assert resp.status_code == 200
+    assert "User-agent: *" in resp.text
+    assert not resp.headers["content-type"].startswith("text/html")
