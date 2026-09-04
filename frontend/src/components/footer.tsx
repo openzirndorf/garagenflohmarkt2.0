@@ -27,10 +27,12 @@ export function Footer() {
         </a>
       </p>
       <p className="mb-3 text-gray-400">Unterstützt von {UNTERSTUETZER.join(", ")}</p>
-      {/* Kontakt, Impressum, Datenschutz und FAQ standen hier zusätzlich als
-          eigene Link-Zeile - alle vier bleiben über das Hamburger-Menü
-          (bzw. innerhalb von Impressum/Datenschutz die Kontakt-Mail)
-          weiterhin erreichbar, der Footer wirkte dadurch aber überladen. */}
+      {/* Kontakt, Datenschutz und FAQ standen hier zusätzlich als eigene
+          Link-Zeile - sie bleiben über das Hamburger-Menü (bzw. innerhalb
+          von Impressum/Datenschutz die Kontakt-Mail) weiterhin erreichbar,
+          der Footer wirkte dadurch aber überladen. Impressum steht als
+          einziger davon zusätzlich hier unten (neben openzirndorf.de/
+          Instagram/Facebook), weil das gesetzlich Pflichtangabe ist. */}
       <p className="mb-2 text-gray-400">entwickelt mit ❤️ in Zirndorf</p>
       <div className="flex flex-wrap justify-center gap-3 text-gray-400">
         <a
@@ -40,6 +42,9 @@ export function Footer() {
           className="hover:text-gray-600 hover:underline"
         >
           openzirndorf.de
+        </a>
+        <a href="#impressum" className="hover:text-gray-600 hover:underline">
+          Impressum
         </a>
         <a
           href={INSTAGRAM_URL}

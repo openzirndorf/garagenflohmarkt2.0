@@ -39,8 +39,6 @@ export function Impressum() {
           team@openzirndorf.de
         </a>
       </p>
-
-      <p className="text-sm text-gray-500">entwickelt mit ❤️ in Zirndorf</p>
     </div>
   );
 }
