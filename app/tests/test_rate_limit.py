@@ -1,4 +1,5 @@
 import asyncio
+from datetime import UTC, datetime, timedelta
 
 from app.rate_limit import check_rate_limit
 
@@ -32,6 +33,24 @@ async def test_rate_limit_survives_concurrent_requests(pool):
     )
     assert sum(1 for r in results if r) == 5
     assert sum(1 for r in results if not r) == 5
+
+
+async def test_check_rate_limit_cleans_up_long_expired_windows(pool):
+    # Enthält die anfragende IP im Klartext (siehe Kommentar in
+    # app/rate_limit.py) - soll deshalb nicht unbegrenzt in der DB liegen
+    # bleiben, sondern spätestens beim nächsten beliebigen Aufruf verfallen.
+    stale_window = datetime.now(UTC) - timedelta(hours=25)
+    await pool.execute(
+        "INSERT INTO rate_limit_buckets (bucket_key, window_start, count) VALUES ($1, $2, 1)",
+        "bucket-stale:203.0.113.42", stale_window,
+    )
+
+    await check_rate_limit(pool, "irgendein-anderer-bucket", window_seconds=3600, max_count=3)
+
+    remaining = await pool.fetchval(
+        "SELECT count(*) FROM rate_limit_buckets WHERE bucket_key = $1", "bucket-stale:203.0.113.42"
+    )
+    assert remaining == 0
 
 
 async def test_create_stand_endpoint_is_rate_limited(client, api_auth):

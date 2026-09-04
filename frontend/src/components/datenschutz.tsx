@@ -104,7 +104,23 @@ export function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">6. Speicherdauer und Löschung</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">
+            6. IP-Adressen und die 🚩 „Melden"-Funktion
+          </h2>
+          <p>
+            Bei Anmeldungen, Login-Versuchen, der 🚩 „Melden"-Funktion und Antworten auf eine
+            Deaktivierung zählen wir Anfragen stundenweise pro IP-Adresse mit, um Missbrauch
+            (z.&nbsp;B. massenhaftes Anlegen falscher Stände) zu verhindern. Diese Zählung wird
+            spätestens nach 24 Stunden automatisch gelöscht. Rechtsgrundlage ist unser berechtigtes
+            Interesse an einem funktionsfähigen, missbrauchsfreien Betrieb (Art. 6 Abs. 1 lit. f
+            DSGVO). Meldest du einen Stand, speichern wir den von dir angegebenen Grund (max. 80
+            Zeichen) in unserem internen Verlauf, sichtbar nur für Admins - von dir selbst erfassen
+            wir dabei keine E-Mail-Adresse oder sonstigen Kontaktweg.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-1 text-base font-bold text-gray-900">7. Speicherdauer und Löschung</h2>
           <p>
             Die Karte geht nach Durchführung des Garagenflohmarkts am 4. Oktober 2026 offline. Deine
             Standdaten bleiben so lange gespeichert, wie sie für den Zweck (Standanmeldung,
@@ -120,7 +136,7 @@ export function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">7. Kartenkacheln und Geocoding</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">8. Kartenkacheln und Geocoding</h2>
           <p>
             Die Kartendarstellung lädt Kartenkacheln von OpenFreeMap (openfreemap.org). Dabei wird,
             wie bei jedem Webseitenaufruf, deine IP-Adresse an diesen Dienst übertragen; OpenFreeMap
@@ -128,7 +144,7 @@ export function Datenschutz() {
             deine eingegebene Adresse in Kartenkoordinaten umzuwandeln, übermitteln wir sie einmalig
             an OpenCage als weiteren Auftragsverarbeiter. OpenCage selbst hostet nach eigenen
             Angaben ausschließlich bei Hetzner in Deutschland - das betrifft nur diesen einen
-            Verarbeitungsschritt bei OpenCage, nicht unsere eigene Infrastruktur (siehe Abschnitt 8:
+            Verarbeitungsschritt bei OpenCage, nicht unsere eigene Infrastruktur (siehe Abschnitt 9:
             wir selbst hosten bei Scaleway). Weitere Inhalte von Drittservern werden nicht geladen;
             Schriftarten sind vollständig selbst gehostet.
           </p>
@@ -136,7 +152,7 @@ export function Datenschutz() {
 
         <section>
           <h2 className="mb-1 text-base font-bold text-gray-900">
-            8. Hosting und Auftragsverarbeitung
+            9. Hosting und Auftragsverarbeitung
           </h2>
           <p>
             Die App läuft auf Servern von Scaleway (Frankreich) innerhalb der EU. Scaleway
@@ -157,7 +173,7 @@ export function Datenschutz() {
         </section>
 
         <section>
-          <h2 className="mb-1 text-base font-bold text-gray-900">9. Deine Rechte</h2>
+          <h2 className="mb-1 text-base font-bold text-gray-900">10. Deine Rechte</h2>
           <p>
             Dir stehen die Betroffenenrechte nach Art. 15–21 DSGVO zu (Auskunft, Berichtigung,
             Löschung, Einschränkung, Widerspruch, Datenübertragbarkeit) sowie das Recht, eine
