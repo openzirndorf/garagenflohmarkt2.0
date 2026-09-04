@@ -642,6 +642,18 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
             >
               Bearbeiten
             </button>
+            {/* War bisher genauso unauffällig (text-xs, grau) gestylt wie der
+                seltene Datenexport darunter und dadurch leicht zu übersehen -
+                anders als Bearbeiten/Löschen/Export ändert Abmelden nichts an
+                den Standdaten, braucht also weder grün noch rot, aber die
+                größere Schrift wie die anderen Hauptaktionen. */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="text-sm text-gray-600 transition-colors hover:text-gray-800"
+            >
+              Abmelden
+            </button>
             <button
               type="button"
               onClick={handleCancel}
@@ -657,13 +669,6 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
               className="text-xs text-gray-400 transition-colors hover:text-gray-600 disabled:opacity-50"
             >
               {exporting ? "…" : "Meine Daten herunterladen"}
-            </button>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="text-xs text-gray-400 transition-colors hover:text-gray-600"
-            >
-              Abmelden
             </button>
           </div>
         </div>
