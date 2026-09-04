@@ -32,6 +32,7 @@ export const KATEGORIEN = [
   "Schmuck",
   "Kunst",
   "Handgemachtes",
+  "Zu verschenken",
   "Sonstiges",
 ] as const;
 
