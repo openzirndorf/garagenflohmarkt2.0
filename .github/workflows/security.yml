@@ -61,7 +61,14 @@ jobs:
         run: npm ci
       # Nur Produktionsabhängigkeiten - Dev-Tooling (Vite-Plugins etc.) hat
       # bekannte, für die ausgelieferte App irrelevante Advisories.
-      - run: npm audit --omit=dev --audit-level=high
+      # --fetch-timeout deutlich unter npms Standard von 5 Minuten pro
+      # Versuch: der Audit-Endpunkt der Registry hatte schon einen
+      # ca. 11-minütigen 503-Ausfall, der diesen Pflicht-Check dank des
+      # langen Default-Timeouts entsprechend lange blockierte - ein
+      # kurzes Timeout lässt einen erneuten Ausfall schneller (und mit
+      # klarerem Fehlerbild) durchschlagen, statt den Job minutenlang
+      # hängen zu lassen.
+      - run: npm audit --omit=dev --audit-level=high --fetch-timeout=30000
 
   # Findet IaC-Fehlkonfigurationen in infra/ (z.B. offene Security Groups,
   # fehlende Verschlüsselung) - unabhängig davon, ob `tofu validate` durchläuft
