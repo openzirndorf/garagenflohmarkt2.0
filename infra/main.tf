@@ -31,9 +31,9 @@ provider "scaleway" {
 # Standard-Datenbank-Instanz (kein Serverless) - kleinster Node-Typ, da nur
 # ~100 Schreibzugriffe insgesamt anfallen. Bewusst keine Serverless SQL
 # Database mehr: die hatte eine fixe, per Terraform nicht einstellbare
-# 7-Tage-Backup-Aufbewahrung, was mit der Löschfrist am 07.10.2026
-# kollidiert - hier lässt sich backup_schedule_retention explizit passend
-# zur Löschfrist setzen.
+# 7-Tage-Backup-Aufbewahrung - hier lässt sich backup_schedule_retention
+# stattdessen explizit kurz halten, damit Backups nicht länger als nötig
+# personenbezogene Daten vorhalten.
 resource "scaleway_rdb_instance" "flohmarkt" {
   name          = "flohmarkt-db"
   node_type     = "DB-DEV-S"
@@ -42,7 +42,7 @@ resource "scaleway_rdb_instance" "flohmarkt" {
 
   disable_backup            = false
   backup_schedule_frequency = 24 # Stunden
-  backup_schedule_retention = 3  # Tage - bewusst kurz, damit Backups zeitnah nach dem 07.10. auslaufen
+  backup_schedule_retention = 3  # Tage - bewusst kurz gehalten
 
   user_name = "flohmarkt"
   password  = var.db_password
@@ -137,7 +137,7 @@ resource "scaleway_object_bucket_policy" "stands" {
 # Scope als der breite Ausgangs-Key.
 resource "scaleway_iam_application" "stands_storage" {
   name        = "garagenflohmarkt-stands-storage"
-  description = "S3-Zugriff für stands_artifact_cron/deletion_job auf den stands-Bucket"
+  description = "S3-Zugriff für stands_artifact_cron auf den stands-Bucket"
 }
 
 resource "scaleway_iam_policy" "stands_storage" {
@@ -259,37 +259,6 @@ resource "scaleway_job_definition" "stands_artifact_cron" {
 
   cron {
     schedule = "*/5 * * * *"
-    timezone = "Europe/Berlin"
-  }
-}
-
-# Löscht alle Anmeldedaten nach dem Event-Cutoff (07.10.2026) - automatisiert,
-# nicht als Kalendererinnerung. Täglicher statt einmaliger Trigger: ein
-# Einmal-Trigger ist ein stiller Single Point of Failure; scripts/deletion_job.py
-# ist idempotent, also ist ein täglicher Lauf gefahrlos und gibt Resilienz,
-# falls ein Lauf fehlschlägt.
-resource "scaleway_job_definition" "deletion_job" {
-  name                   = "flohmarkt-deletion-job"
-  cpu_limit              = 280
-  memory_limit           = 256
-  local_storage_capacity = 1024
-  image_uri              = "${scaleway_registry_namespace.flohmarkt.endpoint}/flohmarkt-api:${var.container_image_tag}"
-  startup_command        = ["python"]
-  args                   = ["-m", "scripts.deletion_job"]
-  timeout                = "5m"
-  region                 = var.scw_region
-
-  env = {
-    DATABASE_URL  = local.database_url
-    STANDS_BUCKET = scaleway_object_bucket.stands.name
-    S3_ENDPOINT   = "https://s3.${var.scw_region}.scw.cloud"
-    S3_REGION     = var.scw_region
-    S3_ACCESS_KEY = scaleway_iam_api_key.stands_storage.access_key
-    S3_SECRET_KEY = scaleway_iam_api_key.stands_storage.secret_key
-  }
-
-  cron {
-    schedule = "0 3 * * *" # täglich 03:00 Europe/Berlin
     timezone = "Europe/Berlin"
   }
 }

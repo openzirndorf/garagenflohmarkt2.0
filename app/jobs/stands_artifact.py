@@ -93,26 +93,6 @@ def _upload(list_json: bytes, geojson: bytes, generated_at: str, stand_count: in
     )
 
 
-def purge_all_stand_objects() -> int:
-    """Löscht ALLE Objekte unter dem stands/-Präfix, nicht nur die aktuell
-    verlinkte Version - frühere Versionen (immutable, siehe _upload) bleiben
-    sonst als personenbezogene Daten im Storage liegen. Für den Löschjob am
-    07.10.2026 (siehe scripts/deletion_job.py). Gibt die Anzahl gelöschter
-    Objekte zurück."""
-    if not _BUCKET:
-        return 0
-
-    s3 = _s3_client()
-    deleted = 0
-    paginator = s3.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=_BUCKET, Prefix="stands/"):
-        keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
-        if keys:
-            s3.delete_objects(Bucket=_BUCKET, Delete={"Objects": keys})
-            deleted += len(keys)
-    return deleted
-
-
 async def regenerate_stands_artifact() -> None:
     """Liest freigegebene Stände und lädt list/geojson + manifest hoch. Tut
     nichts, wenn kein Bucket konfiguriert ist (z.B. lokale Entwicklung ohne

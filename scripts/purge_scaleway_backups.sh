@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Löscht alle automatischen Backups der Flohmarkt-Datenbank-Instanz.
 #
-# Manuell auszuführen, kurz nachdem scripts/deletion_job.py gelaufen ist
-# (Löschjob-Cron in infra/main.tf, täglich 03:00 ab 07.10.2026). Bewusst
-# NICHT automatisiert: das unwiderrufliche Löschen von Backups soll ein
-# Mensch bewusst anstoßen, nicht ein weiterer stiller Cron-Job.
+# Manuell auszuführen, z. B. kurz nachdem Standdaten manuell gelöscht wurden
+# (es gibt bewusst keinen automatisierten Löschjob mehr, siehe
+# datenschutz.tsx Abschnitt 6). Bewusst NICHT automatisiert: das
+# unwiderrufliche Löschen von Backups soll ein Mensch bewusst anstoßen,
+# nicht ein stiller Cron-Job.
 #
 # Hintergrund: Die Standard-Datenbank-Instanz behält automatische Backups
 # laut backup_schedule_retention (infra/main.tf, aktuell 3 Tage) - das kann

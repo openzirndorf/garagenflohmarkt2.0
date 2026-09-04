@@ -85,8 +85,7 @@ garagenflohmarkt2.0/
 ├── migrations/         Nummerierte SQL-Dateien, per scripts/migrate.py angewendet
 ├── scripts/
 │   ├── migrate.py                  Wendet ausstehende Migrationen an (manuell)
-│   ├── deletion_job.py              Löscht alles ab dem 07.10.2026 (Cron)
-│   └── purge_scaleway_backups.sh    Räumt DB-Backups danach manuell weg
+│   └── purge_scaleway_backups.sh    Räumt DB-Backups manuell weg
 ├── tiles/              Anleitung + Ablage für selbstgehostete Kartenkacheln (PMTiles)
 ├── infra/              OpenTofu (Scaleway-Infrastruktur)
 │   ├── main.tf         Ressourcen (RDB, Object Storage, Container, Jobs) + S3-Backend
@@ -488,15 +487,15 @@ SELECT status, count(*) FROM stands GROUP BY status;
   jeder Änderung sowie per Cron alle 5 Minuten neu erzeugt und auf Object
   Storage hochgeladen (Sicherheitsnetz gegen verlorene Background-Tasks bei
   `min_scale = 0`).
-- **Löschjob** (`scripts/deletion_job.py`, täglicher Cron): löscht ab dem
-  **07.10.2026** alle Stände aus der Datenbank sowie alle zugehörigen
-  Storage-Objekte. Kartenkacheln (`tiles/`) bleiben unangetastet.
-- **Backup-Bereinigung** (`scripts/purge_scaleway_backups.sh`): manuell kurz
-  nach dem Löschjob auszuführen, da automatische DB-Backups (Retention
-  siehe `infra/main.tf`) den Löschtermin sonst knapp überschreiten könnten.
+- **Löschung von Standdaten**: es gibt bewusst keinen automatisierten
+  Löschjob mehr (siehe `datenschutz.tsx` Abschnitt 6) - Standbetreiber
+  löschen ihre Daten selbst über „Mein Stand", verbleibende Standdaten
+  nach der Veranstaltung löschen wir bei Bedarf manuell.
+- **Backup-Bereinigung** (`scripts/purge_scaleway_backups.sh`): räumt auf
+  Zuruf alle automatischen DB-Backups weg (Retention siehe `infra/main.tf`),
+  z. B. nachdem manuell Standdaten gelöscht wurden.
 - **Tests**: `app/tests/test_stands_public_allowlist.py` prüft die
   öffentlichen Endpunkte gegen eine Positivliste erlaubter Felder;
-  `app/tests/test_deletion_job.py` und `test_stands_artifact.py` decken die
-  beiden Jobs ab.
+  `app/tests/test_stands_artifact.py` deckt das Karten-Artefakt ab.
 
 </details>

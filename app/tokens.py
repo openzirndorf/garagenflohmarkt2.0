@@ -30,8 +30,7 @@ REGISTRATION_LOGIN_TTL = timedelta(hours=24)
 LOGIN_REQUEST_TTL = timedelta(minutes=30)
 
 # Session-Token nach dem Login: großzügig befristet (deutlich über die
-# Zeitspanne zwischen Anmeldung und Event hinaus, bis zur automatischen
-# Löschung am 07.10.2026 durch scripts/deletion_job.py) - wird im Frontend
+# Zeitspanne zwischen Anmeldung und Event hinaus) - wird im Frontend
 # in localStorage abgelegt (siehe mein-stand.tsx), überlebt also ein
 # Schließen der Seite/App. War ursprünglich 60 Minuten, kombiniert mit
 # sessionStorage (pro Tab, weg beim Schließen) führte das dazu, dass sich

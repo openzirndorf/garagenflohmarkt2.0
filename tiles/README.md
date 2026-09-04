@@ -55,10 +55,9 @@ einziger Lauf vor dem 4.10.2026.
      content-type=application/octet-stream
    ```
 
-   Bewusst **nicht** über `app/jobs/stands_artifact.py` - dieser Job räumt
-   beim Löschtermin (07.10.2026) nur den `stands/`-Präfix auf und lässt
-   `tiles/` unangetastet, da Kartografie keinen Personenbezug hat und beim
-   nächsten Event wiederverwendet werden kann.
+   Bewusst getrennt vom `stands/`-Präfix, den `app/jobs/stands_artifact.py`
+   verwaltet: `tiles/` enthält keine personenbezogenen Daten und kann beim
+   nächsten Event wiederverwendet werden.
 
 ## Frontend-Anbindung (noch nicht umgestellt)
 
