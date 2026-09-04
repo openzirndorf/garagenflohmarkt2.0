@@ -46,7 +46,7 @@ jobs:
       TEST_DATABASE_URL: postgresql://flohmarkt:flohmarkt@localhost:5432/flohmarkt_test
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -147,7 +147,7 @@ jobs:
           tofu init -backend-config=backend.hcl
           echo "DATABASE_URL=$(tofu output -raw database_connection_string)" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e .
