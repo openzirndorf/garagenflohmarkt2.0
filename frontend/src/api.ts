@@ -84,6 +84,16 @@ export async function approveStand(id: number, token: string): Promise<void> {
   if (!res.ok) throw new Error("Freigabe fehlgeschlagen");
 }
 
+// Quittiert offene 🚩-Meldungen zu einem Stand, ohne ihn zu löschen/
+// bearbeiten - siehe POST /stands/{id}/report-ack in app/routes/stands.py.
+export async function acknowledgeReport(id: number, token: string): Promise<void> {
+  const res = await fetch(`${API}/stands/${id}/report-ack`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Meldung konnte nicht als erledigt markiert werden");
+}
+
 export interface AuditLogEntry {
   id: number;
   // null bei globalen Einstellungsänderungen (siehe app/routes/settings.py)
@@ -96,6 +106,7 @@ export interface AuditLogEntry {
     | "DELETED"
     | "REPLIED"
     | "REPORTED"
+    | "REPORT_ACKNOWLEDGED"
     | "DEACTIVATED"
     | "REACTIVATED"
     | "SETTINGS_MANUAL_APPROVAL_ON"

@@ -4,6 +4,7 @@ import {
   type AdminStand,
   type AppSettings,
   type AuditLogEntry,
+  acknowledgeReport,
   addAdmin,
   approveStand,
   deleteStandAdmin,
@@ -39,6 +40,7 @@ const ACTION_LABEL: Record<AuditLogEntry["action"], string> = {
   DELETED: "Gelöscht",
   REPLIED: "Antwort erhalten",
   REPORTED: "Gemeldet",
+  REPORT_ACKNOWLEDGED: "Meldung erledigt",
   DEACTIVATED: "Deaktiviert",
   REACTIVATED: "Reaktiviert",
   SETTINGS_MANUAL_APPROVAL_ON: "Extra Bestätigung aktiviert",
@@ -56,6 +58,7 @@ const ACTION_COLOR: Record<AuditLogEntry["action"], string> = {
   DEACTIVATED: "bg-red-100 text-red-700",
   REACTIVATED: "bg-green-100 text-green-700",
   REPORTED: "bg-orange-100 text-orange-700",
+  REPORT_ACKNOWLEDGED: "bg-green-100 text-green-700",
   SETTINGS_MANUAL_APPROVAL_ON: "bg-purple-100 text-purple-700",
   SETTINGS_MANUAL_APPROVAL_OFF: "bg-purple-100 text-purple-700",
   SETTINGS_BESCHREIBUNG_ON: "bg-purple-100 text-purple-700",
@@ -87,6 +90,7 @@ export function AdminPanel() {
   const [error, setError] = useState<string | null>(null);
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [acknowledgingId, setAcknowledgingId] = useState<number | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
@@ -212,6 +216,19 @@ export function AdminPanel() {
     }
   };
 
+  const handleAcknowledgeReport = async (id: number) => {
+    if (!token) return;
+    setAcknowledgingId(id);
+    try {
+      await acknowledgeReport(id, token);
+      await load(token);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Meldung konnte nicht quittiert werden");
+    } finally {
+      setAcknowledgingId(null);
+    }
+  };
+
   const handleDelete = async (id: number, nickname: string) => {
     if (!confirm(`„${nickname}" wirklich löschen?`)) return;
     if (!token) return;
@@ -300,11 +317,27 @@ export function AdminPanel() {
   // auditLog schon absteigend sortiert ankommt) - meist nur einer, aber bei
   // mehreren Meldungen für denselben Stand sollen nicht ältere überschrieben
   // werden.
+  //
+  // Ein Admin kann eine Meldung über POST /stands/{id}/report-ack
+  // quittieren, ohne den Stand zu löschen/bearbeiten (siehe
+  // handleAcknowledgeReport) - das hängt nur einen neueren
+  // REPORT_ACKNOWLEDGED-Eintrag an, statt REPORTED rückwirkend aus dem
+  // Verlauf zu entfernen (derselbe Zwei-Aktionen-Ansatz wie DEACTIVATED/
+  // REACTIVATED). Beim Durchlauf (neuester Eintrag zuerst) markiert ein
+  // REPORT_ACKNOWLEDGED deshalb den betroffenen Stand als "erledigt bis
+  // hierher" - ältere REPORTED-Einträge desselben Stands werden ab dann
+  // übersprungen, eine neue, noch jüngere Meldung zählt aber wieder.
+  const acknowledgedStandIds = new Set<number>();
   const reportCounts = new Map<number, number>();
   const lastReportAt = new Map<number, string>();
   const reportReasons = new Map<number, string[]>();
   for (const entry of auditLog) {
-    if (entry.action !== "REPORTED" || entry.stand_id == null) continue;
+    if (entry.stand_id == null) continue;
+    if (entry.action === "REPORT_ACKNOWLEDGED") {
+      acknowledgedStandIds.add(entry.stand_id);
+      continue;
+    }
+    if (entry.action !== "REPORTED" || acknowledgedStandIds.has(entry.stand_id)) continue;
     reportCounts.set(entry.stand_id, (reportCounts.get(entry.stand_id) ?? 0) + 1);
     const prev = lastReportAt.get(entry.stand_id);
     if (!prev || entry.created_at > prev) lastReportAt.set(entry.stand_id, entry.created_at);
@@ -432,6 +465,16 @@ export function AdminPanel() {
             )}
           </div>
           <div className="flex shrink-0 gap-2">
+            {reportCounts.has(s.id) && (
+              <button
+                type="button"
+                onClick={() => handleAcknowledgeReport(s.id)}
+                disabled={acknowledgingId === s.id}
+                className="text-xs text-orange-600 hover:text-orange-800 disabled:opacity-50"
+              >
+                {acknowledgingId === s.id ? "…" : "✓ Meldung erledigt"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => startEdit(s)}
@@ -872,6 +915,16 @@ export function AdminPanel() {
                           >
                             {approvingId === s.id ? "…" : "Freigeben"}
                           </button>
+                          {reportCounts.has(s.id) && (
+                            <button
+                              type="button"
+                              onClick={() => handleAcknowledgeReport(s.id)}
+                              disabled={acknowledgingId === s.id}
+                              className="rounded border border-orange-300 px-3 py-1.5 text-sm text-orange-700 hover:bg-orange-50 disabled:opacity-50"
+                            >
+                              {acknowledgingId === s.id ? "…" : "✓ Meldung erledigt"}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => startEdit(s)}

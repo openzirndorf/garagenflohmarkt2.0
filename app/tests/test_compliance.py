@@ -103,3 +103,33 @@ async def test_report_stand_is_rate_limited(client, api_auth):
 
     sixth = await client.post(f"/stands/{stand['id']}/report", json={"grund": "Testgrund"})
     assert sixth.status_code == 429
+
+
+async def test_acknowledge_report_requires_admin_auth(client, api_auth):
+    stand = (await client.post("/stands/", json=_base_body(), auth=api_auth)).json()
+    resp = await client.post(f"/stands/{stand['id']}/report-ack")
+    assert resp.status_code in (401, 403)
+
+
+async def test_acknowledge_report_is_audit_logged_without_touching_the_stand(
+    client, api_auth, admin_headers, pool
+):
+    stand = (await client.post("/stands/", json=_base_body(), auth=api_auth)).json()
+    await client.post(f"/stands/{stand['id']}/report", json={"grund": "Testgrund"})
+
+    resp = await client.post(f"/stands/{stand['id']}/report-ack", headers=admin_headers)
+    assert resp.status_code == 200
+
+    entries = await pool.fetch(
+        "SELECT action, actor FROM admin_audit_log WHERE stand_id = $1 ORDER BY id", stand["id"]
+    )
+    assert [(r["action"], r["actor"]) for r in entries][-1] == ("REPORT_ACKNOWLEDGED", "admin")
+
+    # Der Stand selbst (Status/Inhalt) bleibt unangetastet - reines Quittieren.
+    still_there = await client.get("/stands/admin", headers=admin_headers)
+    assert any(s["id"] == stand["id"] for s in still_there.json())
+
+
+async def test_acknowledge_report_for_unknown_stand_returns_404(client, admin_headers):
+    resp = await client.post("/stands/999999/report-ack", headers=admin_headers)
+    assert resp.status_code == 404

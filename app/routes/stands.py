@@ -788,6 +788,24 @@ async def delete_stand_admin(
     background_tasks.add_task(regenerate_stands_artifact)
 
 
+# POST /stands/{id}/report-ack - Bearer Token. Quittiert offene 🚩-Meldungen
+# zu einem Stand, OHNE den Stand selbst zu löschen/bearbeiten oder
+# vorhandene REPORTED-Einträge rückwirkend aus dem Verlauf zu entfernen -
+# hängt stattdessen einen neueren REPORT_ACKNOWLEDGED-Eintrag an. Im
+# Admin-Panel gilt ein Stand als "aktuell gemeldet", solange sein letzter
+# REPORTED-Eintrag neuer ist als sein letzter REPORT_ACKNOWLEDGED-Eintrag -
+# dasselbe Zwei-Aktionen-Muster wie bei DEACTIVATED/REACTIVATED. Eine neue
+# Meldung nach dem Quittieren taucht also wieder auf.
+@router.post("/{stand_id}/report-ack")
+async def acknowledge_report(stand_id: int, admin_email: str = Depends(require_admin_session_auth)):
+    pool = await get_pool()
+    row = await pool.fetchrow("SELECT id FROM stands WHERE id = $1", stand_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Stand nicht gefunden")
+    await log_action(pool, stand_id, "REPORT_ACKNOWLEDGED", "admin", admin_email)
+    return {"message": "Meldung als erledigt markiert."}
+
+
 # POST /stands/{id}/approve - Bearer Token (manuelle Freigabe, z.B. falls die
 # Login-Mail nie ankommt und Admin und Person sich direkt abstimmen)
 @router.post("/{stand_id}/approve")
