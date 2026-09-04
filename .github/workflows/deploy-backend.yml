@@ -66,9 +66,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      # Siehe ausführlichen Kommentar zum node_modules-Cache in
+      # .github/workflows/test.yml (lint-Job): node_modules direkt cachen
+      # statt nur npms Download-Cache, das Auspacken/Verlinken der ~500
+      # Pakete ist hier der langsame Teil, nicht der Download.
+      - uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
       - run: npm run lint
       - run: npx tsc -p tsconfig.json --noEmit
       - run: npx vitest --run

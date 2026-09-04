@@ -22,9 +22,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
+      # actions/setup-node's eingebautes cache: "npm" cacht nur npms eigenen
+      # Download-Cache (Tarballs) - erspart also nur den Netzwerk-Teil.
+      # Bei diesem Projekt (Tailwind/Biome/Vite/Rollup je mit einem Dutzend
+      # Plattform-Binärpaketen, vite-plugin-pwa zieht workbox-build inkl.
+      # vollem Babel-Preset mit rein - ~500 Pakete gesamt trotz nur 3+16
+      # eigener Einträge in package.json) ist aber das Auspacken/Verlinken
+      # der Pakete selbst der langsame Teil, nicht der Download - deshalb
+      # hier stattdessen das fertige node_modules direkt cachen und "npm
+      # ci" bei Cache-Treffer ganz überspringen.
+      - uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
       - working-directory: frontend
+        if: steps.npm-cache.outputs.cache-hit != 'true'
         run: npm ci
       - working-directory: frontend
         run: npx biome check src vite.config.ts vitest.config.ts
@@ -39,9 +52,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      # Siehe ausführlichen Kommentar zum node_modules-Cache im lint-Job oben.
+      - uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
       # Bewusst "-p tsconfig.json --noEmit" (wie im "build"-Skript), NICHT "-b" -
       # tsc im Build-Modus (-b) hat hier schon einmal versehentlich .js-Dateien
       # neben die .tsx-Quellen geschrieben.
@@ -57,9 +75,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: "npm"
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
+      # Siehe ausführlichen Kommentar zum node_modules-Cache im lint-Job oben.
+      - uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: frontend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm ci
       - run: npx vitest --run
 
   backend-tests:
@@ -86,12 +109,15 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
-      - run: python -m pytest app/tests -v --ignore=app/tests/test_stands_public_allowlist.py --ignore=app/tests/test_stands_tokens.py --ignore=app/tests/test_logging_no_pii.py --ignore=app/tests/test_deletion_job.py
+      - run: python -m pytest app/tests -v --ignore=app/tests/test_stands_public_allowlist.py --ignore=app/tests/test_stands_tokens.py --ignore=app/tests/test_logging_no_pii.py
 
   # Eigener, nicht überspringbarer Job für die Datenschutz-Tests (Positivliste,
-  # Token-Lifecycle, PII-in-Logs, Löschjob) - als Required Status Check in den
+  # Token-Lifecycle, PII-in-Logs) - als Required Status Check in den
   # Branch-Protection-Regeln von main eintragen, damit kein Merge möglich ist,
-  # der eine dieser Eigenschaften verletzt.
+  # der eine dieser Eigenschaften verletzt. test_deletion_job.py stand hier
+  # ebenfalls, bis der automatische Löschjob als Feature entfernt wurde
+  # (siehe datenschutz.tsx Abschnitt 6) - die Datei existiert seitdem nicht
+  # mehr.
   privacy-tests:
     runs-on: ubuntu-latest
     services:
@@ -121,4 +147,3 @@ jobs:
           app/tests/test_stands_public_allowlist.py
           app/tests/test_stands_tokens.py
           app/tests/test_logging_no_pii.py
-          app/tests/test_deletion_job.py
