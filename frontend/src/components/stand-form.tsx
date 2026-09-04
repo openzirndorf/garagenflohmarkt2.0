@@ -367,10 +367,25 @@ export function StandForm({ onSuccess }: Props) {
           <Button
             onClick={handleSubmit}
             disabled={status === "loading" || !allConfirmed}
-            style={{ backgroundColor: allConfirmed ? "#009a00" : undefined }}
+            // Solange nicht beide Haken oben gesetzt sind: sichtbar grau statt
+            // nur abgedunkeltem Grün (Buttons disabled:opacity-50 aus ui.tsx
+            // wirkt auf dem Marken-Grün kaum wie "deaktiviert") - der Button
+            // bleibt an derselben Stelle stehen, damit klar ist, dass er
+            // existiert und nach dem Bestätigen sofort nutzbar wird, statt
+            // z.B. erst dann zu erscheinen.
+            style={
+              allConfirmed
+                ? { backgroundColor: "#009a00" }
+                : { backgroundColor: "#d1d5db", color: "#6b7280", opacity: 1 }
+            }
           >
             {status === "loading" ? "Wird eingereicht…" : "Stand anmelden"}
           </Button>
+          {!allConfirmed && status !== "loading" && (
+            <p className="-mt-2 text-center text-xs text-gray-500">
+              Bitte bestätige oben beide Kästchen, um fortzufahren.
+            </p>
+          )}
         </div>
       </CardContent>
       {faqOpen && (

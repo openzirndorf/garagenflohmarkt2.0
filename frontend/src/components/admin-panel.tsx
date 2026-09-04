@@ -288,6 +288,24 @@ export function AdminPanel() {
   // gesammelt an prominenter Stelle, damit keine übersehen wird.
   const openReplies = all.filter((s) => s.deactivation_reply_message);
 
+  // Meldungen von Besuchern (🚩 "Melden"-Feature, POST /stands/{id}/report)
+  // - bewusst kein eigenes Feld auf dem Stand (siehe app/routes/stands.py
+  // report_stand: der Grund landet nur in der Mail an den Admin, nicht in
+  // der DB), deshalb hier aus den letzten 200 Audit-Log-Einträgen
+  // abgeleitet statt wie deactivation_reply_message direkt vom Stand zu
+  // kommen. Bisher nur als einzelne, leicht übersehene Zeile im Verlauf
+  // weiter unten sichtbar gewesen - jetzt zusätzlich als eigener Abschnitt
+  // oben (siehe unten) und als Badge in den jeweiligen Listenzeilen.
+  const reportCounts = new Map<number, number>();
+  const lastReportAt = new Map<number, string>();
+  for (const entry of auditLog) {
+    if (entry.action !== "REPORTED" || entry.stand_id == null) continue;
+    reportCounts.set(entry.stand_id, (reportCounts.get(entry.stand_id) ?? 0) + 1);
+    const prev = lastReportAt.get(entry.stand_id);
+    if (!prev || entry.created_at > prev) lastReportAt.set(entry.stand_id, entry.created_at);
+  }
+  const reportedStands = all.filter((s) => reportCounts.has(s.id));
+
   // Statistiken
   const catStats = KATEGORIEN.map((k) => ({
     k,
@@ -338,6 +356,14 @@ export function AdminPanel() {
           </span>
           <div className="min-w-0 flex-1">
             <span className="font-medium">{s.nickname}</span>
+            {reportCounts.has(s.id) && (
+              <span
+                title={`${reportCounts.get(s.id)} Meldung${reportCounts.get(s.id) === 1 ? "" : "en"} von Besuchern`}
+                className="ml-2 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs text-orange-700"
+              >
+                🚩 {reportCounts.get(s.id)}
+              </span>
+            )}
             <span className="ml-2 text-gray-500">{s.adresse}</span>
             {s.email && <span className="ml-2 text-gray-400">· {s.email}</span>}
             {s.kategorien && s.kategorien.length > 0 && (
@@ -518,6 +544,29 @@ export function AdminPanel() {
               💬 {openReplies.length} offene Rückmeldung{openReplies.length === 1 ? "" : "en"} von
               Standinhabern - bei „Deaktiviert" ansehen ↓
             </button>
+          )}
+
+          {/* Meldungen von Besuchern (🚩) - anders als Rückmeldungen oben ein
+              eigener, vollständiger Abschnitt statt nur eines Hinweises:
+              gemeldete Stände liegen je nach Fall in "Ausstehend",
+              "Freigegeben" oder "Deaktiviert", ein einzelnes Sprungziel gibt
+              es also nicht. Bisher war eine Meldung nur als einzelne Zeile
+              im Verlauf weiter unten sichtbar und leicht zu übersehen. */}
+          {reportedStands.length > 0 && (
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-orange-200 bg-orange-50 p-5"
+            >
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-orange-700">
+                🚩 Gemeldete Stände ({reportedStands.length})
+              </h2>
+              <p className="mb-3 text-xs text-orange-700">
+                Von Besuchern über die 🚩 „Melden"-Funktion gemeldet (Grund steht nur in der
+                Benachrichtigungs-Mail, nicht hier). Taucht je nach Status auch weiter unten in
+                „Ausstehend", „Freigegeben" oder „Deaktiviert" auf.
+              </p>
+              <ul className="flex flex-col gap-2">{reportedStands.map(renderStandRow)}</ul>
+            </section>
           )}
 
           {/* Einstellungen */}
@@ -734,6 +783,14 @@ export function AdminPanel() {
                                 className="rounded-full bg-red-100 px-1.5 py-0.5 text-xs text-red-700"
                               >
                                 🚫
+                              </span>
+                            )}
+                            {reportCounts.has(s.id) && (
+                              <span
+                                title={`${reportCounts.get(s.id)} Meldung${reportCounts.get(s.id) === 1 ? "" : "en"} von Besuchern`}
+                                className="rounded-full bg-orange-100 px-1.5 py-0.5 text-xs text-orange-700"
+                              >
+                                🚩 {reportCounts.get(s.id)}
                               </span>
                             )}
                           </p>
