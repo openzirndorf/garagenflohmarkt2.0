@@ -4,6 +4,14 @@ import { Faq } from "./faq";
 import { Footer, PORTAL_URL } from "./footer";
 import { Impressum } from "./impressum";
 
+// Dieselben leichten WebP-Maskottchen wie im Schwesterprojekt erfahre
+// (frontend/public/images/maskottchen/, aus dem öffentlichen
+// openzirndorf-Repo) - bewusst als einfache Bilddateien statt der
+// npm-Komponente @openzirndorf/ui: dieses Projekt ist kein Teil des
+// openzirndorf-apps-Monorepos, ein zusätzliches Paket nur für ein
+// Ladebild wäre unverhältnismäßig ("Abhängigkeiten sind teuer").
+const MASCOTS = ["fynn", "horst", "kreiselix", "nico", "paul", "quirin", "tuxi"] as const;
+
 // Zeigt sich, solange die App noch nicht öffentlich gestartet ist (siehe
 // main.tsx: Gate vor FlohmarktApp/AdminPanel) - Impressum/Datenschutz/FAQ
 // müssen aber schon vorher erreichbar sein (Impressumspflicht gilt
@@ -65,6 +73,11 @@ function CountdownBlock({ value, label }: { value: number; label: string }) {
 // ohnehin schon für die Freischalt-Entscheidung selbst.
 function Placeholder({ launchAt }: { launchAt: string | null }) {
   const countdown = useCountdown(launchAt);
+  // Einmal pro Aufruf zufällig gewählt (nicht bei jedem Rerender neu, sonst
+  // würde z.B. der Countdown-Sekundentakt oben das Maskottchen ständig
+  // wechseln lassen) - welches der sieben es ist, hat keine inhaltliche
+  // Bedeutung, reine Auflockerung der sonst reinen Text-/Logo-Seite.
+  const [mascot] = useState(() => MASCOTS[Math.floor(Math.random() * MASCOTS.length)]);
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-16 text-center">
@@ -74,6 +87,13 @@ function Placeholder({ launchAt }: { launchAt: string | null }) {
         width={72}
         height={72}
         className="rounded-xl"
+      />
+      <img
+        src={`/images/maskottchen/${mascot}_plain.webp`}
+        alt=""
+        width={220}
+        height={220}
+        className="w-[160px] sm:w-[200px] md:w-[220px]"
       />
       <div>
         <h1
