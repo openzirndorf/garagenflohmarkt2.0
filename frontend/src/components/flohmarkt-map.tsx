@@ -120,11 +120,68 @@ export function FlohmarktMap({
           spreadCoincidentPoints(geojson),
           favoriteIdsRef.current,
         );
-        map.addSource("stands", { type: "geojson", data: initialData });
+        // cluster: true fasst nahe beieinanderliegende Punkte beim
+        // Rauszoomen zu einem Punkt mit Zähler zusammen (Supercluster,
+        // in MapLibre eingebaut) - ohne das ballen sich bei der
+        // Zirndorf-weiten Startansicht viele Stände nahe der Kernstadt zu
+        // einem unübersichtlichen Klumpen einzelner Kreise. clusterRadius
+        // in Pixern, nicht Metern - wirkt also bei jedem Zoom gleich stark,
+        // unabhängig vom spreadCoincidentPoints()-Versatz oben (der wirkt
+        // in Grad/Metern und wird bei niedrigem Zoom von clusterRadius
+        // ohnehin überstimmt - beide Mechanismen ergänzen sich: Clustering
+        // fürs allgemeine Rauszoomen, der Versatz fürs Auseinanderhalten,
+        // sobald ein Cluster sich in Einzelpunkte auflöst).
+        map.addSource("stands", {
+          type: "geojson",
+          data: initialData,
+          cluster: true,
+          clusterMaxZoom: 15,
+          clusterRadius: 50,
+        });
+
+        // Cluster-Kreise: Größe/Farbe in drei Stufen nach point_count,
+        // dieselbe Grün-Familie wie die Einzelpunkte statt einer fremden
+        // Farbe.
+        map.addLayer({
+          id: "stands-clusters",
+          type: "circle",
+          source: "stands",
+          filter: ["has", "point_count"],
+          paint: {
+            "circle-radius": ["step", ["get", "point_count"], 16, 10, 20, 25, 26],
+            "circle-color": [
+              "step",
+              ["get", "point_count"],
+              "#009A00",
+              10,
+              "#007a00",
+              25,
+              "#005c00",
+            ],
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff",
+          },
+        });
+        map.addLayer({
+          id: "stands-cluster-count",
+          type: "symbol",
+          source: "stands",
+          filter: ["has", "point_count"],
+          layout: {
+            "text-field": ["get", "point_count_abbreviated"],
+            "text-font": ["Noto Sans Bold"],
+            "text-size": 13,
+          },
+          paint: { "text-color": "#fff" },
+        });
+
         map.addLayer({
           id: "stands-pins",
           type: "circle",
           source: "stands",
+          // Wenn nicht (mehr) Teil eines Clusters - siehe stands-clusters
+          // oben, die dieselbe Source für zusammengefasste Punkte nutzt.
+          filter: ["!", ["has", "point_count"]],
           paint: {
             "circle-radius": 10,
             // Eigene Favoriten (siehe favoriteIds-Prop, per localStorage in
@@ -141,6 +198,24 @@ export function FlohmarktMap({
             "circle-stroke-width": 2,
             "circle-stroke-color": "#fff",
           },
+        });
+
+        // Klick auf einen Cluster zoomt genau so weit rein, bis er sich in
+        // Einzelpunkte auflöst (von Supercluster vorberechnet, kein Raten
+        // nötig) statt einer festen Zoomstufe.
+        map.on("click", "stands-clusters", async (e) => {
+          const feature = e.features?.[0];
+          if (!feature || feature.geometry.type !== "Point") return;
+          const clusterId = feature.properties?.cluster_id as number;
+          const source = map.getSource("stands") as maplibregl.GeoJSONSource;
+          const zoom = await source.getClusterExpansionZoom(clusterId);
+          map.easeTo({ center: feature.geometry.coordinates as [number, number], zoom });
+        });
+        map.on("mouseenter", "stands-clusters", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "stands-clusters", () => {
+          map.getCanvas().style.cursor = "";
         });
 
         // Zeigt initial alle angemeldeten Stände, nicht nur CENTER/ZOOM
