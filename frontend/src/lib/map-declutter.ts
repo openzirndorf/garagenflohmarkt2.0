@@ -4,11 +4,14 @@
 // obersten, der zweite Stand wäre auf der Karte praktisch unklickbar (in
 // der Liste bleibt er normal sichtbar, das Problem betrifft nur die
 // Karte, siehe flohmarkt-map.tsx). Ordnet solche Gruppen stattdessen in
-// einem kleinen Kreis um den Original-Punkt an. ~15-20m Radius - sichtbar
-// getrennt etwa ab Straßen-Zoomstufe; bei der Zirndorf-weiten
-// Startansicht sind auch nicht-doppelte, benachbarte Adressen kaum
-// unterscheidbar, das ist keine Regression durch diesen Versatz.
-export const COINCIDENT_OFFSET_DEGREES = 0.00015;
+// einem kleinen Kreis um den Original-Punkt an. Bewusst klein gehalten
+// (~4-5m, war anfangs 0.00015/~15-20m) - der Punkt soll optisch noch
+// erkennbar am selben Gebäude/Grundstück bleiben, nicht wie ein
+// eigenständiger, falscher Nachbar-Standort wirken. Sichtbar getrennt
+// bleiben die Punkte trotzdem, da der Kreisradius selbst (10px) bei
+// typischem Zoom größer ist als die paar Meter Versatz in Bildschirm-
+// Pixeln.
+export const COINCIDENT_OFFSET_DEGREES = 0.00004;
 
 export function spreadCoincidentPoints(
   collection: GeoJSON.FeatureCollection,
