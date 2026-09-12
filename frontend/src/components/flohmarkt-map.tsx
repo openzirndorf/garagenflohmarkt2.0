@@ -2,6 +2,7 @@ import maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchGeoJSON, reportStand } from "../api";
+import { spreadCoincidentPoints } from "../lib/map-declutter";
 import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
 
 // Zirndorf Zentrum
@@ -113,11 +114,13 @@ export function FlohmarktMap({
         // isFavorite schon hier setzen (mit dem zum Ladezeitpunkt aktuellen
         // Stand, siehe favoriteIdsRef) statt auf den Filter-Effekt unten zu
         // warten - sonst blitzen eigene Favoriten beim ersten Laden kurz
-        // grün auf, bevor sie gelb werden.
-        map.addSource("stands", {
-          type: "geojson",
-          data: withFavoriteFlag(geojson, favoriteIdsRef.current),
-        });
+        // grün auf, bevor sie gelb werden. Ebenso schon hier den Versatz für
+        // deckungsgleiche Adressen anwenden, siehe spreadCoincidentPoints.
+        const initialData = withFavoriteFlag(
+          spreadCoincidentPoints(geojson),
+          favoriteIdsRef.current,
+        );
+        map.addSource("stands", { type: "geojson", data: initialData });
         map.addLayer({
           id: "stands-pins",
           type: "circle",
@@ -154,7 +157,7 @@ export function FlohmarktMap({
         // Punkt), duration: 0 vermeidet eine sichtbare Schwenk-Animation
         // direkt nach dem ersten Laden.
         const bounds = new maplibregl.LngLatBounds();
-        for (const f of geojson.features) {
+        for (const f of initialData.features) {
           if (f.geometry.type === "Point") {
             bounds.extend(f.geometry.coordinates as [number, number]);
           }
@@ -236,7 +239,7 @@ export function FlohmarktMap({
     };
 
     const source = map.getSource("stands") as maplibregl.GeoJSONSource | undefined;
-    source?.setData(withFavoriteFlag(filtered, favoriteIds));
+    source?.setData(withFavoriteFlag(spreadCoincidentPoints(filtered), favoriteIds));
   }, [
     kategorienFilter,
     zahlungsartenFilter,
