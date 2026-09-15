@@ -18,6 +18,7 @@ import os
 from datetime import UTC, datetime
 
 import boto3
+from botocore.config import Config
 
 from app.database import get_pool
 from app.public_fields import (
@@ -50,12 +51,20 @@ def _content_hash(data: bytes) -> str:
 
 
 def _s3_client():
+    # retries=standard/5 statt boto3s Default (legacy-Modus, kaum Retries auf
+    # Verbindungsfehlern): live wiederholt mit "socket.gaierror: Temporary
+    # failure in name resolution" fehlgeschlagen - die Job-Sandbox löst
+    # s3.fr-par.scw.cloud gelegentlich kurzzeitig nicht auf (DNS-Flackern der
+    # Scaleway-Plattform, kein Fehler in diesem Code). Der Cron-Lauf alle
+    # 5 Minuten hätte das ohnehin selbst geheilt, aber Standard-Retries mit
+    # Backoff lösen es schon innerhalb desselben Laufs.
     return boto3.client(
         "s3",
         endpoint_url=os.environ["S3_ENDPOINT"],
         region_name=os.environ.get("S3_REGION", "fr-par"),
         aws_access_key_id=os.environ["S3_ACCESS_KEY"],
         aws_secret_access_key=os.environ["S3_SECRET_KEY"],
+        config=Config(retries={"max_attempts": 5, "mode": "standard"}),
     )
 
 
