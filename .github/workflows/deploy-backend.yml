@@ -211,6 +211,26 @@ jobs:
             image=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
             region=fr-par
 
+      - name: Job-Definition (stands-artifact-regen) auf dasselbe Image bringen
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_DEFAULT_PROJECT_ID: ${{ secrets.SCW_PROJECT_ID }}
+          SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_DEFAULT_REGION: fr-par
+        # Ohne diesen Schritt hing die Job-Definition hier seit dem 3.9.
+        # fest, weil sie über keinen der obigen Schritte lief (migrate
+        # nutzt "tofu init" nur, um database_connection_string zu lesen,
+        # kein "tofu apply") - jeder Fix in app/jobs/stands_artifact.py
+        # (oder einer seiner Abhängigkeiten) landete seitdem nie im
+        # tatsächlich laufenden Cron-Job. Live entdeckt, als ein Fix für
+        # ein DNS-Problem im Job trotz Deploy nicht griff.
+        run: |
+          scw jobs definition update \
+            $(scw jobs definition list -o json | jq -r '.[] | select(.name=="stands-artifact-regen") | .id') \
+            image-uri=rg.fr-par.scw.cloud/openzirndorf-flohmarkt/flohmarkt-api:${{ needs.build-and-push.outputs.sha_tag }} \
+            region=fr-par
+
   smoke-test:
     needs: deploy
     runs-on: ubuntu-latest
