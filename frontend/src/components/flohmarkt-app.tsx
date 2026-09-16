@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type OwnStand, fetchStands } from "../api";
 import { useFavorites } from "../lib/favorites";
+import { ORTSTEILE, extractOrtsteil } from "../lib/ortsteil";
 import { appShareOptions } from "../lib/share";
 import type { Stand } from "../types";
 import { Datenschutz } from "./datenschutz";
@@ -267,6 +268,7 @@ export function FlohmarktApp() {
   const [page, setPage] = useState<Page>(pageFromHash);
   const [kategorienFilter, setKategorienFilter] = useState<string[]>([]);
   const [zahlungsartenFilter, setZahlungsartenFilter] = useState<string[]>([]);
+  const [ortsteilFilter, setOrtsteilFilter] = useState<string[]>([]);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
@@ -338,12 +340,17 @@ export function FlohmarktApp() {
     );
   };
 
+  const toggleOrtsteilFilter = (o: string) => {
+    setOrtsteilFilter((prev) => (prev.includes(o) ? prev.filter((c) => c !== o) : [...prev, o]));
+  };
+
   // Auch von StandListe aufgerufen (siehe deren "Keine Treffer"-Zustand,
   // unterscheidet dort von "wirklich noch keine Stände angemeldet") -
   // deshalb als eigene Funktion statt inline im Filter-Panel-Button unten.
   const resetFilters = () => {
     setKategorienFilter([]);
     setZahlungsartenFilter([]);
+    setOrtsteilFilter([]);
     setShowFavoritesOnly(false);
     setSearchInput("");
   };
@@ -353,11 +360,14 @@ export function FlohmarktApp() {
   // Beschreibung), ohne die Filterleiste weiter zu füllen.
   const searchQuery = searchInput.trim().toLowerCase();
 
-  // Nur die Pillen-Filter (Favoriten/Zahlungsart/Kategorie) zählen für das
-  // Badge am "Filter"-Button - die Suche hat ihr eigenes, immer sichtbares
-  // Feld und braucht keinen Zähler.
+  // Nur die Pillen-Filter (Favoriten/Zahlungsart/Kategorie/Ortsteil) zählen
+  // für das Badge am "Filter"-Button - die Suche hat ihr eigenes, immer
+  // sichtbares Feld und braucht keinen Zähler.
   const activeFilterCount =
-    kategorienFilter.length + zahlungsartenFilter.length + (showFavoritesOnly ? 1 : 0);
+    kategorienFilter.length +
+    zahlungsartenFilter.length +
+    ortsteilFilter.length +
+    (showFavoritesOnly ? 1 : 0);
 
   const hasActiveFilter = activeFilterCount > 0 || searchQuery !== "";
 
@@ -378,6 +388,10 @@ export function FlohmarktApp() {
       (s) =>
         zahlungsartenFilter.length === 0 ||
         s.zahlungsarten.some((z) => zahlungsartenFilter.includes(z)),
+    )
+    .filter(
+      (s) =>
+        ortsteilFilter.length === 0 || ortsteilFilter.includes(extractOrtsteil(s.adresse) ?? ""),
     )
     .filter((s) => !showFavoritesOnly || favoriteIds.has(s.id))
     .filter(matchesSearch);
@@ -466,6 +480,7 @@ export function FlohmarktApp() {
             <MapOrList
               kategorienFilter={kategorienFilter}
               zahlungsartenFilter={zahlungsartenFilter}
+              ortsteilFilter={ortsteilFilter}
               showFavoritesOnly={showFavoritesOnly}
               searchQuery={searchQuery}
               favoriteIds={favoriteIds}
@@ -578,6 +593,35 @@ export function FlohmarktApp() {
                           }`}
                         >
                           {k}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Nur relevant für die Außenorte, siehe lib/ortsteil.ts -
+                    die Zirndorfer Kernstadt selbst bekommt keinen eigenen
+                    Ortsteil-Zusatz an der Adresse und lässt sich hier
+                    deshalb nicht separat anwählen. */}
+                <div>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                    Ortsteil
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ORTSTEILE.map((o) => {
+                      const active = ortsteilFilter.includes(o);
+                      return (
+                        <button
+                          key={o}
+                          type="button"
+                          onClick={() => toggleOrtsteilFilter(o)}
+                          className={`rounded-full border-2 px-3 py-1 text-xs font-semibold transition-colors ${
+                            active
+                              ? "border-violet-600 bg-violet-600 text-white"
+                              : "border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-600 hover:bg-violet-100"
+                          }`}
+                        >
+                          {o}
                         </button>
                       );
                     })}

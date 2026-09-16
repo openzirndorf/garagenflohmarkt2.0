@@ -6,6 +6,7 @@ import { StandListe } from "./stand-liste";
 interface Props {
   kategorienFilter: string[];
   zahlungsartenFilter: string[];
+  ortsteilFilter: string[];
   showFavoritesOnly: boolean;
   searchQuery: string;
   favoriteIds: Set<number>;
@@ -22,6 +23,7 @@ interface Props {
 export function MapOrList({
   kategorienFilter,
   zahlungsartenFilter,
+  ortsteilFilter,
   showFavoritesOnly,
   searchQuery,
   favoriteIds,
@@ -55,6 +57,7 @@ export function MapOrList({
     <FlohmarktMap
       kategorienFilter={kategorienFilter}
       zahlungsartenFilter={zahlungsartenFilter}
+      ortsteilFilter={ortsteilFilter}
       showFavoritesOnly={showFavoritesOnly}
       searchQuery={searchQuery}
       favoriteIds={favoriteIds}

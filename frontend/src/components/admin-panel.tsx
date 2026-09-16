@@ -350,6 +350,13 @@ export function AdminPanel() {
   }
   const reportedStands = all.filter((s) => reportCounts.has(s.id));
 
+  // Stände, deren Adresse sich nicht (mehr) präzise genug geocodieren
+  // ließ (siehe app/geocode.py _is_trustworthy) - erscheinen bisher
+  // komplett still ohne Kartenpunkt, ohne dass Owner oder Admin das
+  // irgendwo angezeigt bekommen. Betrifft z.B. Tippfehler in der Straße
+  // oder eine noch nicht in OpenStreetMap erfasste Adresse.
+  const standsWithoutPin = all.filter((s) => s.lat == null || s.lng == null);
+
   // Statistiken
   const catStats = KATEGORIEN.map((k) => ({
     k,
@@ -630,6 +637,31 @@ export function AdminPanel() {
                 „Ausstehend", „Freigegeben" oder „Deaktiviert" auf.
               </p>
               <ul className="flex flex-col gap-2">{reportedStands.map(renderStandRow)}</ul>
+            </section>
+          )}
+
+          {/* Stände ohne Kartenpunkt - meist ein Tippfehler in der Straße
+              oder eine noch nicht in OpenStreetMap erfasste Adresse (siehe
+              app/geocode.py). Bisher komplett unsichtbar: der Stand
+              erscheint zwar in Ausstehend/Freigegeben/Deaktiviert, aber
+              nirgends auf der Karte, ohne dass irgendwer benachrichtigt
+              wird - hier gesammelt, damit sich das proaktiv beheben lässt
+              (Adresse mit Owner klären, dann erneut speichern). */}
+          {standsWithoutPin.length > 0 && (
+            <section
+              style={{ borderRadius: "var(--oz-radius-lg)", boxShadow: "var(--oz-shadow-sm)" }}
+              className="border border-cyan-200 bg-cyan-50 p-5"
+            >
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-cyan-700">
+                📍 Stände ohne Kartenpunkt ({standsWithoutPin.length})
+              </h2>
+              <p className="mb-3 text-xs text-cyan-700">
+                Die Adresse konnte nicht präzise genug gefunden werden (z.&nbsp;B. Tippfehler oder
+                eine Adresse, die noch nicht in OpenStreetMap erfasst ist) - der Stand ist deshalb
+                weder auf der Karte noch im Umkreis-Filter zu finden, taucht aber ganz normal in
+                „Ausstehend"/„Freigegeben"/„Deaktiviert" weiter unten auf.
+              </p>
+              <ul className="flex flex-col gap-2">{standsWithoutPin.map(renderStandRow)}</ul>
             </section>
           )}
 

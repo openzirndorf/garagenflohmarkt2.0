@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { fetchGeoJSON, reportStand } from "../api";
 import { spreadCoincidentPoints } from "../lib/map-declutter";
+import { extractOrtsteil } from "../lib/ortsteil";
 import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
 
 // Zirndorf Zentrum
@@ -29,6 +30,7 @@ function withFavoriteFlag(
 interface Props {
   kategorienFilter?: string[];
   zahlungsartenFilter?: string[];
+  ortsteilFilter?: string[];
   showFavoritesOnly?: boolean;
   // Bereits getrimmt+lowercased vom Aufrufer (siehe flohmarkt-app.tsx) -
   // hier nur noch ein einfacher includes()-Vergleich nötig.
@@ -41,6 +43,7 @@ interface Props {
 export function FlohmarktMap({
   kategorienFilter = [],
   zahlungsartenFilter = [],
+  ortsteilFilter = [],
   showFavoritesOnly = false,
   searchQuery = "",
   favoriteIds,
@@ -301,6 +304,9 @@ export function FlohmarktMap({
         const zahlungsartMatch =
           zahlungsartenFilter.length === 0 ||
           zahlungsarten.some((z) => zahlungsartenFilter.includes(z));
+        const ortsteilMatch =
+          ortsteilFilter.length === 0 ||
+          ortsteilFilter.includes(extractOrtsteil((props.adresse as string) ?? "") ?? "");
         const favoriteMatch = !showFavoritesOnly || favoriteIds.has(props.id as number);
         const searchMatch =
           searchQuery === "" ||
@@ -309,7 +315,7 @@ export function FlohmarktMap({
           (props.beschreibung as string | null)?.toLowerCase().includes(searchQuery) ||
           cats.some((k) => k.toLowerCase().includes(searchQuery)) ||
           zahlungsarten.some((z) => z.toLowerCase().includes(searchQuery));
-        return categoryMatch && zahlungsartMatch && favoriteMatch && searchMatch;
+        return categoryMatch && zahlungsartMatch && ortsteilMatch && favoriteMatch && searchMatch;
       }),
     };
 
@@ -318,6 +324,7 @@ export function FlohmarktMap({
   }, [
     kategorienFilter,
     zahlungsartenFilter,
+    ortsteilFilter,
     showFavoritesOnly,
     searchQuery,
     favoriteIds,
