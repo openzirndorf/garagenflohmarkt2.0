@@ -18,6 +18,7 @@ import {
   updateSettings,
   updateStandAdmin,
 } from "../api";
+import { ZIRNDORF_ORT, ZIRNDORF_PLZ, composeAdresse, splitAdresse } from "../lib/adresse";
 import {
   KATEGORIEN,
   MAX_BESCHREIBUNG_LENGTH,
@@ -94,13 +95,18 @@ export function AdminPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState({
-    adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
     zahlungsarten: [] as string[],
     deactivated: false,
     deactivation_message: "",
   });
+  // Straße/Hausnummer getrennt statt eines Freitextfelds, wie im
+  // öffentlichen Anmelde-/Bearbeiten-Formular (siehe stand-form.tsx/
+  // mein-stand.tsx) - bei einer alten, nicht ins erwartete Muster
+  // passenden Adresse landet sie unverändert im Straße-Feld.
+  const [editStrasse, setEditStrasse] = useState("");
+  const [editHausnummer, setEditHausnummer] = useState("");
 
   // Login per E-Mail + Code, genau wie Standbetreiber unter "Mein Stand" -
   // ersetzt das bisherige feste Eintippen des (geteilten) Master-Tokens.
@@ -245,23 +251,32 @@ export function AdminPanel() {
 
   const startEdit = (s: AdminStand) => {
     setEditForm({
-      adresse: s.adresse,
       beschreibung: s.beschreibung ?? "",
       kategorien: s.kategorien ?? [],
       zahlungsarten: s.zahlungsarten ?? [],
       deactivated: s.deactivated,
       deactivation_message: s.deactivation_message ?? "",
     });
+    const split = splitAdresse(s.adresse);
+    setEditStrasse(split?.strasse ?? s.adresse);
+    setEditHausnummer(split?.hausnummer ?? "");
     setEditingId(s.id);
     setError(null);
   };
 
   const handleSave = async (id: number) => {
     if (!token) return;
+    if (!editStrasse.trim() || !editHausnummer.trim()) {
+      setError("Straße und Hausnummer sind Pflichtfelder.");
+      return;
+    }
     setSavingId(id);
     setError(null);
     try {
-      await updateStandAdmin(id, token, editForm);
+      await updateStandAdmin(id, token, {
+        ...editForm,
+        adresse: composeAdresse(editStrasse, editHausnummer),
+      });
       setEditingId(null);
       await load(token);
     } catch (err) {
@@ -393,6 +408,10 @@ export function AdminPanel() {
           <EditForm
             form={editForm}
             setForm={setEditForm}
+            strasse={editStrasse}
+            hausnummer={editHausnummer}
+            onStrasseChange={setEditStrasse}
+            onHausnummerChange={setEditHausnummer}
             onToggleKat={toggleEditKat}
             onToggleZahlungsart={toggleEditZahlungsart}
             onSave={() => handleSave(s.id)}
@@ -864,6 +883,10 @@ export function AdminPanel() {
                       <EditForm
                         form={editForm}
                         setForm={setEditForm}
+                        strasse={editStrasse}
+                        hausnummer={editHausnummer}
+                        onStrasseChange={setEditStrasse}
+                        onHausnummerChange={setEditHausnummer}
                         onToggleKat={toggleEditKat}
                         onToggleZahlungsart={toggleEditZahlungsart}
                         onSave={() => handleSave(s.id)}
@@ -1163,7 +1186,6 @@ function AdminRosterManager() {
 }
 
 interface EditFormState {
-  adresse: string;
   beschreibung: string;
   kategorien: string[];
   zahlungsarten: string[];
@@ -1174,6 +1196,10 @@ interface EditFormState {
 interface EditFormProps {
   form: EditFormState;
   setForm: React.Dispatch<React.SetStateAction<EditFormState>>;
+  strasse: string;
+  hausnummer: string;
+  onStrasseChange: (v: string) => void;
+  onHausnummerChange: (v: string) => void;
   onToggleKat: (k: string) => void;
   onToggleZahlungsart: (z: string) => void;
   onSave: () => void;
@@ -1184,6 +1210,10 @@ interface EditFormProps {
 function EditForm({
   form,
   setForm,
+  strasse,
+  hausnummer,
+  onStrasseChange,
+  onHausnummerChange,
   onToggleKat,
   onToggleZahlungsart,
   onSave,
@@ -1192,16 +1222,55 @@ function EditForm({
 }: EditFormProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="edit-admin-adresse" className="text-xs font-medium text-gray-600">
-          Adresse
-        </label>
-        <input
-          id="edit-admin-adresse"
-          className="rounded border px-2 py-1.5 text-sm"
-          value={form.adresse}
-          onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
-        />
+      <div className="flex gap-2">
+        <div className="flex flex-1 flex-col gap-1">
+          <label htmlFor="edit-admin-strasse" className="text-xs font-medium text-gray-600">
+            Straße
+          </label>
+          <input
+            id="edit-admin-strasse"
+            className="rounded border px-2 py-1.5 text-sm"
+            value={strasse}
+            onChange={(e) => onStrasseChange(e.target.value)}
+          />
+        </div>
+        <div className="flex w-20 flex-col gap-1">
+          <label htmlFor="edit-admin-hausnummer" className="text-xs font-medium text-gray-600">
+            Hausnr.
+          </label>
+          <input
+            id="edit-admin-hausnummer"
+            className="rounded border px-2 py-1.5 text-sm"
+            value={hausnummer}
+            onChange={(e) => onHausnummerChange(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <div className="flex w-20 flex-col gap-1">
+          <label htmlFor="edit-admin-plz" className="text-xs font-medium text-gray-600">
+            PLZ
+          </label>
+          <input
+            id="edit-admin-plz"
+            className="rounded border bg-gray-100 px-2 py-1.5 text-sm text-gray-500"
+            value={ZIRNDORF_PLZ}
+            disabled
+            readOnly
+          />
+        </div>
+        <div className="flex flex-1 flex-col gap-1">
+          <label htmlFor="edit-admin-ort" className="text-xs font-medium text-gray-600">
+            Ort
+          </label>
+          <input
+            id="edit-admin-ort"
+            className="rounded border bg-gray-100 px-2 py-1.5 text-sm text-gray-500"
+            value={ZIRNDORF_ORT}
+            disabled
+            readOnly
+          />
+        </div>
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="edit-admin-beschreibung" className="text-xs font-medium text-gray-600">
