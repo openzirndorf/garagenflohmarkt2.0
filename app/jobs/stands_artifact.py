@@ -19,8 +19,10 @@ from datetime import UTC, datetime
 
 import boto3
 from botocore.config import Config
+from botocore.exceptions import ConnectionError as BotoConnectionError
+from botocore.exceptions import ReadTimeoutError
 
-from app.database import get_pool
+from app.database import close_pool, get_pool
 from app.public_fields import (
     PUBLIC_GEOJSON_COLUMNS,
     PUBLIC_LIST_COLUMNS,
@@ -163,16 +165,29 @@ async def _upload_with_retry(
             await asyncio.sleep(delay)
 
 
+# Einstiegspunkt für den periodischen Scaleway Serverless Job (Sicherheitsnetz,
+# falls ein inline BackgroundTask verloren geht - siehe infra/main.tf).
+async def _main() -> None:
+    try:
+        await regenerate_stands_artifact()
+    except (BotoConnectionError, ReadTimeoutError):
+        # Trotz _upload_with_retry manchmal (live beobachtet: DNS-Auflösung
+        # von s3.fr-par.scw.cloud teils über 2 Minuten am Stück gestört)
+        # alle Versuche ausgeschöpft. Ein einzelner verpasster Lauf ist
+        # folgenlos - derselbe Cron läuft in 5 Minuten erneut und holt es
+        # nach (siehe Modul-Docstring: dieser Job ist selbst schon das
+        # Sicherheitsnetz). Ein non-zero Exit hier hätte nur Scaleways
+        # "Job run failed"-Managed-Alert für ein Problem ausgelöst, das
+        # sich von selbst behebt - beliebig oft pro Tag, ohne dass Handeln
+        # nötig wäre. Bewusst NUR diese beiden Verbindungsfehler-Typen
+        # abgefangen, nicht generisch Exception: ein echter Bug (z.B.
+        # falsche S3-Zugangsdaten, kaputte Query) soll weiterhin laut
+        # fehlschlagen und alarmieren.
+        logger.exception("Lauf übersprungen (Verbindungsfehler nach allen Versuchen)")
+    finally:
+        await close_pool()
+
+
 if __name__ == "__main__":
-    # Einstiegspunkt für den periodischen Scaleway Serverless Job
-    # (Sicherheitsnetz, falls ein inline BackgroundTask verloren geht - siehe
-    # infra/main.tf). Aufruf: python -m app.jobs.stands_artifact
-    from app.database import close_pool
-
-    async def _main() -> None:
-        try:
-            await regenerate_stands_artifact()
-        finally:
-            await close_pool()
-
+    # Aufruf: python -m app.jobs.stands_artifact
     asyncio.run(_main())

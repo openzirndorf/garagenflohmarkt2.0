@@ -1,8 +1,13 @@
 import json
 
 import pytest
+from botocore.exceptions import EndpointConnectionError
 
 from app.jobs import stands_artifact
+
+
+async def _noop():
+    pass
 
 
 async def test_noop_without_bucket(monkeypatch):
@@ -52,6 +57,35 @@ async def test_upload_gives_up_after_exhausting_retries(monkeypatch):
 
     with pytest.raises(ConnectionError):
         await stands_artifact._upload_with_retry(b"[]", b"{}", "2026-01-01T00:00:00", 0)
+
+
+# _main() ist der Einstiegspunkt des Cron-Jobs (siehe infra/main.tf) -
+# ein Verbindungsfehler zu S3, der auch nach allen Versuchen in
+# _upload_with_retry bestehen bleibt, darf den Job-Lauf nicht als
+# fehlgeschlagen melden (löst sonst unnötig Scaleways "Job run failed"-
+# Managed-Alert für ein folgenloses, selbstheilendes Problem aus - siehe
+# Kommentar bei _main). Ein anderer Fehler (z.B. ein echter Bug) muss
+# dagegen weiterhin durchschlagen.
+async def test_main_swallows_connection_error_after_retries_exhausted(monkeypatch):
+    async def _fake_regenerate():
+        raise EndpointConnectionError(endpoint_url="https://s3.fr-par.scw.cloud/x")
+
+    monkeypatch.setattr(stands_artifact, "regenerate_stands_artifact", _fake_regenerate)
+    # close_pool gemockt, damit der Test nicht den echten, von allen Tests
+    # geteilten DB-Pool schließt (siehe pool-Fixture in conftest.py).
+    monkeypatch.setattr(stands_artifact, "close_pool", _noop)
+    # Darf nicht raisen.
+    await stands_artifact._main()
+
+
+async def test_main_still_raises_on_unrelated_errors(monkeypatch):
+    async def _fake_regenerate():
+        raise ValueError("echter Bug, kein Verbindungsproblem")
+
+    monkeypatch.setattr(stands_artifact, "regenerate_stands_artifact", _fake_regenerate)
+    monkeypatch.setattr(stands_artifact, "close_pool", _noop)
+    with pytest.raises(ValueError):
+        await stands_artifact._main()
 
 
 async def test_artifact_contains_only_approved_stands_and_public_fields(
