@@ -127,9 +127,40 @@ async def regenerate_stands_artifact() -> None:
         rows_to_geojson(geo_rows), default=_json_default, ensure_ascii=False
     ).encode("utf-8")
     generated_at = datetime.now(UTC).isoformat()
-
-    await asyncio.to_thread(_upload, list_json, geojson, generated_at, len(list_rows))
+    await _upload_with_retry(list_json, geojson, generated_at, len(list_rows))
     logger.info("Stands-Artefakt regeneriert (%s Stände)", len(list_rows))
+
+
+# Zusätzlich zu boto3s eigenem Retry (siehe Config in _s3_client) noch ein
+# äußerer Retry mit echten, mehrsekündigen Pausen: live wiederholt mit
+# "Temporary failure in name resolution" beim S3-Endpunkt gescheitert, auch
+# MIT boto3s Retries (die Laufzeit stieg spürbar, die Fehlerrate aber kaum -
+# die internen Backoffs von boto3 sind zu kurz). Da die DB-Verbindung über
+# eine rohe IP läuft (kein DNS nötig) und nie betroffen ist, sieht es nach
+# einem Cold-Start-Effekt aus: das Sandbox-Netzwerk der Job-Instanz braucht
+# nach dem Start manchmal ein paar Sekunden länger, bis DNS zuverlässig
+# funktioniert. Jeder Versuch hier baut einen komplett neuen S3-Client auf
+# (frische Verbindung/Namensauflösung) statt denselben botocore-Client
+# weiterzuverwenden. 3 Versuche mit 5s/10s Pause bleiben mit reichlich
+# Abstand unter dem 5-Minuten-Job-Timeout (siehe infra/main.tf).
+async def _upload_with_retry(
+    list_json: bytes, geojson: bytes, generated_at: str, stand_count: int
+) -> None:
+    delays = [5, 10]
+    for attempt in range(len(delays) + 1):
+        try:
+            await asyncio.to_thread(_upload, list_json, geojson, generated_at, stand_count)
+            return
+        except Exception:
+            if attempt == len(delays):
+                raise
+            delay = delays[attempt]
+            logger.warning(
+                "Upload des Stands-Artefakts fehlgeschlagen (Versuch %s/%s) - "
+                "erneuter Versuch in %ss.",
+                attempt + 1, len(delays) + 1, delay, exc_info=True,
+            )
+            await asyncio.sleep(delay)
 
 
 if __name__ == "__main__":

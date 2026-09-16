@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from app.jobs import stands_artifact
 
 
@@ -7,6 +9,49 @@ async def test_noop_without_bucket(monkeypatch):
     monkeypatch.setattr(stands_artifact, "_BUCKET", "")
     # Darf nicht crashen, obwohl keine S3-Umgebungsvariablen gesetzt sind.
     await stands_artifact.regenerate_stands_artifact()
+
+
+# Live wiederholt an einem intermittierenden DNS-Fehler beim S3-Upload
+# gescheitert (siehe Kommentar bei _upload_with_retry) - deckt den
+# Retry-Mechanismus selbst ab, unabhängig von boto3.
+async def test_upload_retries_after_transient_failures_and_succeeds(monkeypatch):
+    monkeypatch.setattr(stands_artifact, "_BUCKET", "test-bucket")
+    sleeps = []
+    async def _fake_sleep(s):
+        sleeps.append(s)
+
+    monkeypatch.setattr(stands_artifact.asyncio, "sleep", _fake_sleep)
+
+    calls = []
+
+    def flaky_upload(list_json, geojson, generated_at, stand_count):
+        calls.append(1)
+        if len(calls) < 3:
+            raise ConnectionError("Temporary failure in name resolution")
+
+    monkeypatch.setattr(stands_artifact, "_upload", flaky_upload)
+
+    await stands_artifact._upload_with_retry(b"[]", b"{}", "2026-01-01T00:00:00", 0)
+
+    assert len(calls) == 3
+    assert sleeps == [5, 10]
+
+
+async def test_upload_gives_up_after_exhausting_retries(monkeypatch):
+    monkeypatch.setattr(stands_artifact, "_BUCKET", "test-bucket")
+
+    async def _fake_sleep(s):
+        pass
+
+    monkeypatch.setattr(stands_artifact.asyncio, "sleep", _fake_sleep)
+
+    def always_fails(list_json, geojson, generated_at, stand_count):
+        raise ConnectionError("Temporary failure in name resolution")
+
+    monkeypatch.setattr(stands_artifact, "_upload", always_fails)
+
+    with pytest.raises(ConnectionError):
+        await stands_artifact._upload_with_retry(b"[]", b"{}", "2026-01-01T00:00:00", 0)
 
 
 async def test_artifact_contains_only_approved_stands_and_public_fields(
