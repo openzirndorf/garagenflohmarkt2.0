@@ -5,7 +5,7 @@ import httpx
 # für alle anderen Tests weg - dieser gebundene Verweis auf die echte
 # Funktion bleibt davon unberührt, weil er schon beim Modul-Import
 # entsteht, bevor die Fixture überhaupt läuft.
-from app.geocode import GeocodeResult, _format_adresse
+from app.geocode import GeocodeResult, _format_adresse, _nearest_ortsteil
 from app.geocode import geocode as real_geocode
 
 
@@ -37,6 +37,23 @@ def test_format_adresse_returns_none_without_house_number():
 
 def test_format_adresse_returns_none_without_road():
     assert _format_adresse({"house_number": "1"}) is None
+
+
+def test_nearest_ortsteil_recognizes_a_known_center_point():
+    # Exakter Mittelpunkt von Weiherhof (siehe _ORTSTEILE) - muss sich
+    # selbst erkennen.
+    assert _nearest_ortsteil(49.4594327, 10.9283946) == "Weiherhof"
+
+
+def test_nearest_ortsteil_returns_none_for_zirndorf_kernstadt():
+    # Zirndorf-Zentrum (CENTER aus frontend/src/components/flohmarkt-
+    # map.tsx) liegt mindestens 2,1 km von jedem Ortsteil entfernt - klar
+    # außerhalb des 1-km-Radius.
+    assert _nearest_ortsteil(49.4467, 10.9557) is None
+
+
+def test_nearest_ortsteil_returns_none_far_outside_zirndorf():
+    assert _nearest_ortsteil(52.5200, 13.4050) is None  # Berlin
 
 
 # Live gemeldet: eine vertippte Straße (z.B. "Banterbach" statt der echten
@@ -100,6 +117,37 @@ async def test_geocode_accepts_precise_opencage_match(monkeypatch):
     result = await real_geocode("Banderbach 5")
     assert result is not None
     assert result.formatted_adresse == "Banderbach 5, 90513 Zirndorf"
+
+
+async def test_geocode_appends_ortsteil_for_a_match_near_a_known_center(monkeypatch):
+    # OpenCage/Nominatim liefern selbst keinen Ortsteil-Namen für eine
+    # echte Adresse (nur components.city="Zirndorf", siehe Kommentar bei
+    # _ORTSTEILE) - geocode() ergänzt ihn deshalb selbst per Entfernung
+    # aus dem lat/lng des Treffers.
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        # Exakter Mittelpunkt von Weiherhof, siehe _ORTSTEILE.
+                        "geometry": {"lat": 49.4594327, "lng": 10.9283946},
+                        "components": {
+                            "road": "Märzenweg", "house_number": "14", "postcode": "90513",
+                        },
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    result = await real_geocode("Märzenweg 14")
+    assert result is not None
+    assert result.formatted_adresse == "Märzenweg 14, 90513 Zirndorf (Weiherhof)"
 
 
 async def test_geocode_rejects_coarse_nominatim_match_without_house_number(monkeypatch):

@@ -68,9 +68,38 @@ function CountdownBlock({ value, label }: { value: number; label: string }) {
   );
 }
 
+// Zeigt sich nur für den kurzen Moment, in dem main.tsx noch auf die
+// Antwort von /launch-config wartet (launchAt === undefined) - bewusst
+// schlicht und OHNE die "Wir bereiten alles vor"-Botschaft: die App ist
+// (falls längst gestartet) in Wahrheit gleich da, ein "noch nicht
+// fertig" hier wäre irreführend. Vorher zeigte genau dieser
+// Zwischenzustand dieselbe volle Warteseite wie ein echtes "noch nicht
+// gestartet" - wirkte bei jedem App-Aufruf kurz wie ein Rückschritt,
+// auch lange nach dem echten Livegang.
+function LoadingScreen() {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-16">
+      <img
+        src="https://openzirndorf.de/static/media/logo.png"
+        alt="OpenZirndorf"
+        width={56}
+        height={56}
+        className="rounded-xl"
+      />
+      <div
+        className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-[#009a00]"
+        role="status"
+        aria-label="Lädt…"
+      />
+    </div>
+  );
+}
+
 // launchAt kommt von main.tsx (einmaliger /launch-config-Fetch dort, siehe
 // App()) statt hier selbst noch einmal zu laden - main.tsx braucht den Wert
-// ohnehin schon für die Freischalt-Entscheidung selbst.
+// ohnehin schon für die Freischalt-Entscheidung selbst. Wird erst
+// gerendert, sobald launchAt bekannt ist (siehe ComingSoon unten) - kann
+// hier also nicht mehr undefined sein.
 function Placeholder({ launchAt }: { launchAt: string | null }) {
   const countdown = useCountdown(launchAt);
   // Einmal pro Aufruf zufällig gewählt (nicht bei jedem Rerender neu, sonst
@@ -131,7 +160,7 @@ function Placeholder({ launchAt }: { launchAt: string | null }) {
   );
 }
 
-export function ComingSoon({ launchAt }: { launchAt: string | null }) {
+export function ComingSoon({ launchAt }: { launchAt: string | null | undefined }) {
   const [hash, setHash] = useState(window.location.hash);
 
   useEffect(() => {
@@ -159,6 +188,8 @@ export function ComingSoon({ launchAt }: { launchAt: string | null }) {
         <Faq />
       </LegalPage>
     );
+  } else if (launchAt === undefined) {
+    page = <LoadingScreen />;
   } else {
     page = <Placeholder launchAt={launchAt} />;
   }

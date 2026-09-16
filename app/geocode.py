@@ -16,6 +16,7 @@ auf die öffentliche Nominatim-Instanz zurück, aber NUR für die lokale
 Entwicklung. In Produktion ohne gesetzten Key lieber gar nicht geocodieren
 als die Nominatim-Policy zu verletzen.
 """
+import math
 import os
 from typing import NamedTuple
 
@@ -24,6 +25,51 @@ import httpx
 OPENCAGE_URL = "https://api.opencagedata.com/geocode/v1/json"
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 UA = "OpenZirndorf-Flohmarkt/0.1 (kontakt@openzirndorf.de)"
+
+# Benannte Ortsteile (Außenorte) von Zirndorf mit ungefährem Mittelpunkt
+# (Koordinaten von Nominatim, dort als "village" getaggt). OpenCage/
+# Nominatim taggen einzelne Straßenadressen dort NICHT mit dem
+# Ortsteilnamen - live gegengeprüft: eine reine Namenssuche ("Weiherhof,
+# Zirndorf") liefert components.village, dieselbe Adresse aber per
+# Reverse-Geocoding (echte Hausnummer) nur "city": "Zirndorf", kein
+# Ortsteil-Feld. Der Ortsteil wird deshalb hier selbst per Entfernung
+# bestimmt statt vom Geocoder übernommen - diese Liste ist die einzige
+# manuell zu pflegende Stelle, falls ein weiterer Ortsteil dazukommen
+# soll, die Zuordnung zu einer konkreten Adresse läuft danach automatisch.
+_ORTSTEILE = [
+    ("Weiherhof", 49.4594327, 10.9283946),
+    ("Banderbach", 49.4489498, 10.9264537),
+    ("Bronnamberg", 49.4393792, 10.9107111),
+    ("Wintersdorf", 49.4273908, 10.9128271),
+    ("Lind", 49.4213619, 10.9365479),
+    ("Anwanden", 49.4092141, 10.9319222),
+    ("Weinzierlein", 49.4239318, 10.8972761),
+]
+
+# Die Zirndorfer Kernstadt liegt mindestens 2,1 km von jedem dieser
+# Ortsteile entfernt, die Ortsteile selbst mindestens 1,17 km auseinander
+# (mit echten Koordinaten geprüft) - 1 km Radius erfasst die Ortsteile
+# selbst komfortabel, ohne Kernstadt-Adressen fälschlich einem Ortsteil
+# zuzuordnen.
+_ORTSTEIL_RADIUS_KM = 1.0
+
+
+def _haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    r = 6371.0
+    p1, p2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lng2 - lng1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dlambda / 2) ** 2
+    return 2 * r * math.asin(math.sqrt(a))
+
+
+def _nearest_ortsteil(lat: float, lng: float) -> str | None:
+    name, olat, olng = min(
+        _ORTSTEILE, key=lambda o: _haversine_km(lat, lng, o[1], o[2])
+    )
+    if _haversine_km(lat, lng, olat, olng) <= _ORTSTEIL_RADIUS_KM:
+        return name
+    return None
 
 
 class GeocodeResult(NamedTuple):
@@ -87,9 +133,13 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                 formatted_adresse = _format_adresse(components)
                 if not formatted_adresse:
                     return None
+                lat, lng = float(geo["lat"]), float(geo["lng"])
+                ortsteil = _nearest_ortsteil(lat, lng)
+                if ortsteil:
+                    formatted_adresse = f"{formatted_adresse} ({ortsteil})"
                 return GeocodeResult(
-                    lat=float(geo["lat"]),
-                    lng=float(geo["lng"]),
+                    lat=lat,
+                    lng=lng,
                     postcode=components.get("postcode"),
                     formatted_adresse=formatted_adresse,
                 )
@@ -111,9 +161,13 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             formatted_adresse = _format_adresse(components)
             if not formatted_adresse:
                 return None
+            lat, lng = float(data[0]["lat"]), float(data[0]["lon"])
+            ortsteil = _nearest_ortsteil(lat, lng)
+            if ortsteil:
+                formatted_adresse = f"{formatted_adresse} ({ortsteil})"
             return GeocodeResult(
-                lat=float(data[0]["lat"]),
-                lng=float(data[0]["lon"]),
+                lat=lat,
+                lng=lng,
                 postcode=components.get("postcode"),
                 formatted_adresse=formatted_adresse,
             )

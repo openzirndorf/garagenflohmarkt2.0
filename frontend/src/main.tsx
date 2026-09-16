@@ -43,7 +43,13 @@ function App() {
   }, [unlocked]);
 
   if (!unlocked && !isLaunched(launchAt ?? null)) {
-    return <ComingSoon launchAt={launchAt ?? null} />;
+    // launchAt bewusst unverändert (auch der undefined-Zwischenzustand)
+    // durchgereicht - ComingSoon zeigt währenddessen einen schlichten
+    // Lade-Zustand statt der vollen "Wir bereiten alles vor"-Seite, siehe
+    // dortiger Kommentar. Ohne die Unterscheidung sah jeder App-Aufruf
+    // kurz nach der "noch nicht gestartet"-Seite aus, auch lange nach dem
+    // echten Livegang - verwirrend, weil es wie ein Rückschritt wirkte.
+    return <ComingSoon launchAt={launchAt} />;
   }
   return isAdmin ? <AdminPanel /> : <FlohmarktApp />;
 }
