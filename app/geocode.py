@@ -35,8 +35,14 @@ class GeocodeResult(NamedTuple):
     postcode: str | None
     # Aus denselben Bestandteilen zusammengesetzte, einheitlich formatierte
     # Adresse ("Straße Hausnummer, PLZ Ort") - ersetzt bei Erfolg die frei
-    # getippte Nutzereingabe (siehe _format_adresse unten). None, wenn dafür
-    # ein Bestandteil fehlt.
+    # getippte Nutzereingabe (siehe _format_adresse unten). Praktisch nie
+    # None: geocode() gibt seit der Präzisions-Prüfung dort komplett None
+    # zurück (statt eines GeocodeResult mit formatted_adresse=None), wenn
+    # der Treffer nur grob auf Orts-/Straßenebene ohne Hausnummer passt -
+    # sonst würde eine falsch geschriebene Straße (z.B. "Banterbach" statt
+    # "Banderbach") zwar einen unformatierten Adresstext zeigen, aber
+    # trotzdem einen (falschen, meist irgendwo in der Zirndorfer Ortsmitte
+    # liegenden) Kartenpunkt bekommen.
     formatted_adresse: str | None
 
 
@@ -78,11 +84,14 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                     return None
                 geo = results[0]["geometry"]
                 components = results[0].get("components") or {}
+                formatted_adresse = _format_adresse(components)
+                if not formatted_adresse:
+                    return None
                 return GeocodeResult(
                     lat=float(geo["lat"]),
                     lng=float(geo["lng"]),
                     postcode=components.get("postcode"),
-                    formatted_adresse=_format_adresse(components),
+                    formatted_adresse=formatted_adresse,
                 )
 
             # Nur für lokale Entwicklung ohne Key - siehe Modul-Docstring.
@@ -99,11 +108,14 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             if not data:
                 return None
             components = data[0].get("address") or {}
+            formatted_adresse = _format_adresse(components)
+            if not formatted_adresse:
+                return None
             return GeocodeResult(
                 lat=float(data[0]["lat"]),
                 lng=float(data[0]["lon"]),
                 postcode=components.get("postcode"),
-                formatted_adresse=_format_adresse(components),
+                formatted_adresse=formatted_adresse,
             )
         except Exception:  # noqa: BLE001 - Geocoding-Fehler sollen nie die Anmeldung blockieren
             return None

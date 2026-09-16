@@ -1,4 +1,12 @@
+import httpx
+
+# Direkter Import statt über das Modulattribut aufzurufen: die autouse
+# _no_real_geocoding-Fixture (conftest.py) monkeypatcht app.geocode.geocode
+# für alle anderen Tests weg - dieser gebundene Verweis auf die echte
+# Funktion bleibt davon unberührt, weil er schon beim Modul-Import
+# entsteht, bevor die Fixture überhaupt läuft.
 from app.geocode import GeocodeResult, _format_adresse
+from app.geocode import geocode as real_geocode
 
 
 # _format_adresse direkt statt nur über die HTTP-Route getestet, weil sie
@@ -29,6 +37,90 @@ def test_format_adresse_returns_none_without_house_number():
 
 def test_format_adresse_returns_none_without_road():
     assert _format_adresse({"house_number": "1"}) is None
+
+
+# Live gemeldet: eine vertippte Straße (z.B. "Banterbach" statt der echten
+# Zirndorfer Straße "Banderbach") bekam trotzdem einen Kartenpunkt, meist
+# irgendwo in der Zirndorfer Ortsmitte - OpenCage/Nominatim fallen bei
+# einer unbekannten Straße oft auf einen groben Orts-/Stadt-Treffer
+# zurück (hier simuliert: components ohne road/house_number), die
+# geo["lat"]/["lng"] daraus zeigen dann auf diesen groben, falschen
+# Punkt statt gar keinen zu setzen. geocode() lehnt einen solchen zu
+# ungenauen Treffer jetzt komplett ab (None), statt seine Koordinaten zu
+# übernehmen - siehe Kommentar bei GeocodeResult.formatted_adresse.
+async def test_geocode_rejects_coarse_opencage_match_without_house_number(monkeypatch):
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4467, "lng": 10.9557},
+                        "components": {"city": "Zirndorf", "postcode": "90513"},
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    assert await real_geocode("Banterbach 5") is None
+
+
+async def test_geocode_accepts_precise_opencage_match(monkeypatch):
+    # Positiv-Gegenprobe zum Test oben: bestätigt, dass der Mock-Aufbau
+    # selbst funktioniert und ein echter, präziser Treffer weiterhin
+    # akzeptiert wird (sonst könnte der Test oben nur "zufällig" durch
+    # einen kaputten Mock statt durch die eigentliche Präzisionsprüfung
+    # bestehen - geocode() fängt jede Exception ab und gibt dann
+    # ebenfalls None zurück).
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4467, "lng": 10.9557},
+                        "components": {
+                            "road": "Banderbach", "house_number": "5", "postcode": "90513",
+                        },
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    result = await real_geocode("Banderbach 5")
+    assert result is not None
+    assert result.formatted_adresse == "Banderbach 5, 90513 Zirndorf"
+
+
+async def test_geocode_rejects_coarse_nominatim_match_without_house_number(monkeypatch):
+    monkeypatch.delenv("GEOCODE_API_KEY", raising=False)
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json=[
+                {
+                    "lat": "49.4467",
+                    "lon": "10.9557",
+                    "address": {"city": "Zirndorf", "postcode": "90513"},
+                }
+            ],
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    assert await real_geocode("Banterbach 5") is None
 
 
 async def _register(client, api_auth, email="geo@example.com", **overrides):
