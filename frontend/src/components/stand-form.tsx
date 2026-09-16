@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createStand, fetchSettings } from "../api";
+import { ZIRNDORF_ORT, ZIRNDORF_PLZ, composeAdresse } from "../lib/adresse";
 import { ZAHLUNGSARTEN, ZAHLUNGSART_ICON } from "../lib/zahlungsarten";
 import type { StandFormData } from "../types";
 import { Button, Card, CardContent, CardHeader, CardTitle, Modal } from "../ui";
@@ -62,6 +63,12 @@ const RULES = [
 
 export function StandForm({ onSuccess }: Props) {
   const [form, setForm] = useState<StandFormData>(EMPTY);
+  // Straße und Hausnummer getrennt statt eines Freitextfelds - PLZ/Ort
+  // brauchen keine eigene Eingabe, da der Flohmarkt ohnehin nur in
+  // Zirndorf stattfindet (siehe lib/adresse.ts). Werden erst beim Absenden
+  // zu form.adresse zusammengesetzt.
+  const [strasse, setStrasse] = useState("");
+  const [hausnummer, setHausnummer] = useState("");
   // Ein Haken für alle vier Regeln statt vier einzelner - das sind
   // Verhaltensregeln, keine getrennt einwilligungspflichtigen Zwecke, ein
   // gemeinsamer Haken ("ich halte mich an das alles") ist hier ausreichend
@@ -118,8 +125,8 @@ export function StandForm({ onSuccess }: Props) {
   };
 
   const handleSubmit = async () => {
-    if (!form.adresse || !form.email) {
-      setErrorMsg("Adresse und E-Mail sind Pflichtfelder.");
+    if (!strasse.trim() || !hausnummer.trim() || !form.email) {
+      setErrorMsg("Straße, Hausnummer und E-Mail sind Pflichtfelder.");
       setStatus("error");
       return;
     }
@@ -138,10 +145,13 @@ export function StandForm({ onSuccess }: Props) {
     try {
       await createStand({
         ...form,
+        adresse: composeAdresse(strasse, hausnummer),
         datenschutz_zustimmung: consentOk,
         mindestalter_bestaetigt: consentOk,
       });
       setForm(EMPTY);
+      setStrasse("");
+      setHausnummer("");
       setRulesConfirmed(false);
       setConsentOk(false);
       // Kein eigener Erfolgs-Screen mehr hier: onSuccess() navigiert sofort
@@ -170,21 +180,65 @@ export function StandForm({ onSuccess }: Props) {
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="adresse" className="text-sm font-medium">
-              Adresse *
-            </label>
-            <input
-              id="adresse"
-              className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-              placeholder="z.B. Musterstraße 1, Zirndorf"
-              value={form.adresse}
-              onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
-              disabled={status === "loading"}
-            />
+            <div className="flex gap-2">
+              <div className="flex flex-1 flex-col gap-1.5">
+                <label htmlFor="strasse" className="text-sm font-medium">
+                  Straße *
+                </label>
+                <input
+                  id="strasse"
+                  className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  placeholder="z.B. Musterstraße"
+                  value={strasse}
+                  onChange={(e) => setStrasse(e.target.value)}
+                  disabled={status === "loading"}
+                />
+              </div>
+              <div className="flex w-24 flex-col gap-1.5">
+                <label htmlFor="hausnummer" className="text-sm font-medium">
+                  Hausnr. *
+                </label>
+                <input
+                  id="hausnummer"
+                  className="rounded-md border border-input px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                  placeholder="1"
+                  value={hausnummer}
+                  onChange={(e) => setHausnummer(e.target.value)}
+                  disabled={status === "loading"}
+                />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex w-24 flex-col gap-1.5">
+                <label htmlFor="plz" className="text-sm font-medium">
+                  PLZ
+                </label>
+                <input
+                  id="plz"
+                  className="rounded-md border border-input bg-gray-100 px-3 py-2 text-sm text-gray-500 outline-none"
+                  value={ZIRNDORF_PLZ}
+                  disabled
+                  readOnly
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5">
+                <label htmlFor="ort" className="text-sm font-medium">
+                  Ort
+                </label>
+                <input
+                  id="ort"
+                  className="rounded-md border border-input bg-gray-100 px-3 py-2 text-sm text-gray-500 outline-none"
+                  value={ZIRNDORF_ORT}
+                  disabled
+                  readOnly
+                />
+              </div>
+            </div>
             <p className="text-xs text-gray-500">
-              Straße und Hausnummer werden nach der Bestätigung <strong>öffentlich</strong> auf der
-              Karte und in der Liste angezeigt. Bist du nicht Eigentümer*in des Grundstücks? Frag
-              vorher Vermieter*in oder Hausverwaltung.
+              PLZ und Ort sind fest vorausgefüllt, da der Garagenflohmarkt nur in Zirndorf
+              stattfindet. Straße und Hausnummer werden nach der Bestätigung{" "}
+              <strong>öffentlich</strong> auf der Karte und in der Liste angezeigt. Bist du nicht
+              Eigentümer*in des Grundstücks? Frag vorher Vermieter*in oder Hausverwaltung.
             </p>
           </div>
 

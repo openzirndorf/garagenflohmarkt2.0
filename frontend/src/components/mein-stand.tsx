@@ -10,6 +10,7 @@ import {
   suggestNicknames,
   updateStand,
 } from "../api";
+import { ZIRNDORF_ORT, ZIRNDORF_PLZ, composeAdresse, splitAdresse } from "../lib/adresse";
 import { standShareOptions } from "../lib/share";
 import { ShareButton } from "./share-button";
 import {
@@ -52,11 +53,18 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
   const [checkedStorage, setCheckedStorage] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({
-    adresse: "",
     beschreibung: "",
     kategorien: [] as string[],
     zahlungsarten: [] as string[],
   });
+  // Straße/Hausnummer getrennt statt eines Freitextfelds (siehe
+  // stand-form.tsx). Für bestehende Stände wird die gespeicherte Adresse
+  // beim Öffnen des Bearbeiten-Formulars zerlegt (handleEdit unten) - bei
+  // einer alten, nicht ins erwartete Muster passenden Adresse bleibt
+  // hausnummer leer und die komplette Adresse landet im Straße-Feld, dann
+  // eben einmalig von Hand nachbessern.
+  const [strasse, setStrasse] = useState("");
+  const [hausnummer, setHausnummer] = useState("");
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -302,11 +310,13 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
 
   const handleEdit = () => {
     setEditForm({
-      adresse: stand.adresse,
       beschreibung: stand.beschreibung ?? "",
       kategorien: stand.kategorien ?? [],
       zahlungsarten: stand.zahlungsarten ?? [],
     });
+    const split = splitAdresse(stand.adresse);
+    setStrasse(split?.strasse ?? stand.adresse);
+    setHausnummer(split?.hausnummer ?? "");
     setEditing(true);
     setError(null);
   };
@@ -333,10 +343,17 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
 
   const handleSave = async () => {
     if (!sessionToken) return;
+    if (!strasse.trim() || !hausnummer.trim()) {
+      setError("Straße und Hausnummer sind Pflichtfelder.");
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      const updated = await updateStand(sessionToken, editForm);
+      const updated = await updateStand(sessionToken, {
+        ...editForm,
+        adresse: composeAdresse(strasse, hausnummer),
+      });
       setStand(updated);
       setEditing(false);
     } catch (err) {
@@ -435,16 +452,55 @@ export function MeinStand({ onCancelled, onStandChange, justRegistered }: Props)
 
       {editing ? (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="edit-adresse" className="text-xs font-medium text-gray-600">
-              Adresse
-            </label>
-            <input
-              id="edit-adresse"
-              className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
-              value={editForm.adresse}
-              onChange={(e) => setEditForm((f) => ({ ...f, adresse: e.target.value }))}
-            />
+          <div className="flex gap-2">
+            <div className="flex flex-1 flex-col gap-1">
+              <label htmlFor="edit-strasse" className="text-xs font-medium text-gray-600">
+                Straße
+              </label>
+              <input
+                id="edit-strasse"
+                className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
+                value={strasse}
+                onChange={(e) => setStrasse(e.target.value)}
+              />
+            </div>
+            <div className="flex w-20 flex-col gap-1">
+              <label htmlFor="edit-hausnummer" className="text-xs font-medium text-gray-600">
+                Hausnr.
+              </label>
+              <input
+                id="edit-hausnummer"
+                className="rounded-md border border-input bg-white px-3 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:bg-gray-100 disabled:text-gray-400"
+                value={hausnummer}
+                onChange={(e) => setHausnummer(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <div className="flex w-20 flex-col gap-1">
+              <label htmlFor="edit-plz" className="text-xs font-medium text-gray-600">
+                PLZ
+              </label>
+              <input
+                id="edit-plz"
+                className="rounded-md border border-input bg-gray-100 px-3 py-1.5 text-sm text-gray-500 outline-none"
+                value={ZIRNDORF_PLZ}
+                disabled
+                readOnly
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1">
+              <label htmlFor="edit-ort" className="text-xs font-medium text-gray-600">
+                Ort
+              </label>
+              <input
+                id="edit-ort"
+                className="rounded-md border border-input bg-gray-100 px-3 py-1.5 text-sm text-gray-500 outline-none"
+                value={ZIRNDORF_ORT}
+                disabled
+                readOnly
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-gray-600">
