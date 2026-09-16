@@ -119,6 +119,40 @@ async def test_geocode_accepts_precise_opencage_match(monkeypatch):
     assert result.formatted_adresse == "Banderbach 5, 90513 Zirndorf"
 
 
+# Live beobachtet (Kleiberstraße 3, echte bestehende Anmeldung): OpenCage
+# kennt die Straße korrekt (road gesetzt, confidence 9/10), aber keine
+# exakte Hausnummer-Position (Adresse noch nicht bis auf Gebäudeebene in
+# OpenStreetMap erfasst) - lat/lng liegen dann trotzdem sinnvoll auf der
+# richtigen Straße und werden übernommen (anders als beim "Banterbach"-
+# Fall ohne jede Straßenerkennung), nur der Anzeigetext fällt mangels
+# bestätigter Hausnummer auf die Roheingabe zurück (macht der Aufrufer in
+# app/routes/stands.py, hier nur geprüft, dass formatted_adresse None ist).
+async def test_geocode_keeps_coordinates_when_street_known_but_no_house_number(monkeypatch):
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4083302, "lng": 10.9319452},
+                        "components": {"road": "Kleiberstraße", "postcode": "90513"},
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    result = await real_geocode("Kleiberstr. 3")
+    assert result is not None
+    assert result.lat == 49.4083302
+    assert result.lng == 10.9319452
+    assert result.formatted_adresse is None
+
+
 async def test_geocode_appends_ortsteil_for_a_match_near_a_known_center(monkeypatch):
     # OpenCage/Nominatim liefern selbst keinen Ortsteil-Namen für eine
     # echte Adresse (nur components.city="Zirndorf", siehe Kommentar bei

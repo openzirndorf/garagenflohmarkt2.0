@@ -81,14 +81,17 @@ class GeocodeResult(NamedTuple):
     postcode: str | None
     # Aus denselben Bestandteilen zusammengesetzte, einheitlich formatierte
     # Adresse ("Straße Hausnummer, PLZ Ort") - ersetzt bei Erfolg die frei
-    # getippte Nutzereingabe (siehe _format_adresse unten). Praktisch nie
-    # None: geocode() gibt seit der Präzisions-Prüfung dort komplett None
-    # zurück (statt eines GeocodeResult mit formatted_adresse=None), wenn
-    # der Treffer nur grob auf Orts-/Straßenebene ohne Hausnummer passt -
-    # sonst würde eine falsch geschriebene Straße (z.B. "Banterbach" statt
-    # "Banderbach") zwar einen unformatierten Adresstext zeigen, aber
-    # trotzdem einen (falschen, meist irgendwo in der Zirndorfer Ortsmitte
-    # liegenden) Kartenpunkt bekommen.
+    # getippte Nutzereingabe (siehe _format_adresse unten). None, wenn der
+    # Geocoder zwar die Straße, aber keine Hausnummer dafür kennt (z.B.
+    # eine noch nicht in OpenStreetMap erfasste Adresse) - lat/lng liegen
+    # dann trotzdem auf der richtigen Straße und werden übernommen, nur
+    # der Text fällt auf die Roheingabe zurück, da sich die Hausnummer
+    # nicht bestätigen lässt. geocode() selbst gibt None (statt eines
+    # GeocodeResult) nur zurück, wenn nicht mal die Straße gefunden wurde
+    # - sonst würde eine falsch geschriebene Straße (z.B. "Banterbach"
+    # statt "Banderbach") einen (falschen, meist irgendwo in der
+    # Zirndorfer Ortsmitte liegenden) Kartenpunkt auf Orts-/Stadt-Ebene
+    # bekommen.
     formatted_adresse: str | None
 
 
@@ -112,6 +115,21 @@ def _format_adresse(components: dict) -> str | None:
     return f"{road} {house_number}, 90513 Zirndorf"
 
 
+def _is_trustworthy(components: dict) -> bool:
+    # Mindestbar für die Koordinaten selbst: die Straße muss stimmen -
+    # bewusst NICHT zusätzlich die Hausnummer verlangt (das prüft schon
+    # _format_adresse, aber nur für den Anzeigetext). Live beobachtet: für
+    # etliche echte, existierende Adressen kennt OpenCage/Nominatim die
+    # Straße korrekt, aber keine exakte Hausnummer-Position (Adresse noch
+    # nicht bis auf Gebäudeebene in OpenStreetMap erfasst) - der
+    # zurückgegebene Punkt liegt dann trotzdem sinnvoll auf der richtigen
+    # Straße, nur eben nicht exakt am richtigen Gebäude. Fehlt dagegen
+    # auch die Straße (nur noch Orts-/Stadt-Ebene), ist der Punkt
+    # potenziell kilometerweit daneben (siehe "Banterbach"-Fall) - dann
+    # gar keine Koordinaten übernehmen ist besser als falsche.
+    return bool(components.get("road"))
+
+
 async def geocode(adresse: str) -> GeocodeResult | None:
     api_key = os.getenv("GEOCODE_API_KEY")
     query = f"{adresse}, Zirndorf, Bayern, Deutschland"
@@ -130,12 +148,12 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                     return None
                 geo = results[0]["geometry"]
                 components = results[0].get("components") or {}
-                formatted_adresse = _format_adresse(components)
-                if not formatted_adresse:
+                if not _is_trustworthy(components):
                     return None
+                formatted_adresse = _format_adresse(components)
                 lat, lng = float(geo["lat"]), float(geo["lng"])
                 ortsteil = _nearest_ortsteil(lat, lng)
-                if ortsteil:
+                if formatted_adresse and ortsteil:
                     formatted_adresse = f"{formatted_adresse} ({ortsteil})"
                 return GeocodeResult(
                     lat=lat,
@@ -158,12 +176,12 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             if not data:
                 return None
             components = data[0].get("address") or {}
-            formatted_adresse = _format_adresse(components)
-            if not formatted_adresse:
+            if not _is_trustworthy(components):
                 return None
+            formatted_adresse = _format_adresse(components)
             lat, lng = float(data[0]["lat"]), float(data[0]["lon"])
             ortsteil = _nearest_ortsteil(lat, lng)
-            if ortsteil:
+            if formatted_adresse and ortsteil:
                 formatted_adresse = f"{formatted_adresse} ({ortsteil})"
             return GeocodeResult(
                 lat=lat,
