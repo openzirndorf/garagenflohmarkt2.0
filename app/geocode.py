@@ -197,6 +197,15 @@ def _resolve_by_ortsteil_hint(
 _TRAILING_ZIRNDORF_SUFFIX = re.compile(r",?\s*90513\s+Zirndorf\s*$", re.IGNORECASE)
 
 
+# limit=10 statt z.B. 5: OpenCage liefert für dieselbe Anfrage bei
+# unterschiedlichem limit nicht bloß eine gekürzte Version derselben
+# Rangliste, sondern teils andere Kandidaten (live beobachtet: der zu
+# "Weiherhofer Hauptstraße 65" tatsächlich nächstgelegene Treffer, ca.
+# 280m von der per Google Maps bestätigten Adresse entfernt, tauchte bei
+# limit=5 gar nicht auf, sondern erst bei limit=10 - ein bei limit=5
+# vorhandener, aber 600m entfernterer Treffer verschwand dafür). Ohne
+# genug Kandidaten kann _resolve_by_ortsteil_hint nur aus den falschen
+# wählen.
 async def geocode(adresse: str) -> GeocodeResult | None:
     api_key = os.getenv("GEOCODE_API_KEY")
     street_part = _TRAILING_ZIRNDORF_SUFFIX.sub("", adresse).strip()
@@ -207,7 +216,7 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             if api_key:
                 r = await client.get(
                     OPENCAGE_URL,
-                    params={"key": api_key, "q": query, "limit": "5", "no_annotations": "1"},
+                    params={"key": api_key, "q": query, "limit": "10", "no_annotations": "1"},
                     timeout=5,
                 )
                 r.raise_for_status()
@@ -246,7 +255,7 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             # wie OpenCages components, sonst nur einen freien display_name.
             r = await client.get(
                 NOMINATIM_URL,
-                params={"q": query, "format": "json", "limit": "5", "addressdetails": "1"},
+                params={"q": query, "format": "json", "limit": "10", "addressdetails": "1"},
                 headers={"User-Agent": UA},
                 timeout=5,
             )
