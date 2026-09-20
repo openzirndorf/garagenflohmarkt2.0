@@ -159,6 +159,33 @@ def _is_ambiguous_road(candidates: list[tuple[float, float, dict]]) -> bool:
     return False
 
 
+def _resolve_by_ortsteil_hint(
+    road: str, candidates: list[tuple[float, float, dict]]
+) -> tuple[float, float] | None:
+    # Manche mehrdeutigen Straßen tragen den Namen des gemeinten Ortsteils
+    # bereits im eigenen Namen (live bestätigt: "Weiherhofer Hauptstraße"
+    # existiert doppelt, aber nur EINER der beiden ca. 0,8 km entfernten
+    # Treffer liegt tatsächlich innerhalb des Weiherhof-Radius - lieber
+    # diesen naheliegenden Treffer nehmen, statt bei einem so eindeutigen
+    # Hinweis im Straßennamen komplett auf Koordinaten zu verzichten).
+    # Findet sich kein solcher Hinweis oder bleibt es auch dann mehrdeutig
+    # (z.B. zwei Treffer beide "bei Weiherhof"), None zurückgeben - dann
+    # greift weiterhin "lieber keine Koordinaten als geratene falsche".
+    lower_road = road.lower()
+    hint = next((name for name, _, _ in _ORTSTEILE if name.lower() in lower_road), None)
+    if hint is None:
+        return None
+    matches = {
+        (lat, lng)
+        for lat, lng, components in candidates
+        if (components.get("road") or "").strip().lower() == road.strip().lower()
+        and _nearest_ortsteil(lat, lng) == hint
+    }
+    if len(matches) == 1:
+        return next(iter(matches))
+    return None
+
+
 # Straße/Hausnummer-Formular (siehe frontend composeAdresse in
 # lib/adresse.ts) übergibt hier bereits "Straße Hausnummer, 90513
 # Zirndorf" - ohne diesen Schnitt würde die Anfrage unten ein zweites Mal
@@ -192,6 +219,7 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                 if not _is_trustworthy(components):
                     return None
                 formatted_adresse = _format_adresse(components)
+                lat, lng = float(geo["lat"]), float(geo["lng"])
                 if formatted_adresse is None:
                     candidates = [
                         (float(res["geometry"]["lat"]), float(res["geometry"]["lng"]), res.get("components") or {})
@@ -199,8 +227,10 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                         if res.get("geometry")
                     ]
                     if _is_ambiguous_road(candidates):
-                        return None
-                lat, lng = float(geo["lat"]), float(geo["lng"])
+                        resolved = _resolve_by_ortsteil_hint(components.get("road") or "", candidates)
+                        if resolved is None:
+                            return None
+                        lat, lng = resolved
                 ortsteil = _nearest_ortsteil(lat, lng)
                 if formatted_adresse and ortsteil:
                     formatted_adresse = f"{formatted_adresse} ({ortsteil})"
@@ -228,6 +258,7 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             if not _is_trustworthy(components):
                 return None
             formatted_adresse = _format_adresse(components)
+            lat, lng = float(data[0]["lat"]), float(data[0]["lon"])
             if formatted_adresse is None:
                 candidates = [
                     (float(entry["lat"]), float(entry["lon"]), entry.get("address") or {})
@@ -235,8 +266,10 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                     if entry.get("lat") and entry.get("lon")
                 ]
                 if _is_ambiguous_road(candidates):
-                    return None
-            lat, lng = float(data[0]["lat"]), float(data[0]["lon"])
+                    resolved = _resolve_by_ortsteil_hint(components.get("road") or "", candidates)
+                    if resolved is None:
+                        return None
+                    lat, lng = resolved
             ortsteil = _nearest_ortsteil(lat, lng)
             if formatted_adresse and ortsteil:
                 formatted_adresse = f"{formatted_adresse} ({ortsteil})"

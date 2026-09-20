@@ -5,7 +5,13 @@ import httpx
 # für alle anderen Tests weg - dieser gebundene Verweis auf die echte
 # Funktion bleibt davon unberührt, weil er schon beim Modul-Import
 # entsteht, bevor die Fixture überhaupt läuft.
-from app.geocode import GeocodeResult, _format_adresse, _is_ambiguous_road, _nearest_ortsteil
+from app.geocode import (
+    GeocodeResult,
+    _format_adresse,
+    _is_ambiguous_road,
+    _nearest_ortsteil,
+    _resolve_by_ortsteil_hint,
+)
 from app.geocode import geocode as real_geocode
 
 
@@ -242,7 +248,43 @@ async def test_geocode_does_not_duplicate_zirndorf_in_query(monkeypatch):
     assert captured_queries[0].lower().count("zirndorf") == 1
 
 
-async def test_geocode_rejects_ambiguous_opencage_match_without_house_number(monkeypatch):
+# Live gemeldet, dritte Runde: nach dem obigen Fix verschwand der
+# Kartenpunkt für "Weiherhofer Hauptstraße 65" komplett - korrekt im
+# Sinne von "lieber keine als eine falsche Koordinate", aber der Stand
+# sollte tatsächlich in Weiherhof landen, nicht gar nicht angezeigt
+# werden. Da der Straßenname selbst "Weiherhof" referenziert und nur
+# EINER der beiden mehrdeutigen Treffer tatsächlich im Weiherhof-Radius
+# liegt, lässt sich das eindeutig auflösen statt ganz aufzugeben.
+def test_is_ambiguous_road_resolved_via_ortsteil_hint_in_street_name():
+    candidates = [
+        (49.4543617, 10.9200312, {"road": "Weiherhofer Hauptstraße"}),
+        (49.4576463, 10.9232230, {"road": "Weiherhofer Hauptstraße", "village": "Weiherhof"}),
+    ]
+    assert _resolve_by_ortsteil_hint("Weiherhofer Hauptstraße", candidates) == (
+        49.4576463,
+        10.9232230,
+    )
+
+
+def test_resolve_by_ortsteil_hint_returns_none_without_hint_in_name():
+    candidates = [
+        (49.4543617, 10.9200312, {"road": "Bahnhofstraße"}),
+        (49.4594327, 10.9283946, {"road": "Bahnhofstraße"}),
+    ]
+    assert _resolve_by_ortsteil_hint("Bahnhofstraße", candidates) is None
+
+
+def test_resolve_by_ortsteil_hint_returns_none_if_still_ambiguous():
+    # Zwei Treffer, beide zufällig innerhalb desselben Ortsteil-Radius -
+    # der Namenshinweis allein hilft dann nicht weiter.
+    candidates = [
+        (49.4594327, 10.9283946, {"road": "Weiherhofer Hauptstraße"}),
+        (49.4598000, 10.9280000, {"road": "Weiherhofer Hauptstraße"}),
+    ]
+    assert _resolve_by_ortsteil_hint("Weiherhofer Hauptstraße", candidates) is None
+
+
+async def test_geocode_resolves_ambiguous_match_via_ortsteil_hint_in_street_name(monkeypatch):
     monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
 
     async def fake_get(self, url, **kwargs):
@@ -269,7 +311,39 @@ async def test_geocode_rejects_ambiguous_opencage_match_without_house_number(mon
 
     monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
 
-    assert await real_geocode("Weiherhofer Hauptstraße 65") is None
+    result = await real_geocode("Weiherhofer Hauptstraße 65")
+    assert result is not None
+    assert (result.lat, result.lng) == (49.4576463, 10.9232230)
+
+
+async def test_geocode_rejects_ambiguous_opencage_match_without_ortsteil_hint(monkeypatch):
+    # Ohne Ortsteil-Bezug im Straßennamen selbst bleibt es beim "lieber
+    # keine Koordinaten als geratene falsche" - z.B. eine Straße, die
+    # zufällig zweimal im Gemeindegebiet existiert, ohne dass ihr Name
+    # verrät, welcher Abschnitt gemeint ist.
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4543617, "lng": 10.9200312},
+                        "components": {"road": "Bahnhofstraße", "postcode": "90513"},
+                    },
+                    {
+                        "geometry": {"lat": 49.4594327, "lng": 10.9283946},
+                        "components": {"road": "Bahnhofstraße", "postcode": "90513"},
+                    },
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    assert await real_geocode("Bahnhofstraße 65") is None
 
 
 async def test_geocode_accepts_confirmed_house_number_despite_same_named_road_elsewhere(
