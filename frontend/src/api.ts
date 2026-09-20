@@ -66,6 +66,7 @@ export interface AdminStand extends Stand {
   deactivation_reply_message: string | null;
   deactivation_reply_created_at: string | null;
   address_consent_at: string;
+  coords_manually_set: boolean;
 }
 
 export async function fetchAdminStands(token: string): Promise<AdminStand[]> {
@@ -223,6 +224,12 @@ interface StandPatchData {
 interface AdminStandPatchData extends StandPatchData {
   deactivated?: boolean;
   deactivation_message?: string;
+  // Manueller Kartenpunkt (siehe migrations/0018) - lat/lng sind nur
+  // gültig, wenn coords_manually_set zusammen mit ihnen true ist, siehe
+  // update_stand_admin in app/routes/stands.py.
+  lat?: number;
+  lng?: number;
+  coords_manually_set?: boolean;
 }
 
 // Würfelt 3 alternative Standnamen zur Auswahl - reserviert nichts, erst

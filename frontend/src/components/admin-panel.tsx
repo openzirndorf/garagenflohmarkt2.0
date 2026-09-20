@@ -107,6 +107,13 @@ export function AdminPanel() {
   // passenden Adresse landet sie unverändert im Straße-Feld.
   const [editStrasse, setEditStrasse] = useState("");
   const [editHausnummer, setEditHausnummer] = useState("");
+  // Manueller Kartenpunkt (siehe migrations/0018) - überschreibt das sonst
+  // von geocode() ermittelte Ergebnis, z.B. wenn OpenStreetMap für eine
+  // Adresse keine hausnummer-genauen Daten hat. Nur hier im Admin-Panel
+  // setzbar, nicht im öffentlichen Formular oder unter "Mein Stand".
+  const [editCoordsManuallySet, setEditCoordsManuallySet] = useState(false);
+  const [editManualLat, setEditManualLat] = useState("");
+  const [editManualLng, setEditManualLng] = useState("");
 
   // Login per E-Mail + Code, genau wie Standbetreiber unter "Mein Stand" -
   // ersetzt das bisherige feste Eintippen des (geteilten) Master-Tokens.
@@ -260,6 +267,9 @@ export function AdminPanel() {
     const split = splitAdresse(s.adresse);
     setEditStrasse(split?.strasse ?? s.adresse);
     setEditHausnummer(split?.hausnummer ?? "");
+    setEditCoordsManuallySet(s.coords_manually_set);
+    setEditManualLat(s.lat != null ? String(s.lat) : "");
+    setEditManualLng(s.lng != null ? String(s.lng) : "");
     setEditingId(s.id);
     setError(null);
   };
@@ -270,13 +280,25 @@ export function AdminPanel() {
       setError("Straße und Hausnummer sind Pflichtfelder.");
       return;
     }
+    const payload: Parameters<typeof updateStandAdmin>[2] = {
+      ...editForm,
+      adresse: composeAdresse(editStrasse, editHausnummer),
+      coords_manually_set: editCoordsManuallySet,
+    };
+    if (editCoordsManuallySet) {
+      const lat = Number.parseFloat(editManualLat);
+      const lng = Number.parseFloat(editManualLng);
+      if (Number.isNaN(lat) || Number.isNaN(lng)) {
+        setError("Bitte gültige manuelle Koordinaten angeben (Breiten- und Längengrad).");
+        return;
+      }
+      payload.lat = lat;
+      payload.lng = lng;
+    }
     setSavingId(id);
     setError(null);
     try {
-      await updateStandAdmin(id, token, {
-        ...editForm,
-        adresse: composeAdresse(editStrasse, editHausnummer),
-      });
+      await updateStandAdmin(id, token, payload);
       setEditingId(null);
       await load(token);
     } catch (err) {
@@ -412,6 +434,12 @@ export function AdminPanel() {
             hausnummer={editHausnummer}
             onStrasseChange={setEditStrasse}
             onHausnummerChange={setEditHausnummer}
+            coordsManuallySet={editCoordsManuallySet}
+            manualLat={editManualLat}
+            manualLng={editManualLng}
+            onCoordsManuallySetChange={setEditCoordsManuallySet}
+            onManualLatChange={setEditManualLat}
+            onManualLngChange={setEditManualLng}
             onToggleKat={toggleEditKat}
             onToggleZahlungsart={toggleEditZahlungsart}
             onSave={() => handleSave(s.id)}
@@ -887,6 +915,12 @@ export function AdminPanel() {
                         hausnummer={editHausnummer}
                         onStrasseChange={setEditStrasse}
                         onHausnummerChange={setEditHausnummer}
+                        coordsManuallySet={editCoordsManuallySet}
+                        manualLat={editManualLat}
+                        manualLng={editManualLng}
+                        onCoordsManuallySetChange={setEditCoordsManuallySet}
+                        onManualLatChange={setEditManualLat}
+                        onManualLngChange={setEditManualLng}
                         onToggleKat={toggleEditKat}
                         onToggleZahlungsart={toggleEditZahlungsart}
                         onSave={() => handleSave(s.id)}
@@ -1200,6 +1234,12 @@ interface EditFormProps {
   hausnummer: string;
   onStrasseChange: (v: string) => void;
   onHausnummerChange: (v: string) => void;
+  coordsManuallySet: boolean;
+  manualLat: string;
+  manualLng: string;
+  onCoordsManuallySetChange: (v: boolean) => void;
+  onManualLatChange: (v: string) => void;
+  onManualLngChange: (v: string) => void;
   onToggleKat: (k: string) => void;
   onToggleZahlungsart: (z: string) => void;
   onSave: () => void;
@@ -1214,6 +1254,12 @@ function EditForm({
   hausnummer,
   onStrasseChange,
   onHausnummerChange,
+  coordsManuallySet,
+  manualLat,
+  manualLng,
+  onCoordsManuallySetChange,
+  onManualLatChange,
+  onManualLngChange,
   onToggleKat,
   onToggleZahlungsart,
   onSave,
@@ -1271,6 +1317,50 @@ function EditForm({
             readOnly
           />
         </div>
+      </div>
+      {/* Überschreibt den sonst von geocode() ermittelten Kartenpunkt -
+          z.B. wenn OpenStreetMap für eine Adresse keine hausnummer-genauen
+          Daten hat und der automatisch ermittelte Punkt spürbar daneben
+          liegt. Bleibt bei jeder künftigen Bearbeitung bestehen (auch bei
+          Adressänderungen durch Admin oder Inhaber), bis hier wieder
+          deaktiviert wird - siehe migrations/0018. */}
+      <div className="flex flex-col gap-1.5 rounded-md border border-blue-200 bg-blue-50 p-2.5">
+        <label className="flex items-center gap-2 text-xs font-medium text-blue-800">
+          <input
+            type="checkbox"
+            checked={coordsManuallySet}
+            onChange={(e) => onCoordsManuallySetChange(e.target.checked)}
+          />
+          Koordinaten manuell festlegen (überschreibt den automatischen Punkt dauerhaft)
+        </label>
+        {coordsManuallySet && (
+          <div className="flex gap-2">
+            <div className="flex flex-1 flex-col gap-1">
+              <label htmlFor="edit-admin-manual-lat" className="text-xs text-blue-700">
+                Breitengrad
+              </label>
+              <input
+                id="edit-admin-manual-lat"
+                className="rounded border border-blue-300 bg-white px-2 py-1 text-xs"
+                value={manualLat}
+                onChange={(e) => onManualLatChange(e.target.value)}
+                placeholder="z.B. 49.457866"
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1">
+              <label htmlFor="edit-admin-manual-lng" className="text-xs text-blue-700">
+                Längengrad
+              </label>
+              <input
+                id="edit-admin-manual-lng"
+                className="rounded border border-blue-300 bg-white px-2 py-1 text-xs"
+                value={manualLng}
+                onChange={(e) => onManualLngChange(e.target.value)}
+                placeholder="z.B. 10.931671"
+              />
+            </div>
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="edit-admin-beschreibung" className="text-xs font-medium text-gray-600">

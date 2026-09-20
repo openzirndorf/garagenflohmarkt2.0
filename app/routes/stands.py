@@ -96,8 +96,8 @@ _OWNER_COLUMNS = (
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
 # Login-Links, aber nie Token-Hashes oder Klartext-Tokens.
 _ADMIN_COLUMNS = (
-    "id, nickname, adresse, lat, lng, beschreibung, email, kategorien, zahlungsarten, "
-    "status, created_at, login_token_expires_at, session_token_expires_at, "
+    "id, nickname, adresse, lat, lng, coords_manually_set, beschreibung, email, kategorien, "
+    "zahlungsarten, status, created_at, login_token_expires_at, session_token_expires_at, "
     "deactivated, deactivation_message, deactivation_reply_message, "
     "deactivation_reply_created_at, address_consent_at"
 )
@@ -189,6 +189,13 @@ class AdminStandPatch(StandPatch):
     # den Stand komplett von Karte/Liste (siehe PUBLIC_STANDS_FILTER).
     deactivated: bool | None = None
     deactivation_message: str | None = None
+    # Manueller Kartenpunkt (siehe migrations/0018) - ebenfalls nur über
+    # den Admin-Endpunkt setzbar. lat/lng sind nur gültige Eingaben, wenn
+    # coords_manually_set zusammen mit ihnen True ist (siehe
+    # update_stand_admin) - sonst bestimmt weiterhin geocode() den Punkt.
+    lat: float | None = None
+    lng: float | None = None
+    coords_manually_set: bool | None = None
 
 
 class LoginRequestIn(BaseModel):
@@ -479,7 +486,17 @@ async def update_stand(
         geo = await geocode(updates["adresse"])
         if geo:
             _reject_if_outside_zirndorf(geo.postcode)
-        updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
+        # Ein von einem Admin manuell gesetzter Kartenpunkt (siehe
+        # update_stand_admin/migrations/0018) darf durch eine eigene
+        # Adressbearbeitung des Inhabers nicht überschrieben werden - nur
+        # der Anzeigetext wird bei Erfolg weiterhin aktualisiert.
+        coords_manually_set = await pool.fetchval(
+            "SELECT coords_manually_set FROM stands "
+            "WHERE session_token_hash = $1 AND session_token_expires_at > now()",
+            hash_token(session_token),
+        )
+        if not coords_manually_set:
+            updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
         if geo and geo.formatted_adresse:
             updates["adresse"] = geo.formatted_adresse
 
@@ -720,13 +737,13 @@ async def update_stand_admin(
     # würde JEDE Bearbeitung fälschlich als DEACTIVATED/REACTIVATED statt
     # EDITED geloggt und bei einem bereits deaktivierten Stand bei jeder
     # Bearbeitung erneut eine Deaktivierungs-Mail auslösen.
-    previous_deactivated = await pool.fetchval(
-        "SELECT deactivated FROM stands WHERE id = $1", stand_id
+    previous_row = await pool.fetchrow(
+        "SELECT deactivated, coords_manually_set FROM stands WHERE id = $1", stand_id
     )
-    if previous_deactivated is None:
+    if previous_row is None:
         raise HTTPException(status_code=404, detail="Stand nicht gefunden")
     deactivation_changed = (
-        "deactivated" in updates and updates["deactivated"] != previous_deactivated
+        "deactivated" in updates and updates["deactivated"] != previous_row["deactivated"]
     )
 
     # Reaktivieren gilt als "Antwort gelesen/erledigt" - räumt die
@@ -735,11 +752,28 @@ async def update_stand_admin(
         updates["deactivation_reply_message"] = None
         updates["deactivation_reply_created_at"] = None
 
+    # Manueller Kartenpunkt (siehe migrations/0018): bleibt bei JEDEM
+    # künftigen Update bestehen (auch bei diesem selbst, wenn nur andere
+    # Felder geändert werden), solange coords_manually_set nicht explizit
+    # auf false gesetzt wird - dann bestimmt wieder geocode() den Punkt.
+    manual_coords_after = updates.get("coords_manually_set", previous_row["coords_manually_set"])
+    # Nur prüfen, wenn coords_manually_set in DIESEM Update aktiv gesetzt
+    # wird - war es schon vorher True und wird hier gar nicht mitgeschickt
+    # (z.B. eine spätere Bearbeitung anderer Felder), bleiben die bereits
+    # gespeicherten lat/lng unverändert bestehen, ohne erneut mitgeschickt
+    # werden zu müssen.
+    if updates.get("coords_manually_set") and ("lat" not in updates or "lng" not in updates):
+        raise HTTPException(
+            status_code=400,
+            detail="Für manuell gesetzte Koordinaten müssen Breiten- und Längengrad angegeben werden.",
+        )
+
     if "adresse" in updates:
         geo = await geocode(updates["adresse"])
         if geo:
             _reject_if_outside_zirndorf(geo.postcode)
-        updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
+        if not manual_coords_after:
+            updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
         if geo and geo.formatted_adresse:
             updates["adresse"] = geo.formatted_adresse
 

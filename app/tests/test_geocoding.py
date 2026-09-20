@@ -521,3 +521,104 @@ async def test_admin_edit_rejects_address_outside_zirndorf(
     )
     assert resp.status_code == 400
     assert "Zirndorf" in resp.json()["detail"]
+
+
+# Manuelle Koordinaten (siehe migrations/0018) - live nötig geworden, weil
+# OpenStreetMap für "Weiherhofer Hauptstraße 65" keine hausnummer-genauen
+# Daten hat und selbst die beste automatische Auflösung noch ca. 280m von
+# der per Google Maps bestätigten Position entfernt lag.
+async def test_admin_can_set_manual_coordinates(client, api_auth, admin_headers):
+    stand = (await _register(client, api_auth)).json()
+
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"lat": 49.45786580703368, "lng": 10.931671038123381, "coords_manually_set": True},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["lat"] == 49.45786580703368
+    assert body["lng"] == 10.931671038123381
+    assert body["coords_manually_set"] is True
+
+
+async def test_admin_setting_manual_coords_requires_both_lat_and_lng(
+    client, api_auth, admin_headers
+):
+    stand = (await _register(client, api_auth)).json()
+
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"lat": 49.45, "coords_manually_set": True},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 400
+
+
+async def test_manual_coordinates_survive_a_later_address_edit_by_admin(
+    client, api_auth, admin_headers, monkeypatch
+):
+    stand = (await _register(client, api_auth)).json()
+    await client.patch(
+        f"/stands/{stand['id']}",
+        json={"lat": 49.4578, "lng": 10.9316, "coords_manually_set": True},
+        headers=admin_headers,
+    )
+
+    # Der Standard-Fake in conftest.py (_no_real_geocoding) würde bei einer
+    # normalen Adressbearbeitung eigene Koordinaten liefern - die dürfen
+    # den manuell gesetzten Punkt nicht verdrängen, weil coords_manually_set
+    # in diesem Update gar nicht enthalten ist (bleibt also True).
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"adresse": "Andere Straße 9"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["lat"] == 49.4578
+    assert body["lng"] == 10.9316
+    assert body["coords_manually_set"] is True
+
+
+async def test_manual_coordinates_survive_a_later_owner_address_edit(
+    client, api_auth, admin_headers, captured_emails
+):
+    stand = (await _register(client, api_auth)).json()
+    await client.patch(
+        f"/stands/{stand['id']}",
+        json={"lat": 49.4578, "lng": 10.9316, "coords_manually_set": True},
+        headers=admin_headers,
+    )
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    resp = await client.patch(
+        "/stands/by-session",
+        headers={"Authorization": f"Bearer {session_token}"},
+        json={"adresse": "Andere Straße 9"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["lat"] == 49.4578
+    assert body["lng"] == 10.9316
+
+
+async def test_admin_can_revert_to_automatic_coordinates(client, api_auth, admin_headers):
+    stand = (await _register(client, api_auth)).json()
+    await client.patch(
+        f"/stands/{stand['id']}",
+        json={"lat": 49.4578, "lng": 10.9316, "coords_manually_set": True},
+        headers=admin_headers,
+    )
+
+    # Ohne coords_manually_set: false zu setzen, würde der geocode()-Fake
+    # aus conftest.py wieder greifen - hier reicht die Prüfung, dass das
+    # Abschalten selbst den erwarteten Wert zurückgibt und lat/lng nicht
+    # mehr künstlich festgehalten werden.
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"adresse": "Musterstraße 1", "coords_manually_set": False},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["coords_manually_set"] is False

@@ -1,0 +1,12 @@
+-- Erlaubt Admins, den Kartenpunkt eines Stands manuell festzulegen und
+-- damit gegen künftiges Geocoding abzusichern (siehe update_stand_admin/
+-- update_stand in app/routes/stands.py) - nötig, weil OpenStreetMap für
+-- manche echten Adressen keine hausnummer-genauen Daten hat und der
+-- automatisch ermittelte Punkt dann trotz bestem Geocoding-Ergebnis
+-- spürbar daneben liegt (live: "Weiherhofer Hauptstraße 65", ca. 280m
+-- Abweichung zur per Google Maps bestätigten Position). Ist das Flag
+-- gesetzt, überspringen beide PATCH-Endpunkte das Überschreiben von
+-- lat/lng durch geocode() bei jeder künftigen Bearbeitung - ein Update
+-- der übrigen Standdaten darf die manuell gesetzten Koordinaten nicht
+-- löschen.
+ALTER TABLE stands ADD COLUMN coords_manually_set BOOLEAN NOT NULL DEFAULT false;
