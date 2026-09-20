@@ -18,6 +18,7 @@ als die Nominatim-Policy zu verletzen.
 """
 import math
 import os
+import re
 from typing import NamedTuple
 
 import httpx
@@ -158,9 +159,21 @@ def _is_ambiguous_road(candidates: list[tuple[float, float, dict]]) -> bool:
     return False
 
 
+# Straße/Hausnummer-Formular (siehe frontend composeAdresse in
+# lib/adresse.ts) übergibt hier bereits "Straße Hausnummer, 90513
+# Zirndorf" - ohne diesen Schnitt würde die Anfrage unten ein zweites Mal
+# ", Zirndorf, Bayern, Deutschland" anhängen. Live beobachtet (Weiherhofer
+# Hauptstraße 65): diese Dopplung ändert OpenCages Trefferliste spürbar -
+# der zur Erkennung einer mehrdeutigen gleichnamigen Straße nötige zweite
+# Treffer fiel dadurch aus den Top-Treffern raus, _is_ambiguous_road griff
+# nicht mehr und die falschen Koordinaten wurden wieder übernommen.
+_TRAILING_ZIRNDORF_SUFFIX = re.compile(r",?\s*90513\s+Zirndorf\s*$", re.IGNORECASE)
+
+
 async def geocode(adresse: str) -> GeocodeResult | None:
     api_key = os.getenv("GEOCODE_API_KEY")
-    query = f"{adresse}, Zirndorf, Bayern, Deutschland"
+    street_part = _TRAILING_ZIRNDORF_SUFFIX.sub("", adresse).strip()
+    query = f"{street_part}, Zirndorf, Bayern, Deutschland"
 
     async with httpx.AsyncClient() as client:
         try:

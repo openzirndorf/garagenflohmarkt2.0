@@ -216,6 +216,32 @@ def test_is_ambiguous_road_false_for_different_street_names():
     assert _is_ambiguous_road(candidates) is False
 
 
+# Live gemeldet, zweite Runde: derselbe "Weiherhofer Hauptstraße 65"-Fall
+# zeigte den falschen Kartenpunkt sogar NACH dem obigen Fix, sobald über
+# das Straße/Hausnummer-Formular gespeichert wurde. Ursache: composeAdresse()
+# (frontend/src/lib/adresse.ts) übergibt bereits "Straße Hausnummer, 90513
+# Zirndorf" - geocode() hängte darunter selbst noch mal ", Zirndorf,
+# Bayern, Deutschland" an, die doppelte Ortsangabe veränderte OpenCages
+# Trefferliste so, dass der zur Mehrdeutigkeits-Erkennung nötige zweite
+# Treffer nicht mehr auftauchte.
+async def test_geocode_does_not_duplicate_zirndorf_in_query(monkeypatch):
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+    captured_queries = []
+
+    async def fake_get(self, url, **kwargs):
+        captured_queries.append(kwargs["params"]["q"])
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={"results": []},
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    await real_geocode("Weiherhofer Hauptstraße 65, 90513 Zirndorf")
+    assert captured_queries[0].lower().count("zirndorf") == 1
+
+
 async def test_geocode_rejects_ambiguous_opencage_match_without_house_number(monkeypatch):
     monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
 
