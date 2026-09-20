@@ -463,6 +463,24 @@ export function AdminPanel() {
               </span>
             )}
             <span className="ml-2 text-gray-500">{s.adresse}</span>
+            {s.lat != null && s.lng != null && (
+              <a
+                href={`https://www.google.com/maps?q=${s.lat},${s.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="ml-2 text-xs text-blue-500 underline hover:text-blue-700"
+              >
+                🗺️ In Google Maps prüfen
+              </a>
+            )}
+            {s.address_confirmed === false && (
+              <span
+                title="Die Hausnummer konnte von OpenStreetMap nicht bestätigt werden - der Kartenpunkt kann ungenau sein. Ggf. manuell festlegen (siehe Bearbeiten)."
+                className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700"
+              >
+                ⚠️ Genauigkeit unsicher
+              </span>
+            )}
             {s.email && <span className="ml-2 text-gray-400">· {s.email}</span>}
             {s.kategorien && s.kategorien.length > 0 && (
               <div className="mt-0.5 flex flex-wrap gap-1">

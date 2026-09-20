@@ -1,0 +1,12 @@
+-- Hält fest, ob die zuletzt von geocode() gelieferte Hausnummer für die
+-- gespeicherte Adresse bestätigt war (siehe app/routes/stands.py) - true
+-- bei einem hausnummer-genauen OSM-Treffer ODER einem manuell gesetzten
+-- Kartenpunkt (migrations/0018), false bei einem reinen Straßen-Treffer
+-- ohne Hausnummer (der Fall, der bei "Weiherhofer Hauptstraße 65" zu
+-- einem spürbar falschen Kartenpunkt führte). NULL, solange für den Stand
+-- noch nie unter dieser Logik geocodiert wurde (u.a. alle vor diesem
+-- Feature bestehenden Stände, bis zur nächsten Bearbeitung oder einem
+-- gezielten Backfill) - bewusst nicht false, um "nie geprüft" nicht mit
+-- "geprüft und unsicher" zu verwechseln. Admin-Panel zeigt bei false ein
+-- Hinweis-Badge, bei NULL/true keinen.
+ALTER TABLE stands ADD COLUMN address_confirmed BOOLEAN;

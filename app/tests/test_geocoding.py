@@ -622,3 +622,75 @@ async def test_admin_can_revert_to_automatic_coordinates(client, api_auth, admin
     )
     assert resp.status_code == 200
     assert resp.json()["coords_manually_set"] is False
+
+
+# address_confirmed (siehe migrations/0019) - macht den "Weiherhofer
+# Hauptstraße 65"-Fall im Admin-Panel künftig sichtbar, statt erst durch
+# einen Nutzerhinweis auffindbar zu sein.
+async def test_registration_sets_address_confirmed_true_when_house_number_confirmed(
+    client, api_auth, admin_headers
+):
+    # Der Standard-Fake in conftest.py liefert eine bestätigte Hausnummer.
+    stand = (await _register(client, api_auth)).json()
+    resp = await client.get("/stands/admin", headers=admin_headers)
+    found = next(s for s in resp.json() if s["id"] == stand["id"])
+    assert found["address_confirmed"] is True
+
+
+async def test_admin_edit_sets_address_confirmed_false_when_house_number_unconfirmed(
+    client, api_auth, admin_headers, monkeypatch
+):
+    stand = (await _register(client, api_auth)).json()
+    _patch_geocode(
+        monkeypatch,
+        GeocodeResult(lat=49.44, lng=10.95, postcode="90513", formatted_adresse=None),
+    )
+    resp = await client.patch(
+        f"/stands/{stand['id']}", json={"adresse": "Kleiberstr. 3"}, headers=admin_headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["address_confirmed"] is False
+
+
+async def test_owner_edit_sets_address_confirmed_false_when_house_number_unconfirmed(
+    client, api_auth, admin_headers, captured_emails, monkeypatch
+):
+    await _register(client, api_auth)
+    session_token = await _login(client, captured_emails[0]["login_code"])
+
+    _patch_geocode(
+        monkeypatch,
+        GeocodeResult(lat=49.44, lng=10.95, postcode="90513", formatted_adresse=None),
+    )
+    resp = await client.patch(
+        "/stands/by-session",
+        headers={"Authorization": f"Bearer {session_token}"},
+        json={"adresse": "Kleiberstr. 3"},
+    )
+    assert resp.status_code == 200
+    stand_id = resp.json()["id"]
+
+    admin_resp = await client.get("/stands/admin", headers=admin_headers)
+    found = next(s for s in admin_resp.json() if s["id"] == stand_id)
+    assert found["address_confirmed"] is False
+
+
+async def test_manual_coordinates_are_always_treated_as_confirmed(
+    client, api_auth, admin_headers, monkeypatch
+):
+    stand = (await _register(client, api_auth)).json()
+    _patch_geocode(
+        monkeypatch,
+        GeocodeResult(lat=49.44, lng=10.95, postcode="90513", formatted_adresse=None),
+    )
+    await client.patch(
+        f"/stands/{stand['id']}", json={"adresse": "Kleiberstr. 3"}, headers=admin_headers
+    )
+
+    resp = await client.patch(
+        f"/stands/{stand['id']}",
+        json={"lat": 49.4578, "lng": 10.9316, "coords_manually_set": True},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["address_confirmed"] is True

@@ -67,6 +67,12 @@ export interface AdminStand extends Stand {
   deactivation_reply_created_at: string | null;
   address_consent_at: string;
   coords_manually_set: boolean;
+  // true = Hausnummer von OpenStreetMap bestätigt oder Koordinaten manuell
+  // gesetzt, false = nur ein reiner Straßen-Treffer (siehe migrations/0019)
+  // - der Fall, der beim "Weiherhofer Hauptstraße 65"-Stand zu einem
+  // spürbar falschen Kartenpunkt führte. null, wenn der Stand noch nie
+  // unter dieser Logik geocodiert wurde.
+  address_confirmed: boolean | null;
 }
 
 export async function fetchAdminStands(token: string): Promise<AdminStand[]> {

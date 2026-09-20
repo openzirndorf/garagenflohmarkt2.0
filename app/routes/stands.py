@@ -96,9 +96,9 @@ _OWNER_COLUMNS = (
 # Admin sieht zusätzlich E-Mail und den Ablauf eines evtl. offenen
 # Login-Links, aber nie Token-Hashes oder Klartext-Tokens.
 _ADMIN_COLUMNS = (
-    "id, nickname, adresse, lat, lng, coords_manually_set, beschreibung, email, kategorien, "
-    "zahlungsarten, status, created_at, login_token_expires_at, session_token_expires_at, "
-    "deactivated, deactivation_message, deactivation_reply_message, "
+    "id, nickname, adresse, lat, lng, coords_manually_set, address_confirmed, beschreibung, "
+    "email, kategorien, zahlungsarten, status, created_at, login_token_expires_at, "
+    "session_token_expires_at, deactivated, deactivation_message, deactivation_reply_message, "
     "deactivation_reply_created_at, address_consent_at"
 )
 
@@ -266,6 +266,12 @@ async def create_stand(body: StandIn, request: Request):
     if geo:
         _reject_if_outside_zirndorf(geo.postcode)
     lat, lng = (geo.lat, geo.lng) if geo else (None, None)
+    # true = Hausnummer von OpenStreetMap bestätigt, false = nur ein reiner
+    # Straßen-Treffer ohne Hausnummer (siehe GeocodeResult.formatted_adresse
+    # in app/geocode.py) - Admin-Panel markiert false als "Genauigkeit
+    # unsicher". None, wenn geocode() komplett fehlschlug (dann gibt es
+    # ohnehin keine Koordinaten, siehe "Stände ohne Kartenpunkt").
+    address_confirmed = bool(geo.formatted_adresse) if geo else None
     # Einheitlich formatierte Adresse aus dem Geocoding-Ergebnis statt der
     # frei getippten Eingabe ("Straße Hausnummer, PLZ Ort") - fällt bei
     # fehlgeschlagenem Geocoding oder unvollständigen Bestandteilen auf die
@@ -284,11 +290,12 @@ async def create_stand(body: StandIn, request: Request):
 
     try:
         row = await pool.fetchrow(
-            "INSERT INTO stands (nickname, adresse, lat, lng, beschreibung, email, kategorien, "
-            "zahlungsarten, login_token_hash, login_token_expires_at, address_consent_at) "
-            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,now()) "
+            "INSERT INTO stands (nickname, adresse, lat, lng, address_confirmed, beschreibung, "
+            "email, kategorien, zahlungsarten, login_token_hash, login_token_expires_at, "
+            "address_consent_at) "
+            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now()) "
             f"RETURNING {_OWNER_COLUMNS}",
-            nickname, adresse, lat, lng, beschreibung, body.email,
+            nickname, adresse, lat, lng, address_confirmed, beschreibung, body.email,
             body.kategorien, body.zahlungsarten, login_token_hash, login_token_expires_at,
         )
     except asyncpg.UniqueViolationError as exc:
@@ -497,6 +504,7 @@ async def update_stand(
         )
         if not coords_manually_set:
             updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
+            updates["address_confirmed"] = bool(geo.formatted_adresse) if geo else None
         if geo and geo.formatted_adresse:
             updates["adresse"] = geo.formatted_adresse
 
@@ -768,12 +776,18 @@ async def update_stand_admin(
             detail="Für manuell gesetzte Koordinaten müssen Breiten- und Längengrad angegeben werden.",
         )
 
+    # Ein manuell gesetzter Kartenpunkt gilt als admin-bestätigt, unabhängig
+    # davon, was geocode() für den Anzeigetext ermitteln würde.
+    if updates.get("coords_manually_set"):
+        updates["address_confirmed"] = True
+
     if "adresse" in updates:
         geo = await geocode(updates["adresse"])
         if geo:
             _reject_if_outside_zirndorf(geo.postcode)
         if not manual_coords_after:
             updates["lat"], updates["lng"] = (geo.lat, geo.lng) if geo else (None, None)
+            updates["address_confirmed"] = bool(geo.formatted_adresse) if geo else None
         if geo and geo.formatted_adresse:
             updates["adresse"] = geo.formatted_adresse
 
