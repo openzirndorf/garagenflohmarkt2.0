@@ -5,7 +5,7 @@ import httpx
 # für alle anderen Tests weg - dieser gebundene Verweis auf die echte
 # Funktion bleibt davon unberührt, weil er schon beim Modul-Import
 # entsteht, bevor die Fixture überhaupt läuft.
-from app.geocode import GeocodeResult, _format_adresse, _nearest_ortsteil
+from app.geocode import GeocodeResult, _format_adresse, _is_ambiguous_road, _nearest_ortsteil
 from app.geocode import geocode as real_geocode
 
 
@@ -182,6 +182,109 @@ async def test_geocode_appends_ortsteil_for_a_match_near_a_known_center(monkeypa
     result = await real_geocode("Märzenweg 14")
     assert result is not None
     assert result.formatted_adresse == "Märzenweg 14, 90513 Zirndorf (Weiherhof)"
+
+
+# Live gemeldet: "Weiherhofer Hauptstraße 65, 90513 Zirndorf" landete auf
+# der Karte weit entfernt vom tatsächlichen Weiherhof. Ursache: OpenCage
+# liefert für diesen Straßennamen zwei ca. 0,8 km auseinanderliegende,
+# eigene OSM-Wege zurück (einer bei Banderbach, einer tatsächlich bei
+# Weiherhof) - ohne Hausnummer-Treffer übernahm geocode() bisher blind
+# den ersten davon.
+def test_is_ambiguous_road_true_for_same_name_far_apart():
+    candidates = [
+        (49.4543617, 10.9200312, {"road": "Weiherhofer Hauptstraße"}),
+        (49.4576463, 10.9232230, {"road": "Weiherhofer Hauptstraße"}),
+    ]
+    assert _is_ambiguous_road(candidates) is True
+
+
+def test_is_ambiguous_road_false_for_same_name_close_together():
+    # Zwei Treffer für dieselbe Straße nur wenige Meter auseinander sind
+    # normale Geocoding-Ungenauigkeit, keine echte Mehrdeutigkeit.
+    candidates = [
+        (49.4543617, 10.9200312, {"road": "Musterstraße"}),
+        (49.4543700, 10.9200400, {"road": "Musterstraße"}),
+    ]
+    assert _is_ambiguous_road(candidates) is False
+
+
+def test_is_ambiguous_road_false_for_different_street_names():
+    candidates = [
+        (49.4543617, 10.9200312, {"road": "Musterstraße"}),
+        (49.4594327, 10.9283946, {"road": "Andere Straße"}),
+    ]
+    assert _is_ambiguous_road(candidates) is False
+
+
+async def test_geocode_rejects_ambiguous_opencage_match_without_house_number(monkeypatch):
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4543617, "lng": 10.9200312},
+                        "components": {"road": "Weiherhofer Hauptstraße", "postcode": "90513"},
+                    },
+                    {
+                        "geometry": {"lat": 49.4576463, "lng": 10.9232230},
+                        "components": {
+                            "road": "Weiherhofer Hauptstraße",
+                            "postcode": "90513",
+                            "village": "Weiherhof",
+                        },
+                    },
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    assert await real_geocode("Weiherhofer Hauptstraße 65") is None
+
+
+async def test_geocode_accepts_confirmed_house_number_despite_same_named_road_elsewhere(
+    monkeypatch,
+):
+    # Ist die Hausnummer beim ERSTEN (besten) Treffer bestätigt, wird ihm
+    # trotzdem vertraut, auch wenn irgendwo ein weiterer, weit entfernter
+    # Treffer mit demselben Straßennamen existiert - die Mehrdeutigkeits-
+    # Prüfung greift nur, wenn die Hausnummer selbst unbestätigt ist.
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4576463, "lng": 10.9232230},
+                        "components": {
+                            "road": "Weiherhofer Hauptstraße",
+                            "house_number": "65",
+                            "postcode": "90513",
+                        },
+                    },
+                    {
+                        "geometry": {"lat": 49.4543617, "lng": 10.9200312},
+                        "components": {"road": "Weiherhofer Hauptstraße", "postcode": "90513"},
+                    },
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    result = await real_geocode("Weiherhofer Hauptstraße 65")
+    assert result is not None
+    # Liegt tatsächlich innerhalb des Weiherhof-Radius (siehe _ORTSTEILE) -
+    # bestätigt nebenbei, dass der bestätigte erste Treffer unverändert
+    # durchläuft, inklusive Ortsteil-Ergänzung.
+    assert result.formatted_adresse == "Weiherhofer Hauptstraße 65, 90513 Zirndorf (Weiherhof)"
 
 
 async def test_geocode_rejects_coarse_nominatim_match_without_house_number(monkeypatch):

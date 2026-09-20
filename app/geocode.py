@@ -130,6 +130,34 @@ def _is_trustworthy(components: dict) -> bool:
     return bool(components.get("road"))
 
 
+# Ab welchem Abstand zwei gleichnamige Straßen-Treffer als zwei
+# unterschiedliche, tatsächlich getrennte Orte gelten statt als
+# Ungenauigkeit desselben Straßenabschnitts.
+_AMBIGUOUS_ROAD_DISTANCE_KM = 0.3
+
+
+def _is_ambiguous_road(candidates: list[tuple[float, float, dict]]) -> bool:
+    # Manche Straßennamen existieren in Zirndorf gleich mehrfach als
+    # eigene, weit auseinanderliegende OSM-Wege (live bestätigt: "Weiherhofer
+    # Hauptstraße" liefert bei OpenCage zwei ca. 0,8 km auseinanderliegende
+    # Treffer - einer bei Banderbach, einer tatsächlich bei Weiherhof).
+    # Ohne bestätigte Hausnummer (siehe _format_adresse) lässt sich dann
+    # nicht bestimmen, welcher Abschnitt gemeint ist - ein blind
+    # übernommener erster Treffer setzt den Stand mit einiger
+    # Wahrscheinlichkeit an eine falsche Stelle. Besser gar keine
+    # Koordinaten übernehmen als eine geratene falsche.
+    seen: dict[str, tuple[float, float]] = {}
+    for lat, lng, components in candidates:
+        road = components.get("road")
+        if not road:
+            continue
+        key = road.strip().lower()
+        if key in seen and _haversine_km(lat, lng, *seen[key]) > _AMBIGUOUS_ROAD_DISTANCE_KM:
+            return True
+        seen.setdefault(key, (lat, lng))
+    return False
+
+
 async def geocode(adresse: str) -> GeocodeResult | None:
     api_key = os.getenv("GEOCODE_API_KEY")
     query = f"{adresse}, Zirndorf, Bayern, Deutschland"
@@ -139,7 +167,7 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             if api_key:
                 r = await client.get(
                     OPENCAGE_URL,
-                    params={"key": api_key, "q": query, "limit": "1", "no_annotations": "1"},
+                    params={"key": api_key, "q": query, "limit": "5", "no_annotations": "1"},
                     timeout=5,
                 )
                 r.raise_for_status()
@@ -151,6 +179,14 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                 if not _is_trustworthy(components):
                     return None
                 formatted_adresse = _format_adresse(components)
+                if formatted_adresse is None:
+                    candidates = [
+                        (float(res["geometry"]["lat"]), float(res["geometry"]["lng"]), res.get("components") or {})
+                        for res in results
+                        if res.get("geometry")
+                    ]
+                    if _is_ambiguous_road(candidates):
+                        return None
                 lat, lng = float(geo["lat"]), float(geo["lng"])
                 ortsteil = _nearest_ortsteil(lat, lng)
                 if formatted_adresse and ortsteil:
@@ -167,7 +203,7 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             # wie OpenCages components, sonst nur einen freien display_name.
             r = await client.get(
                 NOMINATIM_URL,
-                params={"q": query, "format": "json", "limit": "1", "addressdetails": "1"},
+                params={"q": query, "format": "json", "limit": "5", "addressdetails": "1"},
                 headers={"User-Agent": UA},
                 timeout=5,
             )
@@ -179,6 +215,14 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             if not _is_trustworthy(components):
                 return None
             formatted_adresse = _format_adresse(components)
+            if formatted_adresse is None:
+                candidates = [
+                    (float(entry["lat"]), float(entry["lon"]), entry.get("address") or {})
+                    for entry in data
+                    if entry.get("lat") and entry.get("lon")
+                ]
+                if _is_ambiguous_road(candidates):
+                    return None
             lat, lng = float(data[0]["lat"]), float(data[0]["lon"])
             ortsteil = _nearest_ortsteil(lat, lng)
             if formatted_adresse and ortsteil:
