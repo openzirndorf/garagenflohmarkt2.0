@@ -346,6 +346,41 @@ async def test_geocode_rejects_ambiguous_opencage_match_without_ortsteil_hint(mo
     assert await real_geocode("Bahnhofstraße 65") is None
 
 
+# Live gemeldet: "Humboldtstrasse 32, Zirndorf (Weiherhof)" (eine bereits
+# verunglückte, doppelt "Zirndorf"-haltige Roheingabe aus der Zeit vor der
+# strukturierten Adresseingabe) blieb dauerhaft ohne Kartenpunkt. Ursache:
+# OpenCage stufte den GROBEN Orts-/Stadt-Treffer als allerersten Treffer
+# ein, obwohl ein späterer Treffer tatsächlich die Straße kannte -
+# geocode() prüfte bisher nur results[0] auf Vertrauenswürdigkeit und gab
+# bei einem groben ersten Treffer sofort auf, statt weiterzusuchen.
+async def test_geocode_skips_untrustworthy_first_result_and_uses_later_one(monkeypatch):
+    monkeypatch.setenv("GEOCODE_API_KEY", "test-key")
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "results": [
+                    {
+                        "geometry": {"lat": 49.4424, "lng": 10.95414},
+                        "components": {"postcode": "90513"},
+                    },
+                    {
+                        "geometry": {"lat": 49.4580688, "lng": 10.932585},
+                        "components": {"road": "Humboldtstraße", "postcode": "90513"},
+                    },
+                ]
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    result = await real_geocode("Humboldtstrasse 32, Zirndorf (Weiherhof)")
+    assert result is not None
+    assert (result.lat, result.lng) == (49.4580688, 10.932585)
+
+
 async def test_geocode_accepts_confirmed_house_number_despite_same_named_road_elsewhere(
     monkeypatch,
 ):

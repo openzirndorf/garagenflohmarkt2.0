@@ -221,12 +221,21 @@ async def geocode(adresse: str) -> GeocodeResult | None:
                 )
                 r.raise_for_status()
                 results = r.json().get("results") or []
-                if not results:
+                # Nicht blind results[0] nehmen: live beobachtet
+                # ("Humboldtstraße 32, Zirndorf (Weiherhof)" - eine bereits
+                # verunglückte, doppelt "Zirndorf"-haltige Roheingabe), dass
+                # OpenCage manchmal einen groben Orts-/Stadt-Treffer VOR
+                # einem tatsächlich brauchbaren Straßen-Treffer einordnet -
+                # den ersten TATSÄCHLICH vertrauenswürdigen Treffer suchen,
+                # statt einen späteren brauchbaren Treffer zu verwerfen.
+                top = next(
+                    (res for res in results if _is_trustworthy(res.get("components") or {})),
+                    None,
+                )
+                if top is None:
                     return None
-                geo = results[0]["geometry"]
-                components = results[0].get("components") or {}
-                if not _is_trustworthy(components):
-                    return None
+                geo = top["geometry"]
+                components = top.get("components") or {}
                 formatted_adresse = _format_adresse(components)
                 lat, lng = float(geo["lat"]), float(geo["lng"])
                 if formatted_adresse is None:
@@ -261,13 +270,18 @@ async def geocode(adresse: str) -> GeocodeResult | None:
             )
             r.raise_for_status()
             data = r.json()
-            if not data:
+            # Siehe Kommentar im OpenCage-Zweig oben - nicht blind data[0]
+            # nehmen, falls ein späterer Treffer tatsächlich vertrauens-
+            # würdig ist.
+            top = next(
+                (entry for entry in data if _is_trustworthy(entry.get("address") or {})),
+                None,
+            )
+            if top is None:
                 return None
-            components = data[0].get("address") or {}
-            if not _is_trustworthy(components):
-                return None
+            components = top.get("address") or {}
             formatted_adresse = _format_adresse(components)
-            lat, lng = float(data[0]["lat"]), float(data[0]["lon"])
+            lat, lng = float(top["lat"]), float(top["lon"])
             if formatted_adresse is None:
                 candidates = [
                     (float(entry["lat"]), float(entry["lon"]), entry.get("address") or {})
