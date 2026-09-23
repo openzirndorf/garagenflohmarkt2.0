@@ -64,3 +64,19 @@ async def test_robots_txt_is_served_as_a_real_static_file(client, monkeypatch, t
     assert resp.status_code == 200
     assert "User-agent: *" in resp.text
     assert not resp.headers["content-type"].startswith("text/html")
+
+
+# Live gemeldet: Google Search Console meldete beim Einreichen der Sitemap
+# "Vorübergehender Verarbeitungsfehler" - Ursache war ein HEAD auf
+# sitemap.xml (über dieselbe Catch-all-Route wie robots.txt oben), das mit
+# 405 beantwortet wurde. FastAPI/Starlette fügt einem @app.get()-Endpunkt
+# HEAD NICHT automatisch hinzu (lokal reproduziert) - die Route braucht
+# @app.api_route(methods=["GET", "HEAD"]).
+async def test_sitemap_xml_responds_to_head_requests(client, monkeypatch, tmp_path):
+    (tmp_path / "sitemap.xml").write_text(
+        '<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>'
+    )
+    monkeypatch.setattr("app.main._DIST_DIR", tmp_path)
+
+    resp = await client.head("/sitemap.xml")
+    assert resp.status_code == 200

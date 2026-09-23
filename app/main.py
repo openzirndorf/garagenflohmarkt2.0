@@ -130,7 +130,14 @@ app.include_router(settings_router, prefix="/settings")
 _DIST_DIR = Path(__file__).parent.parent / "dist"
 
 
-@app.get("/{full_path:path}", include_in_schema=False)
+# methods=["GET", "HEAD"] statt @app.get(): FastAPI/Starlette fügt HEAD
+# einem GET-Endpunkt NICHT automatisch hinzu (live geprüft, auch lokal mit
+# einer minimalen Route reproduziert - 405 mit Allow: GET). Live
+# aufgefallen, weil die Google Search Console beim Einreichen der Sitemap
+# "Vorübergehender Verarbeitungsfehler" meldete - viele Crawler/Tools
+# schicken vor einem GET erst ein HEAD, das über diese Route auch
+# sitemap.xml/robots.txt/das restliche gebaute Frontend ausliefert.
+@app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
 def spa(full_path: str) -> FileResponse:
     if not _DIST_DIR.is_dir():
         # Lokale Entwicklung ohne Docker-Build: kein Frontend zum
