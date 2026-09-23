@@ -26,9 +26,60 @@
       content="Stadtweiter Garagenflohmarkt in Zirndorf am 4. Oktober 2026 - Stände auf der Karte finden oder eigenen Stand anmelden."
     />
     <meta name="twitter:image" content="https://openzirndorf.de/static/media/logo.png" />
+
+    <!-- Schema.org Event-Markup, statisch im HTML (kein JS nötig, um es
+         zu sehen) - hilft Suchmaschinen und KI-Systemen (Gemini, ChatGPT
+         u.a.), die Veranstaltung selbst ohne Ausführen der React-App zu
+         verstehen (Was/Wann/Wo). Muss mit EVENT_DATE in
+         src/components/flohmarkt-app.tsx übereinstimmen. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        "name": "Garagenflohmarkt Zirndorf",
+        "description": "Stadtweiter Garagenflohmarkt in Zirndorf: Privatpersonen öffnen ihre Garagen, Höfe und Gärten für Trödel, Kleidung, Spielzeug und mehr. Alle teilnehmenden Stände sind auf einer interaktiven Karte zu finden.",
+        "startDate": "2026-10-04T10:00:00+02:00",
+        "endDate": "2026-10-04T16:00:00+02:00",
+        "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+        "eventStatus": "https://schema.org/EventScheduled",
+        "location": {
+          "@type": "Place",
+          "name": "Zirndorf",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Zirndorf",
+            "postalCode": "90513",
+            "addressCountry": "DE"
+          }
+        },
+        "organizer": {
+          "@type": "Organization",
+          "name": "OpenZirndorf",
+          "url": "https://openzirndorf.de/"
+        },
+        "image": "https://openzirndorf.de/static/media/logo.png",
+        "url": "https://garagenflohmarkt.openzirndorf.de/",
+        "isAccessibleForFree": true
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Statischer Fallback-Inhalt, bis React übernimmt (siehe
+           src/main.tsx) - für Crawler/Tools, die kein JavaScript
+           ausführen (viele KI-Suchwerkzeuge tun das nicht, anders als
+           Googlebot). Wird beim React-Mount ersetzt, rein additiv, keine
+           funktionale Wirkung für echte Nutzer*innen. -->
+      <main>
+        <h1>Garagenflohmarkt Zirndorf</h1>
+        <p>
+          Sonntag, 4. Oktober 2026, 10:00–16:00 Uhr: Stadtweiter Garagenflohmarkt in Zirndorf.
+          Privatpersonen öffnen ihre Garagen, Höfe und Gärten für Trödel, Kleidung, Spielzeug und
+          mehr - alle teilnehmenden Stände auf einer interaktiven Karte.
+        </p>
+        <p>Eigenen Stand kostenlos anmelden oder Stände auf der Karte/in der Liste finden.</p>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
