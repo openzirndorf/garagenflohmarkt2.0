@@ -126,6 +126,12 @@ def _dist_with_compressed_variants(tmp_path):
     return dist, original
 
 
+def _vary_tokens(resp):
+    # Die CORS-Middleware hängt (je nach Konfiguration, z.B. in der CI) noch
+    # "Origin" an Vary an - nur auf Accept-Encoding prüfen.
+    return {t.strip().lower() for t in resp.headers.get("vary", "").split(",") if t.strip()}
+
+
 async def _raw(client, path, accept_encoding, method="GET"):
     async with client.stream(method, path, headers={"Accept-Encoding": accept_encoding}) as resp:
         body = b"".join([chunk async for chunk in resp.aiter_raw()])
@@ -139,7 +145,7 @@ async def test_brotli_variant_is_served_when_accepted(client, monkeypatch, tmp_p
     resp, body = await _raw(client, "/app.js", "gzip, deflate, br")
     assert resp.status_code == 200
     assert resp.headers["content-encoding"] == "br"
-    assert resp.headers["vary"] == "Accept-Encoding"
+    assert "accept-encoding" in _vary_tokens(resp)
     assert resp.headers["content-type"].startswith("text/javascript")
     assert body == b"BROTLI-BYTES"
 
@@ -167,7 +173,7 @@ async def test_original_is_served_without_accepted_compression(client, monkeypat
 
     resp, body = await _raw(client, "/app.js", "identity")
     assert "content-encoding" not in resp.headers
-    assert resp.headers["vary"] == "Accept-Encoding"
+    assert "accept-encoding" in _vary_tokens(resp)
     assert body == original
 
 
@@ -177,7 +183,7 @@ async def test_file_without_variants_has_no_encoding_or_vary(client, monkeypatch
 
     resp, body = await _raw(client, "/logo.png", "gzip, br")
     assert "content-encoding" not in resp.headers
-    assert "vary" not in resp.headers
+    assert "accept-encoding" not in _vary_tokens(resp)
     assert body == b"PNG"
 
 
