@@ -41,6 +41,11 @@ const MAX_VUS = Number.parseInt(__ENV.MAX_VUS || "300", 10);
 const NEW_VISITOR_RATIO = Number.parseFloat(__ENV.NEW_VISITOR_RATIO || "0.4");
 const FORM_OPENER_RATIO = 0.15;
 const DATA_SOURCE_OVERRIDE = __ENV.DATA_SOURCE || "";
+// k6 fordert von sich aus KEINE komprimierten Antworten an (festgestellt: ohne
+// diesen Header lädt es das 1,4-MB-Bundle unkomprimiert, ein Browser bekommt
+// per Brotli ~0,3 MB). Mit dem Header verhält sich der Test wie ein Browser;
+// k6 dekomprimiert die Antworten selbst.
+const BROWSER_HEADERS = { "Accept-Encoding": "gzip, deflate, br" };
 
 const PROFILES = {
   smoke: {
@@ -102,18 +107,18 @@ export function setup() {
   }
 
   // Assets aus dem echten Build ermitteln (Dateinamen enthalten Hashes).
-  const html = http.get(`${BASE_URL}/`).body;
+  const html = http.get(`${BASE_URL}/`, { headers: BROWSER_HEADERS }).body;
   const assets = new Set(allMatches(/(?:src|href)="(\/assets\/[^"]+)"/g, html, 1));
   for (const path of ["/manifest.webmanifest", "/registerSW.js"]) assets.add(path);
 
   for (const path of [...assets]) {
     if (path.endsWith(".js")) {
-      const js = http.get(`${BASE_URL}${path}`).body;
+      const js = http.get(`${BASE_URL}${path}`, { headers: BROWSER_HEADERS }).body;
       for (const worker of allMatches(/(assets\/maplibre-gl-worker-[\w-]+\.js)/g, js, 1)) {
         assets.add(`/${worker}`);
       }
     } else if (path.endsWith(".css")) {
-      const css = http.get(`${BASE_URL}${path}`).body;
+      const css = http.get(`${BASE_URL}${path}`, { headers: BROWSER_HEADERS }).body;
       for (const font of allMatches(/url\(["']?([^)"']+\.woff2)["']?\)/g, css, 1)) {
         assets.add(font.startsWith("/") ? font : `/assets/${font.replace(/^\.\//, "")}`);
       }
@@ -123,7 +128,7 @@ export function setup() {
   // CORS erlauben, sonst verwirft der Browser die Antwort (fetchManifest in
   // frontend/src/api.ts) und die App nutzt die Live-API.
   const probe = http.get(`${STATIC_BASE_URL}/stands/manifest.json`, {
-    headers: { Origin: BASE_URL },
+    headers: { ...BROWSER_HEADERS, Origin: BASE_URL },
   });
   const corsOk = Boolean(probe.headers["Access-Control-Allow-Origin"]);
   const dataSource = DATA_SOURCE_OVERRIDE || (corsOk ? "bucket" : "api");
@@ -138,7 +143,7 @@ function loadData(dataSource) {
     // Die App fragt immer zuerst das Manifest im Bucket (auch wenn der
     // Browser die Antwort wegen fehlendem CORS verwirft).
     const manifestRes = http.get(`${STATIC_BASE_URL}/stands/manifest.json`, {
-      tags: { kind: "data", name: "manifest" },
+      headers: BROWSER_HEADERS, tags: { kind: "data", name: "manifest" },
     });
     check(manifestRes, { "manifest 200": (r) => r.status === 200 });
 
@@ -146,16 +151,16 @@ function loadData(dataSource) {
       if (manifestRes.status !== 200) return;
       const manifest = manifestRes.json();
       const responses = http.batch([
-        ["GET", `${STATIC_BASE_URL}/${manifest.list_url}`, null, { tags: { kind: "data", name: "liste" } }],
-        ["GET", `${STATIC_BASE_URL}/${manifest.geojson_url}`, null, { tags: { kind: "data", name: "geojson" } }],
+        ["GET", `${STATIC_BASE_URL}/${manifest.list_url}`, null, { headers: BROWSER_HEADERS, tags: { kind: "data", name: "liste" } }],
+        ["GET", `${STATIC_BASE_URL}/${manifest.geojson_url}`, null, { headers: BROWSER_HEADERS, tags: { kind: "data", name: "geojson" } }],
       ]);
       check(responses[0], { "liste 200": (r) => r.status === 200 });
       check(responses[1], { "geojson 200": (r) => r.status === 200 });
     } else {
       // Live-API-Fallback: läuft über Container und Datenbank.
       const responses = http.batch([
-        ["GET", `${BASE_URL}/stands`, null, { tags: { kind: "api", name: "stands" } }],
-        ["GET", `${BASE_URL}/stands/geojson`, null, { tags: { kind: "api", name: "stands-geojson" } }],
+        ["GET", `${BASE_URL}/stands`, null, { headers: BROWSER_HEADERS, tags: { kind: "api", name: "stands" } }],
+        ["GET", `${BASE_URL}/stands/geojson`, null, { headers: BROWSER_HEADERS, tags: { kind: "api", name: "stands-geojson" } }],
       ]);
       check(responses[0], { "GET /stands 200": (r) => r.status === 200 });
       check(responses[1], { "GET /stands/geojson 200": (r) => r.status === 200 });
@@ -168,7 +173,7 @@ export default function (data) {
 
   if (newVisitor) {
     group("Erstbesuch: Seite und Assets", () => {
-      const page = http.get(`${BASE_URL}/`, { tags: { kind: "page", name: "index" } });
+      const page = http.get(`${BASE_URL}/`, { headers: BROWSER_HEADERS, tags: { kind: "page", name: "index" } });
       check(page, { "index 200": (r) => r.status === 200 });
       sleep(0.3);
       const responses = http.batch(
@@ -176,14 +181,14 @@ export default function (data) {
           "GET",
           `${BASE_URL}${path}`,
           null,
-          { tags: { kind: "asset", name: "asset" }, responseType: "none" },
+          { headers: BROWSER_HEADERS, tags: { kind: "asset", name: "asset" }, responseType: "none" },
         ]),
       );
       check(responses, { "alle Assets 200": (rs) => rs.every((r) => r.status === 200) });
     });
   }
 
-  const launch = http.get(`${BASE_URL}/launch-config`, { tags: { kind: "api", name: "launch-config" } });
+  const launch = http.get(`${BASE_URL}/launch-config`, { headers: BROWSER_HEADERS, tags: { kind: "api", name: "launch-config" } });
   check(launch, { "launch-config 200": (r) => r.status === 200 });
   sleep(0.5 + Math.random());
 
@@ -191,7 +196,7 @@ export default function (data) {
   sleep(2 + Math.random() * 4);
 
   if (Math.random() < FORM_OPENER_RATIO) {
-    const settings = http.get(`${BASE_URL}/settings`, { tags: { kind: "api", name: "settings" } });
+    const settings = http.get(`${BASE_URL}/settings`, { headers: BROWSER_HEADERS, tags: { kind: "api", name: "settings" } });
     check(settings, { "settings 200": (r) => r.status === 200 });
   }
 
