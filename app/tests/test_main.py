@@ -195,3 +195,15 @@ async def test_head_request_returns_encoding_headers_without_body(client, monkey
     assert resp.status_code == 200
     assert resp.headers["content-encoding"] == "br"
     assert body == b""
+
+
+# Die interaktive API-Doku soll in Produktion nicht öffentlich sein (listet
+# alle Endpunkte inkl. Admin-Routen auf). Die Catch-all-Route liefert für
+# diese Pfade stattdessen die Startseite - entscheidend ist, dass keine
+# Swagger-/OpenAPI-Inhalte mehr ausgeliefert werden.
+async def test_api_docs_are_not_exposed(client):
+    for path in ["/docs", "/redoc", "/openapi.json"]:
+        resp = await client.get(path)
+        assert "swagger" not in resp.text.lower(), path
+        assert '"openapi"' not in resp.text, path
+        assert "redoc" not in resp.text.lower(), path

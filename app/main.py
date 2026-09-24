@@ -18,7 +18,17 @@ async def lifespan(app: FastAPI):
     yield
     await close_pool()
 
-app = FastAPI(title="Flohmarkt API", lifespan=lifespan)
+# Interaktive API-Doku (/docs, /redoc, /openapi.json) ist in Produktion
+# bewusst aus: sie listet alle Endpunkte samt Admin-Routen für jeden
+# einsehbar auf und erleichtert Angreifern das Erkunden. Nicht angewiesen
+# darauf ist die App selbst (das Frontend nutzt die Endpunkte direkt).
+app = FastAPI(
+    title="Flohmarkt API",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 app.add_middleware(
     CORSMiddleware,
