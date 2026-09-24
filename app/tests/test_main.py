@@ -80,3 +80,30 @@ async def test_sitemap_xml_responds_to_head_requests(client, monkeypatch, tmp_pa
 
     resp = await client.head("/sitemap.xml")
     assert resp.status_code == 200
+
+
+# Sicherheitslücke (live gefunden): die Catch-all-Route lieferte per
+# "/%2e%2e/..." Dateien außerhalb von dist/ aus (u.a. wäre /proc/self/environ
+# mit allen Container-Secrets erreichbar gewesen). Fix: Pfad auflösen und
+# prüfen, dass er innerhalb von dist/ liegt, sonst index.html.
+async def test_path_traversal_does_not_leak_files_outside_dist(client, monkeypatch, tmp_path):
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html>INDEX</html>")
+    (tmp_path / "secret.txt").write_text("GEHEIM")
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    for path in ["/%2e%2e/secret.txt", "/..%2fsecret.txt", "/%2e%2e%2fsecret.txt", "/a/../../secret.txt"]:
+        resp = await client.get(path)
+        assert "GEHEIM" not in resp.text, path
+        assert resp.status_code == 200
+        assert "INDEX" in resp.text, path
+
+
+async def test_path_with_null_byte_falls_back_to_index(client, monkeypatch, tmp_path):
+    (tmp_path / "index.html").write_text("<html>INDEX</html>")
+    monkeypatch.setattr("app.main._DIST_DIR", tmp_path)
+
+    resp = await client.get("/foo%00bar")
+    assert resp.status_code == 200
+    assert "INDEX" in resp.text

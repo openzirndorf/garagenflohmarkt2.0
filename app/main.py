@@ -143,5 +143,13 @@ def spa(full_path: str) -> FileResponse:
         # Lokale Entwicklung ohne Docker-Build: kein Frontend zum
         # Ausliefern vorhanden, sauberer 404 statt eines FileNotFoundError.
         raise HTTPException(status_code=404, detail="Nicht gefunden")
-    candidate = _DIST_DIR / full_path
-    return FileResponse(candidate if candidate.is_file() else _DIST_DIR / "index.html")
+    # Pfad muss innerhalb von dist/ bleiben: ohne diese Prüfung lieferte
+    # z.B. /%2e%2e/app/main.py (live bestätigt) beliebige Dateien außerhalb
+    # aus - inkl. /proc/self/environ mit allen Secrets des Containers.
+    dist = _DIST_DIR.resolve()
+    try:
+        candidate = (dist / full_path).resolve()
+        served = candidate if candidate.is_file() and candidate.is_relative_to(dist) else dist / "index.html"
+    except (OSError, ValueError):
+        served = dist / "index.html"
+    return FileResponse(served)
