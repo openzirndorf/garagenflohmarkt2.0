@@ -160,6 +160,63 @@ resource "scaleway_iam_api_key" "stands_storage" {
   expires_at = "2026-10-31T00:00:00Z"
 }
 
+# Eigener, minimaler Key für den SMTP-Versand des Containers. Vorher war
+# SMTP_PASSWORD der org-weite Owner-Key (var.scw_secret_key) - über eine
+# Path-Traversal-Lücke in der Frontend-Route (behoben, siehe app/main.py)
+# waren alle Container-Secrets lesbar, damit auch ein Key mit Vollzugriff
+# auf die ganze Organisation. Dieser Key darf nur E-Mails per SMTP senden,
+# und nur im Projekt, unter dem Transactional Email eingerichtet ist.
+resource "scaleway_iam_application" "smtp" {
+  name        = "garagenflohmarkt-smtp"
+  description = "SMTP-Versand (Transactional Email) des flohmarkt-api-Containers"
+}
+
+resource "scaleway_iam_policy" "smtp" {
+  name           = "garagenflohmarkt-smtp"
+  application_id = scaleway_iam_application.smtp.id
+
+  rule {
+    project_ids          = [var.smtp_project_id]
+    permission_set_names = ["TransactionalEmailEmailSmtpCreate"]
+  }
+}
+
+resource "scaleway_iam_api_key" "smtp" {
+  application_id     = scaleway_iam_application.smtp.id
+  default_project_id = var.smtp_project_id
+  description        = "SMTP-Versand flohmarkt-api (nur E-Mail-Versand)"
+  expires_at         = "2026-10-31T00:00:00Z"
+}
+
+# Eigener Key für die CI (GitHub Actions: Image pushen, Container und Jobs
+# aktualisieren) statt des org-weiten Owner-Keys, der nur noch lokal für
+# tofu gebraucht wird und weder in GitHub noch in Containern liegt.
+resource "scaleway_iam_application" "ci" {
+  name        = "garagenflohmarkt-ci"
+  description = "Deploy-Pipeline (GitHub Actions) des Garagenflohmarkts"
+}
+
+resource "scaleway_iam_policy" "ci" {
+  name           = "garagenflohmarkt-ci"
+  application_id = scaleway_iam_application.ci.id
+
+  rule {
+    project_ids = [var.scw_project_id]
+    permission_set_names = [
+      "ContainerRegistryFullAccess",
+      "ContainersFullAccess",
+      "ServerlessJobsFullAccess",
+    ]
+  }
+}
+
+resource "scaleway_iam_api_key" "ci" {
+  application_id     = scaleway_iam_application.ci.id
+  default_project_id = var.scw_project_id
+  description        = "GitHub Actions Deploy (Garagenflohmarkt-Projekt)"
+  expires_at         = "2027-03-31T00:00:00Z"
+}
+
 # Container Registry Namespace – speichert das Docker Image der API
 resource "scaleway_registry_namespace" "flohmarkt" {
   name      = "openzirndorf-flohmarkt"
@@ -202,7 +259,7 @@ resource "scaleway_container" "flohmarkt_api" {
     ADMIN_TOKEN   = var.admin_token
     API_USERNAME  = var.api_username
     API_PASSWORD  = var.api_password
-    SMTP_PASSWORD = var.scw_secret_key
+    SMTP_PASSWORD = scaleway_iam_api_key.smtp.secret_key
     # Eigener, auf dieses Projekt beschränkter Key (siehe
     # scaleway_iam_api_key.stands_storage oben) - der breite
     # Terraform/Mailing-Key hat default_project_id = OpenZirndorf-Projekt und
@@ -216,12 +273,12 @@ resource "scaleway_container" "flohmarkt_api" {
   }
 
   environment_variables = {
-    SMTP_HOST     = "smtp.tem.scaleway.com"
-    SMTP_PORT     = "465"
-    SMTP_USER     = var.smtp_project_id
-    SMTP_FROM     = var.smtp_from
-    BACKEND_URL   = var.backend_url
-    FRONTEND_URL  = var.frontend_url
+    SMTP_HOST    = "smtp.tem.scaleway.com"
+    SMTP_PORT    = "465"
+    SMTP_USER    = var.smtp_project_id
+    SMTP_FROM    = var.smtp_from
+    BACKEND_URL  = var.backend_url
+    FRONTEND_URL = var.frontend_url
     # Siehe variables.tf: steuert die Platzhalter-/Countdown-Seite
     # (GET /launch-config, frontend/src/components/coming-soon.tsx). Leer
     # ist ein gültiger Zustand ("Datum steht noch nicht fest").

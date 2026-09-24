@@ -23,3 +23,14 @@ output "stands_bucket_url" {
   description = "Öffentliche Basis-URL des Stands-Artefakt-Buckets - für VITE_STATIC_BASE_URL im Frontend"
   value       = "https://${scaleway_object_bucket.stands.name}.s3.${var.scw_region}.scw.cloud"
 }
+
+# Zugangsdaten der CI-Anwendung (GitHub Actions) - nur zum Eintragen in die
+# GitHub-Secrets SCW_ACCESS_KEY/SCW_SECRET_KEY: tofu output -raw ci_secret_key
+output "ci_access_key" {
+  value = scaleway_iam_api_key.ci.access_key
+}
+
+output "ci_secret_key" {
+  value     = scaleway_iam_api_key.ci.secret_key
+  sensitive = true
+}
