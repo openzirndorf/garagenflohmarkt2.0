@@ -98,6 +98,18 @@ locals {
 resource "scaleway_object_bucket" "stands" {
   name   = "garagenflohmarkt-stands"
   region = var.scw_region
+
+  # Ohne CORS-Regel verwirft der Browser die Antwort des Buckets (Seite und
+  # Bucket liegen auf verschiedenen Origins), fetchManifest in frontend/src/
+  # api.ts fällt dann still auf die Live-API zurück - jeder Besucher belastet
+  # Container und Datenbank statt des Buckets (live festgestellt: der Bucket
+  # meldete NoSuchCORSConfiguration). Nur lesend und nur für die Seite selbst.
+  cors_rule {
+    allowed_origins = [var.frontend_url]
+    allowed_methods = ["GET", "HEAD"]
+    allowed_headers = ["*"]
+    max_age_seconds = 3600
+  }
 }
 
 resource "scaleway_object_bucket_acl" "stands" {
