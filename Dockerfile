@@ -19,7 +19,7 @@ ENV VITE_API_URL=$VITE_API_URL \
     VITE_API_USERNAME=$VITE_API_USERNAME \
     VITE_API_PASSWORD=$VITE_API_PASSWORD \
     VITE_STATIC_BASE_URL=$VITE_STATIC_BASE_URL
-RUN npm run build
+RUN npm run build && node scripts/precompress.mjs
 
 FROM python:3.12-slim AS builder
 WORKDIR /app

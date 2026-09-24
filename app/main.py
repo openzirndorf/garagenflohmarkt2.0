@@ -1,8 +1,9 @@
+import mimetypes
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -130,6 +131,26 @@ app.include_router(settings_router, prefix="/settings")
 _DIST_DIR = Path(__file__).parent.parent / "dist"
 
 
+# Reihenfolge = Präferenz (Brotli ist kleiner als gzip).
+_PRECOMPRESSED_ENCODINGS = (("br", ".br"), ("gzip", ".gz"))
+
+
+def _accepted_encodings(header: str) -> set[str]:
+    accepted: set[str] = set()
+    for part in header.split(","):
+        name, _, params = part.strip().partition(";")
+        quality = 1.0
+        params = params.strip()
+        if params.startswith("q="):
+            try:
+                quality = float(params[2:])
+            except ValueError:
+                quality = 0.0
+        if quality > 0:
+            accepted.add(name.strip().lower())
+    return accepted
+
+
 # methods=["GET", "HEAD"] statt @app.get(): FastAPI/Starlette fügt HEAD
 # einem GET-Endpunkt NICHT automatisch hinzu (live geprüft, auch lokal mit
 # einer minimalen Route reproduziert - 405 mit Allow: GET). Live
@@ -138,7 +159,7 @@ _DIST_DIR = Path(__file__).parent.parent / "dist"
 # schicken vor einem GET erst ein HEAD, das über diese Route auch
 # sitemap.xml/robots.txt/das restliche gebaute Frontend ausliefert.
 @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-def spa(full_path: str) -> FileResponse:
+def spa(full_path: str, request: Request) -> FileResponse:
     if not _DIST_DIR.is_dir():
         # Lokale Entwicklung ohne Docker-Build: kein Frontend zum
         # Ausliefern vorhanden, sauberer 404 statt eines FileNotFoundError.
@@ -152,4 +173,21 @@ def spa(full_path: str) -> FileResponse:
         served = candidate if candidate.is_file() and candidate.is_relative_to(dist) else dist / "index.html"
     except (OSError, ValueError):
         served = dist / "index.html"
-    return FileResponse(served)
+    # Beim Docker-Build vorkomprimierte Varianten (frontend/scripts/
+    # precompress.mjs) ausliefern, sofern der Client sie akzeptiert - der
+    # Container komprimiert so nichts pro Request (1 vCPU; das JS-Bundle ist
+    # ~1,4 MB, mit Brotli ~310 KB).
+    media_type = mimetypes.guess_type(served.name)[0] or "application/octet-stream"
+    variants = [
+        (encoding, served.with_name(served.name + suffix))
+        for encoding, suffix in _PRECOMPRESSED_ENCODINGS
+    ]
+    variants = [(encoding, path) for encoding, path in variants if path.is_file()]
+    headers = {"Vary": "Accept-Encoding"} if variants else {}
+    accepted = _accepted_encodings(request.headers.get("accept-encoding", ""))
+    for encoding, path in variants:
+        if encoding in accepted:
+            return FileResponse(
+                path, media_type=media_type, headers={**headers, "Content-Encoding": encoding}
+            )
+    return FileResponse(served, headers=headers)

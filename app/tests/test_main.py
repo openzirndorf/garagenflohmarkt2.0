@@ -107,3 +107,85 @@ async def test_path_with_null_byte_falls_back_to_index(client, monkeypatch, tmp_
     resp = await client.get("/foo%00bar")
     assert resp.status_code == 200
     assert "INDEX" in resp.text
+
+
+# Vorkomprimierte Frontend-Dateien (frontend/scripts/precompress.mjs, beim
+# Docker-Build): je nach Accept-Encoding .br/.gz statt der Originaldatei -
+# ohne das lieferte der Container das ~1,4 MB große JS-Bundle unkomprimiert.
+def _dist_with_compressed_variants(tmp_path):
+    import gzip
+
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html>INDEX</html>")
+    original = b"console.log('hallo');" * 200
+    (dist / "app.js").write_bytes(original)
+    (dist / "app.js.gz").write_bytes(gzip.compress(original))
+    (dist / "app.js.br").write_bytes(b"BROTLI-BYTES")
+    (dist / "logo.png").write_bytes(b"PNG")
+    return dist, original
+
+
+async def _raw(client, path, accept_encoding, method="GET"):
+    async with client.stream(method, path, headers={"Accept-Encoding": accept_encoding}) as resp:
+        body = b"".join([chunk async for chunk in resp.aiter_raw()])
+        return resp, body
+
+
+async def test_brotli_variant_is_served_when_accepted(client, monkeypatch, tmp_path):
+    dist, _ = _dist_with_compressed_variants(tmp_path)
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    resp, body = await _raw(client, "/app.js", "gzip, deflate, br")
+    assert resp.status_code == 200
+    assert resp.headers["content-encoding"] == "br"
+    assert resp.headers["vary"] == "Accept-Encoding"
+    assert resp.headers["content-type"].startswith("text/javascript")
+    assert body == b"BROTLI-BYTES"
+
+
+async def test_gzip_variant_is_served_when_brotli_is_not_accepted(client, monkeypatch, tmp_path):
+    dist, original = _dist_with_compressed_variants(tmp_path)
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    resp = await client.get("/app.js", headers={"Accept-Encoding": "gzip"})
+    assert resp.headers["content-encoding"] == "gzip"
+    assert resp.content == original
+
+
+async def test_quality_zero_excludes_an_encoding(client, monkeypatch, tmp_path):
+    dist, _ = _dist_with_compressed_variants(tmp_path)
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    resp, _ = await _raw(client, "/app.js", "br;q=0, gzip")
+    assert resp.headers["content-encoding"] == "gzip"
+
+
+async def test_original_is_served_without_accepted_compression(client, monkeypatch, tmp_path):
+    dist, original = _dist_with_compressed_variants(tmp_path)
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    resp, body = await _raw(client, "/app.js", "identity")
+    assert "content-encoding" not in resp.headers
+    assert resp.headers["vary"] == "Accept-Encoding"
+    assert body == original
+
+
+async def test_file_without_variants_has_no_encoding_or_vary(client, monkeypatch, tmp_path):
+    dist, _ = _dist_with_compressed_variants(tmp_path)
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    resp, body = await _raw(client, "/logo.png", "gzip, br")
+    assert "content-encoding" not in resp.headers
+    assert "vary" not in resp.headers
+    assert body == b"PNG"
+
+
+async def test_head_request_returns_encoding_headers_without_body(client, monkeypatch, tmp_path):
+    dist, _ = _dist_with_compressed_variants(tmp_path)
+    monkeypatch.setattr("app.main._DIST_DIR", dist)
+
+    resp, body = await _raw(client, "/app.js", "br", method="HEAD")
+    assert resp.status_code == 200
+    assert resp.headers["content-encoding"] == "br"
+    assert body == b""
