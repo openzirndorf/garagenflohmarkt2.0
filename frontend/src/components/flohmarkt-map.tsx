@@ -1,10 +1,17 @@
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import { useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
+// MapLibre 6 ist ESM-only: unter Vite muss die Worker-URL einmalig gesetzt
+// werden. ?worker&url (nicht ?url) bündelt den Worker samt seinem
+// Schwester-Modul selbst-enthalten - liegt danach same-origin unter
+// /assets/, passt also zur CSP (worker-src 'self') ohne blob:.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { fetchGeoJSON, reportStand } from "../api";
 import { spreadCoincidentPoints } from "../lib/map-declutter";
 import { extractOrtsteil } from "../lib/ortsteil";
 import { type StandPopupProperties, buildStandPopupContent } from "../lib/stand-popup";
+
+maplibregl.setWorkerUrl(workerUrl);
 
 // Zirndorf Zentrum
 const CENTER: [number, number] = [10.9557, 49.4467];
