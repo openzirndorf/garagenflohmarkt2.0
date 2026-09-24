@@ -7,8 +7,12 @@
 //
 // Was ein Besucher tatsächlich lädt (siehe frontend/src/api.ts):
 //   - Erstbesucher: index.html + JS/CSS/Worker/Schriften aus dem Container
-//   - alle: /launch-config (Container), dann Manifest + Standliste + GeoJSON
-//     aus dem Object-Storage-Bucket (nicht aus dem Container)
+//   - alle: /launch-config (Container), dann Standliste + GeoJSON. Vorgesehen
+//     ist der Object-Storage-Bucket (Manifest -> Liste/GeoJSON). Erlaubt der
+//     Bucket der Seite per CORS den Zugriff nicht, fällt die App still auf die
+//     Live-API zurück (/stands, /stands/geojson - Container + Datenbank). Das
+//     Skript erkennt in setup() selbst, welcher Weg echte Browser nehmen
+//     (DATA_SOURCE=bucket|api überschreibt das).
 //   - ein Teil öffnet das Anmeldeformular: /settings (kleine DB-Abfrage)
 //
 // Aufruf (ohne k6-Installation, per Docker):
@@ -36,6 +40,7 @@ const PROFILE = __ENV.PROFILE || "smoke";
 const MAX_VUS = Number.parseInt(__ENV.MAX_VUS || "300", 10);
 const NEW_VISITOR_RATIO = Number.parseFloat(__ENV.NEW_VISITOR_RATIO || "0.4");
 const FORM_OPENER_RATIO = 0.15;
+const DATA_SOURCE_OVERRIDE = __ENV.DATA_SOURCE || "";
 
 const PROFILES = {
   smoke: {
@@ -114,28 +119,47 @@ export function setup() {
       }
     }
   }
-  return { assets: [...assets] };
+  // Wie laden echte Browser die Daten? Der Bucket muss der Seiten-Origin per
+  // CORS erlauben, sonst verwirft der Browser die Antwort (fetchManifest in
+  // frontend/src/api.ts) und die App nutzt die Live-API.
+  const probe = http.get(`${STATIC_BASE_URL}/stands/manifest.json`, {
+    headers: { Origin: BASE_URL },
+  });
+  const corsOk = Boolean(probe.headers["Access-Control-Allow-Origin"]);
+  const dataSource = DATA_SOURCE_OVERRIDE || (corsOk ? "bucket" : "api");
+  console.warn(
+    `Datenquelle der Besucher: ${dataSource} (Bucket-CORS ${corsOk ? "vorhanden" : "FEHLT - Browser fallen auf die API zurück"})`,
+  );
+  return { assets: [...assets], dataSource };
 }
 
-function loadData() {
-  group("Daten aus dem Bucket", () => {
+function loadData(dataSource) {
+  group("Karten- und Listendaten", () => {
+    // Die App fragt immer zuerst das Manifest im Bucket (auch wenn der
+    // Browser die Antwort wegen fehlendem CORS verwirft).
     const manifestRes = http.get(`${STATIC_BASE_URL}/stands/manifest.json`, {
       tags: { kind: "data", name: "manifest" },
     });
-    const ok = check(manifestRes, { "manifest 200": (r) => r.status === 200 });
-    if (!ok) return;
-    const manifest = manifestRes.json();
-    const responses = http.batch([
-      ["GET", `${STATIC_BASE_URL}/${manifest.list_url}`, null, { tags: { kind: "data", name: "liste" } }],
-      [
-        "GET",
-        `${STATIC_BASE_URL}/${manifest.geojson_url}`,
-        null,
-        { tags: { kind: "data", name: "geojson" } },
-      ],
-    ]);
-    check(responses[0], { "liste 200": (r) => r.status === 200 });
-    check(responses[1], { "geojson 200": (r) => r.status === 200 });
+    check(manifestRes, { "manifest 200": (r) => r.status === 200 });
+
+    if (dataSource === "bucket") {
+      if (manifestRes.status !== 200) return;
+      const manifest = manifestRes.json();
+      const responses = http.batch([
+        ["GET", `${STATIC_BASE_URL}/${manifest.list_url}`, null, { tags: { kind: "data", name: "liste" } }],
+        ["GET", `${STATIC_BASE_URL}/${manifest.geojson_url}`, null, { tags: { kind: "data", name: "geojson" } }],
+      ]);
+      check(responses[0], { "liste 200": (r) => r.status === 200 });
+      check(responses[1], { "geojson 200": (r) => r.status === 200 });
+    } else {
+      // Live-API-Fallback: läuft über Container und Datenbank.
+      const responses = http.batch([
+        ["GET", `${BASE_URL}/stands`, null, { tags: { kind: "api", name: "stands" } }],
+        ["GET", `${BASE_URL}/stands/geojson`, null, { tags: { kind: "api", name: "stands-geojson" } }],
+      ]);
+      check(responses[0], { "GET /stands 200": (r) => r.status === 200 });
+      check(responses[1], { "GET /stands/geojson 200": (r) => r.status === 200 });
+    }
   });
 }
 
@@ -163,7 +187,7 @@ export default function (data) {
   check(launch, { "launch-config 200": (r) => r.status === 200 });
   sleep(0.5 + Math.random());
 
-  loadData();
+  loadData(data.dataSource);
   sleep(2 + Math.random() * 4);
 
   if (Math.random() < FORM_OPENER_RATIO) {
