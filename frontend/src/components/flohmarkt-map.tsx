@@ -1,5 +1,5 @@
 import * as maplibregl from "maplibre-gl";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 // MapLibre 6 ist ESM-only: unter Vite muss die Worker-URL einmalig gesetzt
 // werden. ?worker&url (nicht ?url) bündelt den Worker samt seinem
@@ -338,12 +338,92 @@ export function FlohmarktMap({
     allGeoJSON,
   ]);
 
+  // Vollbild per CSS-Overlay statt Fullscreen API: iOS-Safari (iPhone)
+  // unterstützt requestFullscreen nur für Videos, nicht für beliebige
+  // Elemente. Der Karten-Container bleibt dasselbe DOM-Element (die Karte
+  // wird also nicht neu aufgebaut), nur der Wrapper wird zum Overlay.
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // Beendet das Vollbild; über history.back(), wenn beim Öffnen ein Eintrag
+  // angelegt wurde - so verschwindet er wieder und die Zurück-Geste des
+  // Handys schließt das Vollbild, statt die Seite zu verlassen.
+  const closeFullscreen = useCallback(() => {
+    if (window.history.state?.kartenVollbild) window.history.back();
+    else setFullscreen(false);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    // cooperativeGestures (zwei Finger zum Verschieben, siehe Map-Optionen)
+    // verhindert im Normalfall das Hängenbleiben beim Scrollen der Seite -
+    // im Vollbild gibt es nichts zu scrollen, ein Finger soll reichen.
+    if (fullscreen) map.cooperativeGestures.disable();
+    else map.cooperativeGestures.enable();
+    // Der Container hat seine Größe geändert.
+    const frame = requestAnimationFrame(() => map.resize());
+    if (!fullscreen) return () => cancelAnimationFrame(frame);
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.history.pushState({ kartenVollbild: true }, "");
+    const onPopState = () => setFullscreen(false);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeFullscreen();
+    };
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [fullscreen, closeFullscreen]);
+
   return (
-    <div
-      ref={containerRef}
-      style={{ width: "100%", height: "100%" }}
-      role="img"
-      aria-label="Karte mit Garagenflohmarkt-Ständen in Zirndorf"
-    />
+    <div className={fullscreen ? "fixed inset-0 z-[1000] bg-white" : "relative h-full w-full"}>
+      <div
+        ref={containerRef}
+        style={{ width: "100%", height: "100%" }}
+        role="img"
+        aria-label="Karte mit Garagenflohmarkt-Ständen in Zirndorf"
+      />
+      {/* Unter dem Standort-Button (oben rechts), im Stil der MapLibre-Steuerelemente. */}
+      <button
+        type="button"
+        onClick={() => (fullscreen ? closeFullscreen() : setFullscreen(true))}
+        aria-label={fullscreen ? "Vollbild beenden" : "Karte im Vollbild anzeigen"}
+        title={fullscreen ? "Vollbild beenden" : "Vollbild"}
+        className="absolute top-[49px] right-[10px] z-10 flex h-[29px] w-[29px] items-center justify-center rounded bg-white text-gray-800 shadow-[0_0_0_2px_rgba(0,0,0,0.1)] hover:bg-gray-100"
+      >
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          {fullscreen ? (
+            <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+          ) : (
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          )}
+        </svg>
+      </button>
+      {fullscreen && (
+        <button
+          type="button"
+          onClick={closeFullscreen}
+          className="absolute top-3 left-3 z-10 rounded-full bg-white px-4 py-2 text-sm font-semibold text-gray-800 shadow-md hover:bg-gray-100"
+        >
+          ✕ Vollbild beenden
+        </button>
+      )}
+    </div>
   );
 }
