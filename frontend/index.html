@@ -30,7 +30,9 @@
     <!-- Schema.org Event-Markup, statisch im HTML (kein JS nötig, um es
          zu sehen) - hilft Suchmaschinen und KI-Systemen (Gemini, ChatGPT
          u.a.), die Veranstaltung selbst ohne Ausführen der React-App zu
-         verstehen (Was/Wann/Wo). Muss mit EVENT_DATE in
+         verstehen (Was/Wann/Wo). performer/offers sind für Google-Events nur
+         empfohlen: kostenlose Teilnahme (price 0), performer = die
+         teilnehmenden Privatpersonen (ein Flohmarkt hat keine Auftretenden). Muss mit EVENT_DATE in
          src/components/flohmarkt-app.tsx übereinstimmen. -->
     <script type="application/ld+json">
       {
@@ -56,6 +58,18 @@
           "@type": "Organization",
           "name": "OpenZirndorf",
           "url": "https://openzirndorf.de/"
+        },
+        "performer": {
+          "@type": "Organization",
+          "name": "Teilnehmende Privatpersonen aus Zirndorf"
+        },
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "EUR",
+          "availability": "https://schema.org/InStock",
+          "url": "https://garagenflohmarkt.openzirndorf.de/",
+          "validFrom": "2026-09-04T10:43:00+02:00"
         },
         "image": "https://openzirndorf.de/static/media/logo.png",
         "url": "https://garagenflohmarkt.openzirndorf.de/",
