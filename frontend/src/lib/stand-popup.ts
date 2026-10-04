@@ -229,9 +229,10 @@ export function buildStandPopupContent(
   });
 
   if (coords) {
+    const nav = navigationUrl(coords.lat, coords.lng, adresse);
     const navLink = document.createElement("a");
-    navLink.href = navigationUrl(coords.lat, coords.lng, adresse);
-    navLink.target = "_blank";
+    navLink.href = nav.url;
+    if (nav.newTab) navLink.target = "_blank";
     navLink.rel = "noopener noreferrer";
     navLink.textContent = "Navigieren";
     Object.assign(navLink.style, {
