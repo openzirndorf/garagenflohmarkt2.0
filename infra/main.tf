@@ -257,13 +257,13 @@ resource "scaleway_container" "flohmarkt_api" {
   port         = 8080
   cpu_limit    = 1000
   memory_limit = 1024
-  # Auf 1 gesetzt am 03.10.2026, einen Tag vor dem Event (04.10.2026) -
-  # keine Kaltstarts mehr am Veranstaltungstag selbst (siehe bekannte Falle
-  # zu memory_limit/timeout weiter oben in diesem Projekt). Bewusst kein
-  # Dauerzustand: nach dem Event wieder auf 0 zurücksetzen (läuft sonst
-  # durchgehend und kostet entsprechend) - keine automatische
-  # Zeitsteuerung für ein derart seltenes Ereignis, das macht ein Mensch.
-  min_scale = 1
+  # War vom 03.10. bis 05.10.2026 (Event + ein Tag danach) auf 1 gesetzt,
+  # um Kaltstarts am Veranstaltungstag zu vermeiden (siehe bekannte Falle
+  # zu memory_limit/timeout weiter oben in diesem Projekt). 0 spart Kosten
+  # außerhalb eines Events - kurz vor dem nächsten Flohmarkt wieder manuell
+  # auf 1 setzen. Bewusst keine automatische Zeitsteuerung für ein derart
+  # seltenes Ereignis, das macht ein Mensch.
+  min_scale = 0
   max_scale = 5
 
   secret_environment_variables = {
